@@ -3,6 +3,7 @@ module github.com/ca-risken/datasource-api
 go 1.17
 
 require (
+	github.com/aws/aws-sdk-go v1.34.28
 	github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/envoyproxy/protoc-gen-validate v0.6.7
@@ -30,6 +31,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
