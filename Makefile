@@ -59,7 +59,8 @@ proto-validate: fmt
 	done
 
 .PHONY: proto
-proto : proto-without-validate proto-validate proto-mock
+# proto : proto-without-validate proto-validate proto-mock 
+proto : proto-without-validate proto-validate  # TODO add proto-mock
 
 PHONY: build
 build: test
@@ -106,3 +107,5 @@ generate-mock: proto-mock
 proto-mock: $(MOCK_TARGETS)
 %.mock: FAKE
 	sh hack/generate-mock.sh proto/$(*)
+
+FAKE:

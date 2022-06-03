@@ -1,0 +1,266 @@
+syntax = "proto3";
+
+package diagnosis;
+option go_package = "github.com/ca-risken/datasource-api/proto/diagnosis";
+
+import "diagnosis/entities.proto";
+import "google/protobuf/empty.proto";
+
+service DiagnosisService {
+  // DataSource
+  rpc ListDiagnosisDataSource(ListDiagnosisDataSourceRequest)
+      returns (ListDiagnosisDataSourceResponse) {}
+  rpc GetDiagnosisDataSource(GetDiagnosisDataSourceRequest)
+      returns (GetDiagnosisDataSourceResponse) {}
+  rpc PutDiagnosisDataSource(PutDiagnosisDataSourceRequest)
+      returns (PutDiagnosisDataSourceResponse) {}
+  rpc DeleteDiagnosisDataSource(DeleteDiagnosisDataSourceRequest)
+      returns (google.protobuf.Empty) {}
+
+  // WpscanSetting
+  rpc ListWpscanSetting(ListWpscanSettingRequest)
+      returns (ListWpscanSettingResponse) {}
+  rpc GetWpscanSetting(GetWpscanSettingRequest)
+      returns (GetWpscanSettingResponse) {}
+  rpc PutWpscanSetting(PutWpscanSettingRequest)
+      returns (PutWpscanSettingResponse) {}
+  rpc DeleteWpscanSetting(DeleteWpscanSettingRequest)
+      returns (google.protobuf.Empty) {}
+
+  // PortscanSetting
+  rpc ListPortscanSetting(ListPortscanSettingRequest)
+      returns (ListPortscanSettingResponse) {}
+  rpc GetPortscanSetting(GetPortscanSettingRequest)
+      returns (GetPortscanSettingResponse) {}
+  rpc PutPortscanSetting(PutPortscanSettingRequest)
+      returns (PutPortscanSettingResponse) {}
+  rpc DeletePortscanSetting(DeletePortscanSettingRequest)
+      returns (google.protobuf.Empty) {}
+
+  // PortscanTarget
+  rpc ListPortscanTarget(ListPortscanTargetRequest)
+      returns (ListPortscanTargetResponse) {}
+  rpc GetPortscanTarget(GetPortscanTargetRequest)
+      returns (GetPortscanTargetResponse) {}
+  rpc PutPortscanTarget(PutPortscanTargetRequest)
+      returns (PutPortscanTargetResponse) {}
+  rpc DeletePortscanTarget(DeletePortscanTargetRequest)
+      returns (google.protobuf.Empty) {}
+
+  // ApplicationScan
+  rpc ListApplicationScan(ListApplicationScanRequest)
+      returns (ListApplicationScanResponse) {}
+  rpc GetApplicationScan(GetApplicationScanRequest)
+      returns (GetApplicationScanResponse) {}
+  rpc PutApplicationScan(PutApplicationScanRequest)
+      returns (PutApplicationScanResponse) {}
+  rpc DeleteApplicationScan(DeleteApplicationScanRequest)
+      returns (google.protobuf.Empty) {}
+
+  // ApplicationScanBasicSetting
+  rpc ListApplicationScanBasicSetting(ListApplicationScanBasicSettingRequest)
+      returns (ListApplicationScanBasicSettingResponse) {}
+  rpc GetApplicationScanBasicSetting(GetApplicationScanBasicSettingRequest)
+      returns (GetApplicationScanBasicSettingResponse) {}
+  rpc PutApplicationScanBasicSetting(PutApplicationScanBasicSettingRequest)
+      returns (PutApplicationScanBasicSettingResponse) {}
+  rpc DeleteApplicationScanBasicSetting(
+      DeleteApplicationScanBasicSettingRequest)
+      returns (google.protobuf.Empty) {}
+
+  // KICK
+  rpc InvokeScan(InvokeScanRequest) returns (InvokeScanResponse) {}
+  rpc InvokeScanAll(InvokeScanAllRequest) returns (google.protobuf.Empty) {}
+}
+
+// DiagnosisDataSourceService
+message ListDiagnosisDataSourceRequest {
+  uint32 project_id = 1;
+  string name = 2;
+}
+
+message ListDiagnosisDataSourceResponse {
+  repeated DiagnosisDataSource diagnosis_data_source = 1;
+}
+
+message GetDiagnosisDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 diagnosis_data_source_id = 2;
+}
+
+message GetDiagnosisDataSourceResponse {
+  DiagnosisDataSource diagnosis_data_source = 1;
+}
+
+message PutDiagnosisDataSourceRequest {
+  uint32 project_id = 1;
+  DiagnosisDataSourceForUpsert diagnosis_data_source = 2;
+}
+
+message PutDiagnosisDataSourceResponse {
+  uint32 project_id = 1;
+  DiagnosisDataSource diagnosis_data_source = 2;
+}
+
+message DeleteDiagnosisDataSourceRequest {
+  uint32 project_id = 1;
+  uint32 diagnosis_data_source_id = 2;
+}
+
+// WpscanSettingService
+message ListWpscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 diagnosis_data_source_id = 2;
+}
+
+message ListWpscanSettingResponse { repeated WpscanSetting wpscan_setting = 1; }
+
+message GetWpscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 wpscan_setting_id = 2;
+}
+
+message GetWpscanSettingResponse { WpscanSetting wpscan_setting = 1; }
+
+message PutWpscanSettingRequest {
+  uint32 project_id = 1;
+  WpscanSettingForUpsert wpscan_setting = 2;
+}
+
+message PutWpscanSettingResponse { WpscanSetting wpscan_setting = 1; }
+
+message DeleteWpscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 wpscan_setting_id = 2;
+}
+
+// PortscanSettingService
+message ListPortscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 diagnosis_data_source_id = 2;
+}
+
+message ListPortscanSettingResponse {
+  repeated PortscanSetting portscan_setting = 1;
+}
+
+message GetPortscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 portscan_setting_id = 2;
+}
+
+message GetPortscanSettingResponse { PortscanSetting portscan_setting = 1; }
+
+message PutPortscanSettingRequest {
+  uint32 project_id = 1;
+  PortscanSettingForUpsert portscan_setting = 2;
+}
+
+message PutPortscanSettingResponse { PortscanSetting portscan_setting = 1; }
+
+message DeletePortscanSettingRequest {
+  uint32 project_id = 1;
+  uint32 portscan_setting_id = 2;
+}
+
+message ListPortscanTargetRequest {
+  uint32 project_id = 1;
+  uint32 portscan_setting_id = 2;
+  Status status = 3;
+}
+
+message ListPortscanTargetResponse {
+  repeated PortscanTarget portscan_target = 1;
+}
+
+message GetPortscanTargetRequest {
+  uint32 project_id = 1;
+  uint32 portscan_target_id = 2;
+}
+
+message GetPortscanTargetResponse { PortscanTarget portscan_target = 1; }
+
+message PutPortscanTargetRequest {
+  uint32 project_id = 1;
+  PortscanTargetForUpsert portscan_target = 2;
+}
+
+message PutPortscanTargetResponse { PortscanTarget portscan_target = 1; }
+
+message DeletePortscanTargetRequest {
+  uint32 project_id = 1;
+  uint32 portscan_target_id = 2;
+}
+
+// ApplicationScanService
+message ListApplicationScanRequest {
+  uint32 project_id = 1;
+  uint32 diagnosis_data_source_id = 2;
+}
+
+message ListApplicationScanResponse {
+  repeated ApplicationScan application_scan = 1;
+}
+
+message GetApplicationScanRequest {
+  uint32 project_id = 1;
+  uint32 application_scan_id = 2;
+}
+
+message GetApplicationScanResponse { ApplicationScan application_scan = 1; }
+
+message PutApplicationScanRequest {
+  uint32 project_id = 1;
+  ApplicationScanForUpsert application_scan = 2;
+}
+
+message PutApplicationScanResponse { ApplicationScan application_scan = 1; }
+
+message DeleteApplicationScanRequest {
+  uint32 project_id = 1;
+  uint32 application_scan_id = 2;
+}
+
+message ListApplicationScanBasicSettingRequest {
+  uint32 project_id = 1;
+  uint32 application_scan_id = 2;
+}
+
+message ListApplicationScanBasicSettingResponse {
+  repeated ApplicationScanBasicSetting application_scan_basic_setting = 1;
+}
+
+message GetApplicationScanBasicSettingRequest {
+  uint32 project_id = 1;
+  uint32 application_scan_id = 2;
+}
+
+message GetApplicationScanBasicSettingResponse {
+  ApplicationScanBasicSetting application_scan_basic_setting = 1;
+}
+
+message PutApplicationScanBasicSettingRequest {
+  uint32 project_id = 1;
+  ApplicationScanBasicSettingForUpsert application_scan_basic_setting = 2;
+}
+
+message PutApplicationScanBasicSettingResponse {
+  ApplicationScanBasicSetting application_scan_basic_setting = 1;
+}
+
+message DeleteApplicationScanBasicSettingRequest {
+  uint32 project_id = 1;
+  uint32 application_scan_basic_setting_id = 2;
+}
+
+// KICK Diagnosis
+message InvokeScanRequest {
+  uint32 project_id = 1;
+  uint32 setting_id = 2;
+  uint32 diagnosis_data_source_id = 3;
+  bool scan_only = 4;
+}
+
+message InvokeScanResponse { string message = 1; }
+
+message InvokeScanAllRequest { uint32 diagnosis_data_source_id = 1; }
