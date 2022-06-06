@@ -4,7 +4,7 @@ env:
   variables:
     PRIVATE_IMAGE_NAME: 'risken-datasource-api'
     PUBLIC_REGISTRY: 'public.ecr.aws/risken'
-    PUBLIC_IMAGE_NAME: 'datasource-api'
+    PUBLIC_IMAGE_NAME: 'risken-datasource-api'
   parameter-store:
     GITHUB_USER: '/build/GITHUB_USER'
     GITHUB_TOKEN: '/build/GITHUB_TOKEN'
