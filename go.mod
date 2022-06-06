@@ -6,9 +6,12 @@ require (
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
+	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
+	github.com/ca-risken/common/pkg/tracer v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/core/proto/project v0.0.0-20220428031553-0579e204c316
 	github.com/envoyproxy/protoc-gen-validate v0.6.7
+	github.com/gassara-kys/envconfig v1.4.4
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/golang/protobuf v1.5.2
@@ -25,6 +28,7 @@ require (
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.0.0-20211129110424-6491aa3bf583 // indirect
 	github.com/DataDog/datadog-go v4.8.2+incompatible // indirect
 	github.com/DataDog/datadog-go/v5 v5.0.2 // indirect
+	github.com/DataDog/gostackparse v0.5.0 // indirect
 	github.com/DataDog/sketches-go v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef // indirect
@@ -34,6 +38,7 @@ require (
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b // indirect
+	github.com/google/pprof v0.0.0-20210423192551-a2663126120b // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.4 // indirect

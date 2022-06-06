@@ -47,6 +47,7 @@ github.com/DataDog/datadog-go v4.8.2+incompatible h1:qbcKSx29aBLD+5QLvlQZlGmRMF/
 github.com/DataDog/datadog-go v4.8.2+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/datadog-go/v5 v5.0.2 h1:UFtEe7662/Qojxkw1d6SboAeA0CPI3naKhVASwFn+04=
 github.com/DataDog/datadog-go/v5 v5.0.2/go.mod h1:ZI9JFB4ewXbw1sBnF4sxsR2k1H3xjV+PUAOUsHvKpcU=
+github.com/DataDog/gostackparse v0.5.0 h1:jb72P6GFHPHz2W0onsN51cS3FkaMDcjb0QzgxxA4gDk=
 github.com/DataDog/gostackparse v0.5.0/go.mod h1:lTfqcJKqS9KnXQGnyQMCugq3u1FP6UZMfWR0aitKFMM=
 github.com/DataDog/sketches-go v1.0.0 h1:chm5KSXO7kO+ywGWJ0Zs6tdmWU8PBXSbywFVciL6BG4=
 github.com/DataDog/sketches-go v1.0.0/go.mod h1:O+XkJHWk9w4hDwY2ZUDU31ZC9sNYlYo8DiFsxjYeo1k=
@@ -100,8 +101,12 @@ github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b/go.m
 github.com/ca-risken/common/pkg/logging v0.0.0-20220517105456-de734080357a/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b h1:qNttEBJBsXg68Kzj0+9rw7c52L9rhgaChZOyUO/A4VQ=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
+github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b h1:S3vrpeI7invfVyBw0PhZ15/A/kIV9AOPTXpc+e7RQdU=
+github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:xldq3VZ7qomkI5vfpw8Y9qCVEFl8BrSvDr+sxbz32H4=
 github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b h1:zKrHCxQ0UZkFYHpdCeXDsfj4JqjDamcgFeq87+DJC6c=
 github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:fnvFF8ESVirs5LV36leyFKf3FbuqjLDhJnipGJgDZtA=
+github.com/ca-risken/common/pkg/tracer v0.0.0-20220601065422-5b97bd6efc9b h1:qt68fmotTZgAFvjnP0DnAdusZwWdOTAlqErQEfgbyCg=
+github.com/ca-risken/common/pkg/tracer v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:PIXjETIPseBEB/OXp5Rxn8FFuRwfQjFZe1VN+0Skh2E=
 github.com/ca-risken/core/proto/project v0.0.0-20220428031553-0579e204c316 h1:Qfifm/MDcNh9LuLZyjna7PWVCfISTEOIy/81WS+17mM=
 github.com/ca-risken/core/proto/project v0.0.0-20220428031553-0579e204c316/go.mod h1:2wvmStoiOXmoWx8TbXMJPRc+rN6uGA1uPEbDAVT5gDo=
 github.com/cenkalti/backoff/v3 v3.0.0/go.mod h1:cIeZDE3IrqwwJl6VUwCN6trj1oXrTS4rc0ij+ULvLYs=
@@ -187,6 +192,8 @@ github.com/frankban/quicktest v1.13.0/go.mod h1:qLE0fzW0VuyUAJgPU19zByoIr0HtCHN/
 github.com/fsnotify/fsnotify v1.4.7/go.mod h1:jwhsz4b93w/PPRr/qN1Yymfu8t87LnFCMoQvtojpjFo=
 github.com/fsnotify/fsnotify v1.4.9/go.mod h1:znqG4EE+3YCdAaPaxE2ZRY/06pZUdp0tY4IgpuI1SZQ=
 github.com/garyburd/redigo v1.6.3/go.mod h1:rTb6epsqigu3kYKBnaF028A7Tf/Aw5s0cqA47doKKqw=
+github.com/gassara-kys/envconfig v1.4.4 h1:T80dkGadFnVOpQUnhJr4prSXtcHKXu8ajBUhyBpoup0=
+github.com/gassara-kys/envconfig v1.4.4/go.mod h1:wg0dgDDpjb5TSQNIgSG9TrOtDRUkcTTz+9kSx2nYw9s=
 github.com/ghodss/yaml v0.0.0-20150909031657-73d445a93680/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
@@ -331,6 +338,7 @@ github.com/google/pprof v0.0.0-20191218002539-d4f498aebedc/go.mod h1:ZgVRPoUq/hf
 github.com/google/pprof v0.0.0-20200212024743-f11f1df84d12/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20200229191704-1ebb73c60ed3/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20200430221834-fc25d7d30c6d/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
+github.com/google/pprof v0.0.0-20210423192551-a2663126120b h1:l2YRhr+YLzmSp7KJMswRVk/lO5SwoFIcCLzJsVj+YPc=
 github.com/google/pprof v0.0.0-20210423192551-a2663126120b/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/uuid v1.1.1/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
@@ -1143,6 +1151,7 @@ google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQ
 google.golang.org/protobuf v1.27.1/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
 google.golang.org/protobuf v1.28.0 h1:w43yiav+6bVFTBQFZX0r7ipe9JQ1QsbMgHwbBziscLw=
 google.golang.org/protobuf v1.28.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
+gopkg.in/DataDog/dd-trace-go.v1 v1.36.0/go.mod h1:Cv0Bzs/zTzzrUDSw8Q+q/vC+uwPD+R530npGo0lfiCE=
 gopkg.in/DataDog/dd-trace-go.v1 v1.37.1 h1:rgO9oC3Mr7es0zKIsaooL50UY0qboUDdueP7MzH1fUI=
 gopkg.in/DataDog/dd-trace-go.v1 v1.37.1/go.mod h1:HMpV5TQ38YAfRJ8OlM7UfLyGg6D01MPNHRFwsnrGMB0=
 gopkg.in/airbrake/gobrake.v2 v2.0.9/go.mod h1:/h5ZAUhDkGaJfjzjKLSjv6zCL6O0LLBxU4K+aSYdM/U=

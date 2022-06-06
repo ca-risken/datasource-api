@@ -10,6 +10,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/datasource-api
 
 FROM public.ecr.aws/risken/base/risken-base:v0.0.1
 COPY --from=builder /bin/datasource-api /usr/local/bin/
+ADD docker-entrypoint.sh /usr/local/bin
 ENV PORT= \
     PROFILE_EXPORTER= \
     PROFILE_TYPES= \
