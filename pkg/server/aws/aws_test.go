@@ -212,7 +212,7 @@ func TestListDataSource(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			if c.mockResp != nil || c.mockErr != nil {
-				mockDB.On("ListDataSource").Return(c.mockResp, c.mockErr).Once()
+				mockDB.On("ListAWSDataSource").Return(c.mockResp, c.mockErr).Once()
 			}
 			got, err := svc.ListDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {

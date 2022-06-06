@@ -4,9 +4,6 @@ go 1.17
 
 require (
 	github.com/aws/aws-sdk-go v1.34.28
-	github.com/ca-risken/aws/pkg/message v0.0.0-20220526101459-e41efbb1d9e1
-	github.com/ca-risken/aws/pkg/model v0.0.0-20220526101459-e41efbb1d9e1
-	github.com/ca-risken/aws/proto/aws v0.0.0-20220526101459-e41efbb1d9e1
 	github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
