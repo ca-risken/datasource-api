@@ -15,8 +15,8 @@ type AWSRepoInterface interface {
 	GetAWSByAccountID(ctx context.Context, projectID uint32, awsAccountID string) (*model.AWS, error)
 	UpsertAWS(ctx context.Context, data *model.AWS) (*model.AWS, error)
 	DeleteAWS(ctx context.Context, projectID, awsID uint32) error
-	ListAWSDataSource(ctx context.Context, projectID, awsID uint32, ds string) (*[]dataSource, error)
-	ListDataSourceByAWSDataSourceID(ctx context.Context, awsDataSourceID uint32) (*[]dataSource, error)
+	ListAWSDataSource(ctx context.Context, projectID, awsID uint32, ds string) (*[]DataSource, error)
+	ListDataSourceByAWSDataSourceID(ctx context.Context, awsDataSourceID uint32) (*[]DataSource, error)
 	ListAWSRelDataSource(ctx context.Context, projectID, awsID uint32) (*[]model.AWSRelDataSource, error)
 	UpsertAWSRelDataSource(ctx context.Context, data *aws.DataSourceForAttach) (*model.AWSRelDataSource, error)
 	GetAWSRelDataSourceByID(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*model.AWSRelDataSource, error)
@@ -94,7 +94,7 @@ func (c *Client) DeleteAWS(ctx context.Context, projectID, awsID uint32) error {
 	return nil
 }
 
-type dataSource struct {
+type DataSource struct {
 	AWSDataSourceID uint32
 	DataSource      string
 	MaxScore        float32
@@ -107,7 +107,7 @@ type dataSource struct {
 	ScanAt          time.Time
 }
 
-func (c *Client) ListAWSDataSource(ctx context.Context, projectID, awsID uint32, ds string) (*[]dataSource, error) {
+func (c *Client) ListAWSDataSource(ctx context.Context, projectID, awsID uint32, ds string) (*[]DataSource, error) {
 	var params []interface{}
 	query := `
 select
@@ -147,14 +147,14 @@ order by
 	, ards.aws_id
   , ads.aws_data_source_id
 `
-	data := []dataSource{}
+	data := []DataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (c *Client) ListDataSourceByAWSDataSourceID(ctx context.Context, dataSourceID uint32) (*[]dataSource, error) {
+func (c *Client) ListDataSourceByAWSDataSourceID(ctx context.Context, dataSourceID uint32) (*[]DataSource, error) {
 	var params []interface{}
 	query := `select ads.aws_data_source_id
 	, ads.data_source
@@ -172,7 +172,7 @@ func (c *Client) ListDataSourceByAWSDataSourceID(ctx context.Context, dataSource
 		query += " where aws_data_source_id = ?"
 		params = append(params, dataSourceID)
 	}
-	data := []dataSource{}
+	data := []DataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
