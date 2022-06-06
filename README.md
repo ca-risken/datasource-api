@@ -2,7 +2,7 @@
 
 # RISKEN AWS
 
-![Build Status]()
+![Build Status](https://codebuild.ap-northeast-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiM09KWEhQRHZEQTZoeDN5dnNxaU9MZDI5TCtLckRvd2dMQVRMUVpBeWd3WVg2S0lFNUVvd0ZsN3l1U014WC9nUW9RWlozcHlpN2FLeFl4ZjZEQm9keGZNPSIsIml2UGFyYW1ldGVyU3BlYyI6IlYzdEFGZFdDdkRsV1QyL04iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=main)
 
 `RISKEN` is a monitoring tool for your cloud platforms, web-site, source-code... 
 `RISKEN DataSource API` is a security monitoring system for datasouces(e.g. aws, google, osint..) that searches, analyzes, evaluate, and alerts on discovered threat information.
