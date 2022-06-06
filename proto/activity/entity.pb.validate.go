@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -31,14 +32,29 @@ var (
 	_ = (*url.URL)(nil)
 	_ = (*mail.Address)(nil)
 	_ = anypb.Any{}
+	_ = sort.Sort
 )
 
 // Validate checks the field values on ARN with the rules defined in the proto
-// definition for this message. If any rules are violated, an error is returned.
+// definition for this message. If any rules are violated, the first error
+// encountered is returned, or nil if there are no violations.
 func (m *ARN) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ARN with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in ARNMultiError, or nil if none found.
+func (m *ARN) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ARN) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for Partition
 
@@ -54,8 +70,28 @@ func (m *ARN) Validate() error {
 
 	// no validation rules for ResourceId
 
+	if len(errors) > 0 {
+		return ARNMultiError(errors)
+	}
+
 	return nil
 }
+
+// ARNMultiError is an error wrapping multiple validation errors returned by
+// ARN.ValidateAll() if the designated constraints aren't met.
+type ARNMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ARNMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ARNMultiError) AllErrors() []error { return m }
 
 // ARNValidationError is the validation error returned by ARN.Validate if the
 // designated constraints aren't met.
@@ -112,11 +148,26 @@ var _ interface {
 } = ARNValidationError{}
 
 // Validate checks the field values on CloudTrail with the rules defined in the
-// proto definition for this message. If any rules are violated, an error is returned.
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
 func (m *CloudTrail) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on CloudTrail with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in CloudTrailMultiError, or
+// nil if none found.
+func (m *CloudTrail) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *CloudTrail) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for EventId
 
@@ -135,7 +186,26 @@ func (m *CloudTrail) Validate() error {
 	for idx, item := range m.GetResources() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, CloudTrailValidationError{
+						field:  fmt.Sprintf("Resources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, CloudTrailValidationError{
+						field:  fmt.Sprintf("Resources[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return CloudTrailValidationError{
 					field:  fmt.Sprintf("Resources[%v]", idx),
@@ -149,8 +219,28 @@ func (m *CloudTrail) Validate() error {
 
 	// no validation rules for CloudtrailEvent
 
+	if len(errors) > 0 {
+		return CloudTrailMultiError(errors)
+	}
+
 	return nil
 }
+
+// CloudTrailMultiError is an error wrapping multiple validation errors
+// returned by CloudTrail.ValidateAll() if the designated constraints aren't met.
+type CloudTrailMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m CloudTrailMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m CloudTrailMultiError) AllErrors() []error { return m }
 
 // CloudTrailValidationError is the validation error returned by
 // CloudTrail.Validate if the designated constraints aren't met.
@@ -207,11 +297,26 @@ var _ interface {
 } = CloudTrailValidationError{}
 
 // Validate checks the field values on Resource with the rules defined in the
-// proto definition for this message. If any rules are violated, an error is returned.
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
 func (m *Resource) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Resource with the rules defined in
+// the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ResourceMultiError, or nil
+// if none found.
+func (m *Resource) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Resource) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for ResourceType
 
@@ -221,8 +326,28 @@ func (m *Resource) Validate() error {
 
 	// no validation rules for RelationshipName
 
+	if len(errors) > 0 {
+		return ResourceMultiError(errors)
+	}
+
 	return nil
 }
+
+// ResourceMultiError is an error wrapping multiple validation errors returned
+// by Resource.ValidateAll() if the designated constraints aren't met.
+type ResourceMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ResourceMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ResourceMultiError) AllErrors() []error { return m }
 
 // ResourceValidationError is the validation error returned by
 // Resource.Validate if the designated constraints aren't met.
@@ -279,12 +404,26 @@ var _ interface {
 } = ResourceValidationError{}
 
 // Validate checks the field values on Configuration with the rules defined in
-// the proto definition for this message. If any rules are violated, an error
-// is returned.
+// the proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
 func (m *Configuration) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Configuration with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// result is a list of violation errors wrapped in ConfigurationMultiError, or
+// nil if none found.
+func (m *Configuration) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Configuration) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for Version
 
@@ -315,7 +454,26 @@ func (m *Configuration) Validate() error {
 	for idx, item := range m.GetTags() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("Tags[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("Tags[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ConfigurationValidationError{
 					field:  fmt.Sprintf("Tags[%v]", idx),
@@ -330,7 +488,26 @@ func (m *Configuration) Validate() error {
 	for idx, item := range m.GetRelationships() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("Relationships[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("Relationships[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ConfigurationValidationError{
 					field:  fmt.Sprintf("Relationships[%v]", idx),
@@ -347,7 +524,26 @@ func (m *Configuration) Validate() error {
 	for idx, item := range m.GetSupplementaryConfiguration() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("SupplementaryConfiguration[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConfigurationValidationError{
+						field:  fmt.Sprintf("SupplementaryConfiguration[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ConfigurationValidationError{
 					field:  fmt.Sprintf("SupplementaryConfiguration[%v]", idx),
@@ -359,8 +555,29 @@ func (m *Configuration) Validate() error {
 
 	}
 
+	if len(errors) > 0 {
+		return ConfigurationMultiError(errors)
+	}
+
 	return nil
 }
+
+// ConfigurationMultiError is an error wrapping multiple validation errors
+// returned by Configuration.ValidateAll() if the designated constraints
+// aren't met.
+type ConfigurationMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ConfigurationMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ConfigurationMultiError) AllErrors() []error { return m }
 
 // ConfigurationValidationError is the validation error returned by
 // Configuration.Validate if the designated constraints aren't met.
@@ -417,18 +634,52 @@ var _ interface {
 } = ConfigurationValidationError{}
 
 // Validate checks the field values on Tag with the rules defined in the proto
-// definition for this message. If any rules are violated, an error is returned.
+// definition for this message. If any rules are violated, the first error
+// encountered is returned, or nil if there are no violations.
 func (m *Tag) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Tag with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in TagMultiError, or nil if none found.
+func (m *Tag) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Tag) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for Key
 
 	// no validation rules for Value
 
+	if len(errors) > 0 {
+		return TagMultiError(errors)
+	}
+
 	return nil
 }
+
+// TagMultiError is an error wrapping multiple validation errors returned by
+// Tag.ValidateAll() if the designated constraints aren't met.
+type TagMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m TagMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m TagMultiError) AllErrors() []error { return m }
 
 // TagValidationError is the validation error returned by Tag.Validate if the
 // designated constraints aren't met.
@@ -486,18 +737,53 @@ var _ interface {
 
 // Validate checks the field values on SupplementaryConfiguration with the
 // rules defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *SupplementaryConfiguration) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on SupplementaryConfiguration with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// SupplementaryConfigurationMultiError, or nil if none found.
+func (m *SupplementaryConfiguration) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *SupplementaryConfiguration) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
+
+	var errors []error
 
 	// no validation rules for Key
 
 	// no validation rules for Value
 
+	if len(errors) > 0 {
+		return SupplementaryConfigurationMultiError(errors)
+	}
+
 	return nil
 }
+
+// SupplementaryConfigurationMultiError is an error wrapping multiple
+// validation errors returned by SupplementaryConfiguration.ValidateAll() if
+// the designated constraints aren't met.
+type SupplementaryConfigurationMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m SupplementaryConfigurationMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m SupplementaryConfigurationMultiError) AllErrors() []error { return m }
 
 // SupplementaryConfigurationValidationError is the validation error returned
 // by SupplementaryConfiguration.Validate if the designated constraints aren't met.

@@ -15,7 +15,9 @@ import (
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/queue"
+	activityServer "github.com/ca-risken/datasource-api/pkg/server/activity"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
+	"github.com/ca-risken/datasource-api/proto/activity"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
@@ -29,23 +31,28 @@ import (
 type Server struct {
 	port        string
 	coreSvcAddr string
+	awsRegion   string
 	db          *db.Client
 	queue       *queue.Client
 	logger      logging.Logger
 }
 
-func NewServer(port string, coreSvcAddr string, db *db.Client, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion string, db *db.Client, logger logging.Logger) *Server {
 	return &Server{
 		port:        port,
 		coreSvcAddr: coreSvcAddr,
+		awsRegion:   awsRegion,
 		db:          db,
 		logger:      logger,
 	}
 }
 
 func (s *Server) Run(ctx context.Context) error {
+	localServerAddr := fmt.Sprintf(":%s", s.port)
 	pjClient := s.newProjectClient(s.coreSvcAddr)
+	awsClient := s.newAWSClient(localServerAddr)
 	awsSvc := awsServer.NewAWSSerevice(ctx, s.db, s.queue, pjClient, s.logger)
+	activitySvc := activityServer.NewActivityService(ctx, awsClient, s.awsRegion, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -54,11 +61,11 @@ func (s *Server) Run(ctx context.Context) error {
 				grpctrace.UnaryServerInterceptor(),
 				mimosarpc.LoggingUnaryServerInterceptor(s.logger))))
 	aws.RegisterAWSServiceServer(server, awsSvc)
+	activity.RegisterActivityServiceServer(server, activitySvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
 
-	localServerAddr := fmt.Sprintf(":%s", s.port)
 	s.logger.Infof(ctx, "Starting gRPC server at %s", localServerAddr)
 	l, err := net.Listen("tcp", localServerAddr)
 	if err != nil {
@@ -128,6 +135,15 @@ func (s *Server) newProjectClient(svcAddr string) project.ProjectServiceClient {
 		s.logger.Fatalf(ctx, "failed to get grpc connection: err=%+v", err)
 	}
 	return project.NewProjectServiceClient(conn)
+}
+
+func (s *Server) newAWSClient(svcAddr string) aws.AWSServiceClient {
+	ctx := context.Background()
+	conn, err := getGRPCConn(ctx, svcAddr)
+	if err != nil {
+		s.logger.Fatalf(ctx, "failed to get grpc connection: err=%+v", err)
+	}
+	return aws.NewAWSServiceClient(conn)
 }
 
 func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {

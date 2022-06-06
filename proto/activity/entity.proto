@@ -3,10 +3,6 @@ syntax = "proto3";
 package datasource.activity;
 option go_package = "github.com/ca-risken/datasource-api/proto/activity";
 
-/**
- * Entity
- **/
-
 // ARN
 // https://docs.aws.amazon.com/sdk-for-go/api/aws/arn/#ARN
 message ARN {
@@ -77,7 +73,6 @@ message SupplementaryConfiguration {
 
 enum AttributeKey {
   UNKNOWN = 0;
-
   RESOURCE_TYPE = 1;
   RESOURCE_NAME = 2;
   EVENT_ID = 3;

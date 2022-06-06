@@ -11,6 +11,7 @@ import (
 	"net/mail"
 	"net/url"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -31,25 +32,65 @@ var (
 	_ = (*url.URL)(nil)
 	_ = (*mail.Address)(nil)
 	_ = anypb.Any{}
+	_ = sort.Sort
 )
 
 // Validate checks the field values on DescribeARNRequest with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *DescribeARNRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DescribeARNRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DescribeARNRequestMultiError, or nil if none found.
+func (m *DescribeARNRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DescribeARNRequest) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	if !_DescribeARNRequest_Arn_Pattern.MatchString(m.GetArn()) {
-		return DescribeARNRequestValidationError{
+		err := DescribeARNRequestValidationError{
 			field:  "Arn",
 			reason: "value does not match regex pattern \"^arn:.*$\"",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return DescribeARNRequestMultiError(errors)
 	}
 
 	return nil
 }
+
+// DescribeARNRequestMultiError is an error wrapping multiple validation errors
+// returned by DescribeARNRequest.ValidateAll() if the designated constraints
+// aren't met.
+type DescribeARNRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DescribeARNRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DescribeARNRequestMultiError) AllErrors() []error { return m }
 
 // DescribeARNRequestValidationError is the validation error returned by
 // DescribeARNRequest.Validate if the designated constraints aren't met.
@@ -111,13 +152,46 @@ var _DescribeARNRequest_Arn_Pattern = regexp.MustCompile("^arn:.*$")
 
 // Validate checks the field values on DescribeARNResponse with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *DescribeARNResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on DescribeARNResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// DescribeARNResponseMultiError, or nil if none found.
+func (m *DescribeARNResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *DescribeARNResponse) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
-	if v, ok := interface{}(m.GetArn()).(interface{ Validate() error }); ok {
+	var errors []error
+
+	if all {
+		switch v := interface{}(m.GetArn()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, DescribeARNResponseValidationError{
+					field:  "Arn",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, DescribeARNResponseValidationError{
+					field:  "Arn",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetArn()).(interface{ Validate() error }); ok {
 		if err := v.Validate(); err != nil {
 			return DescribeARNResponseValidationError{
 				field:  "Arn",
@@ -127,8 +201,29 @@ func (m *DescribeARNResponse) Validate() error {
 		}
 	}
 
+	if len(errors) > 0 {
+		return DescribeARNResponseMultiError(errors)
+	}
+
 	return nil
 }
+
+// DescribeARNResponseMultiError is an error wrapping multiple validation
+// errors returned by DescribeARNResponse.ValidateAll() if the designated
+// constraints aren't met.
+type DescribeARNResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m DescribeARNResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m DescribeARNResponseMultiError) AllErrors() []error { return m }
 
 // DescribeARNResponseValidationError is the validation error returned by
 // DescribeARNResponse.Validate if the designated constraints aren't met.
@@ -188,45 +283,79 @@ var _ interface {
 
 // Validate checks the field values on ListCloudTrailRequest with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *ListCloudTrailRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListCloudTrailRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListCloudTrailRequestMultiError, or nil if none found.
+func (m *ListCloudTrailRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListCloudTrailRequest) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	if m.GetProjectId() <= 0 {
-		return ListCloudTrailRequestValidationError{
+		err := ListCloudTrailRequestValidationError{
 			field:  "ProjectId",
 			reason: "value must be greater than 0",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if m.GetAwsId() <= 0 {
-		return ListCloudTrailRequestValidationError{
+		err := ListCloudTrailRequestValidationError{
 			field:  "AwsId",
 			reason: "value must be greater than 0",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if utf8.RuneCountInString(m.GetRegion()) < 1 {
-		return ListCloudTrailRequestValidationError{
+		err := ListCloudTrailRequestValidationError{
 			field:  "Region",
 			reason: "value length must be at least 1 runes",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if val := m.GetStartTime(); val < 0 || val > 253402268399 {
-		return ListCloudTrailRequestValidationError{
+		err := ListCloudTrailRequestValidationError{
 			field:  "StartTime",
 			reason: "value must be inside range [0, 253402268399]",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if val := m.GetEndTime(); val < 0 || val > 253402268399 {
-		return ListCloudTrailRequestValidationError{
+		err := ListCloudTrailRequestValidationError{
 			field:  "EndTime",
 			reason: "value must be inside range [0, 253402268399]",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	// no validation rules for AttributeKey
@@ -235,8 +364,29 @@ func (m *ListCloudTrailRequest) Validate() error {
 
 	// no validation rules for NextToken
 
+	if len(errors) > 0 {
+		return ListCloudTrailRequestMultiError(errors)
+	}
+
 	return nil
 }
+
+// ListCloudTrailRequestMultiError is an error wrapping multiple validation
+// errors returned by ListCloudTrailRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ListCloudTrailRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListCloudTrailRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListCloudTrailRequestMultiError) AllErrors() []error { return m }
 
 // ListCloudTrailRequestValidationError is the validation error returned by
 // ListCloudTrailRequest.Validate if the designated constraints aren't met.
@@ -296,16 +446,49 @@ var _ interface {
 
 // Validate checks the field values on ListCloudTrailResponse with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *ListCloudTrailResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListCloudTrailResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListCloudTrailResponseMultiError, or nil if none found.
+func (m *ListCloudTrailResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListCloudTrailResponse) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	for idx, item := range m.GetCloudtrail() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ListCloudTrailResponseValidationError{
+						field:  fmt.Sprintf("Cloudtrail[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ListCloudTrailResponseValidationError{
+						field:  fmt.Sprintf("Cloudtrail[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ListCloudTrailResponseValidationError{
 					field:  fmt.Sprintf("Cloudtrail[%v]", idx),
@@ -319,8 +502,29 @@ func (m *ListCloudTrailResponse) Validate() error {
 
 	// no validation rules for NextToken
 
+	if len(errors) > 0 {
+		return ListCloudTrailResponseMultiError(errors)
+	}
+
 	return nil
 }
+
+// ListCloudTrailResponseMultiError is an error wrapping multiple validation
+// errors returned by ListCloudTrailResponse.ValidateAll() if the designated
+// constraints aren't met.
+type ListCloudTrailResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListCloudTrailResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListCloudTrailResponseMultiError) AllErrors() []error { return m }
 
 // ListCloudTrailResponseValidationError is the validation error returned by
 // ListCloudTrailResponse.Validate if the designated constraints aren't met.
@@ -380,72 +584,139 @@ var _ interface {
 
 // Validate checks the field values on ListConfigHistoryRequest with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *ListConfigHistoryRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListConfigHistoryRequest with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListConfigHistoryRequestMultiError, or nil if none found.
+func (m *ListConfigHistoryRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListConfigHistoryRequest) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	if m.GetProjectId() <= 0 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "ProjectId",
 			reason: "value must be greater than 0",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if m.GetAwsId() <= 0 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "AwsId",
 			reason: "value must be greater than 0",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if utf8.RuneCountInString(m.GetRegion()) < 1 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "Region",
 			reason: "value length must be at least 1 runes",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if utf8.RuneCountInString(m.GetResourceType()) < 1 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "ResourceType",
 			reason: "value length must be at least 1 runes",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if utf8.RuneCountInString(m.GetResourceId()) < 1 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "ResourceId",
 			reason: "value length must be at least 1 runes",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if val := m.GetLaterTime(); val < 0 || val > 253402268399 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "LaterTime",
 			reason: "value must be inside range [0, 253402268399]",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if val := m.GetEarlierTime(); val < 0 || val > 253402268399 {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "EarlierTime",
 			reason: "value must be inside range [0, 253402268399]",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	if _, ok := _ListConfigHistoryRequest_ChronologicalOrder_InLookup[m.GetChronologicalOrder()]; !ok {
-		return ListConfigHistoryRequestValidationError{
+		err := ListConfigHistoryRequestValidationError{
 			field:  "ChronologicalOrder",
 			reason: "value must be in list [Reverse Forward ]",
 		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
 	}
 
 	// no validation rules for StartingToken
 
+	if len(errors) > 0 {
+		return ListConfigHistoryRequestMultiError(errors)
+	}
+
 	return nil
 }
+
+// ListConfigHistoryRequestMultiError is an error wrapping multiple validation
+// errors returned by ListConfigHistoryRequest.ValidateAll() if the designated
+// constraints aren't met.
+type ListConfigHistoryRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListConfigHistoryRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListConfigHistoryRequestMultiError) AllErrors() []error { return m }
 
 // ListConfigHistoryRequestValidationError is the validation error returned by
 // ListConfigHistoryRequest.Validate if the designated constraints aren't met.
@@ -511,16 +782,49 @@ var _ListConfigHistoryRequest_ChronologicalOrder_InLookup = map[string]struct{}{
 
 // Validate checks the field values on ListConfigHistoryResponse with the rules
 // defined in the proto definition for this message. If any rules are
-// violated, an error is returned.
+// violated, the first error encountered is returned, or nil if there are no violations.
 func (m *ListConfigHistoryResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ListConfigHistoryResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ListConfigHistoryResponseMultiError, or nil if none found.
+func (m *ListConfigHistoryResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ListConfigHistoryResponse) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
 
+	var errors []error
+
 	for idx, item := range m.GetConfiguration() {
 		_, _ = idx, item
 
-		if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ListConfigHistoryResponseValidationError{
+						field:  fmt.Sprintf("Configuration[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ListConfigHistoryResponseValidationError{
+						field:  fmt.Sprintf("Configuration[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
 				return ListConfigHistoryResponseValidationError{
 					field:  fmt.Sprintf("Configuration[%v]", idx),
@@ -534,8 +838,29 @@ func (m *ListConfigHistoryResponse) Validate() error {
 
 	// no validation rules for NextToken
 
+	if len(errors) > 0 {
+		return ListConfigHistoryResponseMultiError(errors)
+	}
+
 	return nil
 }
+
+// ListConfigHistoryResponseMultiError is an error wrapping multiple validation
+// errors returned by ListConfigHistoryResponse.ValidateAll() if the
+// designated constraints aren't met.
+type ListConfigHistoryResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ListConfigHistoryResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ListConfigHistoryResponseMultiError) AllErrors() []error { return m }
 
 // ListConfigHistoryResponseValidationError is the validation error returned by
 // ListConfigHistoryResponse.Validate if the designated constraints aren't met.

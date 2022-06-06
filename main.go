@@ -100,7 +100,7 @@ func main() {
 		MaxConnection:  conf.DBMaxConnection,
 	}
 	db := db.NewClient(dbConf, logger)
-	server := server.NewServer(conf.Port, conf.CoreSvcAddr, db, logger)
+	server := server.NewServer(conf.Port, conf.CoreSvcAddr, conf.AWSRegion, db, logger)
 
 	err = server.Run(ctx)
 	if err != nil {
