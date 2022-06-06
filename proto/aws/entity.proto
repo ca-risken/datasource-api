@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package aws.aws;
+package datasource.aws;
 option go_package = "github.com/ca-risken/datasource-api/proto/aws";
 
 /**

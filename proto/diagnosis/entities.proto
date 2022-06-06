@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package diagnosis;
+package datasource.diagnosis;
 option go_package = "github.com/ca-risken/datasource-api/proto/diagnosis";
 
 message DiagnosisDataSource {

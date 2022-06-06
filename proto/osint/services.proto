@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package osint.osint;
+package datasource.osint;
 option go_package = "github.com/ca-risken/datasource-api/proto/osint";
 
 import "osint/entities.proto";

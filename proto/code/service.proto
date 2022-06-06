@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package code.code;
+package datasource.code;
 option go_package = "github.com/ca-risken/datasource-api/proto/code";
 
 import "google/protobuf/empty.proto";

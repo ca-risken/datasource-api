@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package aws.activity;
+package datasource.activity;
 option go_package = "github.com/ca-risken/datasource-api/proto/activity";
 
 /**

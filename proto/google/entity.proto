@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package google.google;
+package datasource.google;
 option go_package = "github.com/ca-risken/datasource-api/proto/google";
 
 /**
