@@ -17,9 +17,11 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	activityServer "github.com/ca-risken/datasource-api/pkg/server/activity"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
+	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	"github.com/ca-risken/datasource-api/proto/activity"
 	"github.com/ca-risken/datasource-api/proto/aws"
+	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/ca-risken/datasource-api/proto/google"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
@@ -35,17 +37,19 @@ type Server struct {
 	coreSvcAddr          string
 	awsRegion            string
 	googleCredentialPath string
+	dataKey              string
 	db                   *db.Client
 	queue                *queue.Client
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath string, db *db.Client, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
 		awsRegion:            awsRegion,
 		googleCredentialPath: googleCredentialPath,
+		dataKey:              dataKey,
 		db:                   db,
 		logger:               logger,
 	}
@@ -58,6 +62,7 @@ func (s *Server) Run(ctx context.Context) error {
 	awsSvc := awsServer.NewAWSSerevice(s.db, s.queue, pjClient, s.logger)
 	activitySvc := activityServer.NewActivityService(awsClient, s.awsRegion, s.logger)
 	googleSvc := googleServer.NewGoogleService(s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
+	codeSvc := codeServer.NewCodeService(s.coreSvcAddr, s.dataKey, s.db, s.queue, pjClient, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -68,6 +73,7 @@ func (s *Server) Run(ctx context.Context) error {
 	aws.RegisterAWSServiceServer(server, awsSvc)
 	activity.RegisterActivityServiceServer(server, activitySvc)
 	google.RegisterGoogleServiceServer(server, googleSvc)
+	code.RegisterCodeServiceServer(server, codeSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API

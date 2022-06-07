@@ -14,6 +14,8 @@ type MockAWSRepository struct {
 	mock.Mock
 }
 
+var _ db.AWSRepoInterface = (*MockAWSRepository)(nil) // verify interface compliance
+
 func (m *MockAWSRepository) ListAWS(context.Context, uint32, uint32, string) (*[]model.AWS, error) {
 	args := m.Called()
 	return args.Get(0).(*[]model.AWS), args.Error(1)

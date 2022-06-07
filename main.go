@@ -42,8 +42,9 @@ type AppConf struct {
 	GoogleSCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
 	GooglePortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
 
-	// google
-	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"`
+	// datasource
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
+	DataKey              string `split_words:"true" required:"true"`                                // code
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -108,7 +109,7 @@ func main() {
 		MaxConnection:  conf.DBMaxConnection,
 	}
 	db := db.NewClient(dbConf, logger)
-	server := server.NewServer(conf.Port, conf.CoreSvcAddr, conf.AWSRegion, conf.GoogleCredentialPath, db, logger)
+	server := server.NewServer(conf.Port, conf.CoreSvcAddr, conf.AWSRegion, conf.GoogleCredentialPath, conf.DataKey, db, logger)
 
 	err = server.Run(ctx)
 	if err != nil {

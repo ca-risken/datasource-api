@@ -13,6 +13,8 @@ type MockGoogleRepository struct {
 	mock.Mock
 }
 
+var _ db.GoogleRepoInterface = (*MockGoogleRepository)(nil) // verify interface compliance
+
 func (m *MockGoogleRepository) ListGoogleDataSource(ctx context.Context, googleDataSourceID uint32, name string) (*[]model.GoogleDataSource, error) {
 	args := m.Called()
 	return args.Get(0).(*[]model.GoogleDataSource), args.Error(1)
