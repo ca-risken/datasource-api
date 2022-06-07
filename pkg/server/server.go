@@ -19,10 +19,12 @@ import (
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
 	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
+	osintServer "github.com/ca-risken/datasource-api/pkg/server/osint"
 	"github.com/ca-risken/datasource-api/proto/activity"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/ca-risken/datasource-api/proto/google"
+	"github.com/ca-risken/datasource-api/proto/osint"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -63,6 +65,7 @@ func (s *Server) Run(ctx context.Context) error {
 	activitySvc := activityServer.NewActivityService(awsClient, s.awsRegion, s.logger)
 	googleSvc := googleServer.NewGoogleService(s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
 	codeSvc := codeServer.NewCodeService(s.coreSvcAddr, s.dataKey, s.db, s.queue, pjClient, s.logger)
+	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -74,6 +77,7 @@ func (s *Server) Run(ctx context.Context) error {
 	activity.RegisterActivityServiceServer(server, activitySvc)
 	google.RegisterGoogleServiceServer(server, googleSvc)
 	code.RegisterCodeServiceServer(server, codeSvc)
+	osint.RegisterOsintServiceServer(server, osintSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API

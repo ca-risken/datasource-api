@@ -42,6 +42,12 @@ type AppConf struct {
 	GoogleSCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
 	GooglePortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
 
+	GitleaksQueueURL         string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	GitleaksFullScanQueueURL string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+
+	SubdomainQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
+	WebsiteQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
+
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	DataKey              string `split_words:"true" required:"true"`                                // code
@@ -109,7 +115,15 @@ func main() {
 		MaxConnection:  conf.DBMaxConnection,
 	}
 	db := db.NewClient(dbConf, logger)
-	server := server.NewServer(conf.Port, conf.CoreSvcAddr, conf.AWSRegion, conf.GoogleCredentialPath, conf.DataKey, db, logger)
+	server := server.NewServer(
+		conf.Port,
+		conf.CoreSvcAddr,
+		conf.AWSRegion,
+		conf.GoogleCredentialPath,
+		conf.DataKey,
+		db,
+		logger,
+	)
 
 	err = server.Run(ctx)
 	if err != nil {
