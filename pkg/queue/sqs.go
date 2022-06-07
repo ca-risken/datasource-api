@@ -2,11 +2,11 @@ package queue
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/common/pkg/logging"
 )
 
 type SQSConfig struct {
@@ -27,8 +27,8 @@ type SQSConfig struct {
 	GooglePortscanQueueURL    string
 
 	// code
-	GitleaksQueueURL         string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
-	GitleaksFullScanQueueURL string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	GitleaksQueueURL         string
+	GitleaksFullScanQueueURL string
 
 	// osint
 	SubdomainQueueURL string
@@ -41,7 +41,8 @@ type SQSConfig struct {
 }
 
 type Client struct {
-	svc *sqs.SQS
+	svc    *sqs.SQS
+	logger logging.Logger
 
 	// aws
 	awsGuardDutyQueueURL      string
@@ -70,19 +71,21 @@ type Client struct {
 	diagnosisApplicationScanQueueURL string
 }
 
-func NewSQSClient(ctx context.Context, conf *SQSConfig) (*Client, error) {
+func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Client {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create session error, %w", err)
+		l.Fatalf(ctx, "Failed to create sqs session, err=%w", err)
 	}
 	session := sqs.New(sess, &aws.Config{
 		Region:   &conf.AWSRegion,
 		Endpoint: &conf.SQSEndpoint,
 	})
 	return &Client{
-		svc:                              session,
+		svc:    session,
+		logger: l,
+
 		awsGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
 		awsAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
 		awsAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
@@ -94,10 +97,12 @@ func NewSQSClient(ctx context.Context, conf *SQSConfig) (*Client, error) {
 		googlePortscanQueueURL:           conf.GooglePortscanQueueURL,
 		gitleaksQueueURL:                 conf.GitleaksQueueURL,
 		gitleaksFullScanQueueURL:         conf.GitleaksFullScanQueueURL,
+		subdomainQueueURL:                conf.SubdomainQueueURL,
+		websiteQueueURL:                  conf.WebsiteQueueURL,
 		diagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		diagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		diagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
-	}, nil
+	}
 }
 
 func (c *Client) send(ctx context.Context, url string, buf *[]byte) (*sqs.SendMessageOutput, error) {

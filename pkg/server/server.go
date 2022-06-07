@@ -47,7 +47,7 @@ type Server struct {
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
@@ -55,6 +55,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		googleCredentialPath: googleCredentialPath,
 		dataKey:              dataKey,
 		db:                   db,
+		queue:                q,
 		logger:               logger,
 	}
 }

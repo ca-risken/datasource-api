@@ -8,6 +8,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	"github.com/ca-risken/common/pkg/tracer"
 	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/queue"
 	"github.com/ca-risken/datasource-api/pkg/server"
 	"github.com/gassara-kys/envconfig"
 )
@@ -31,23 +32,19 @@ type AppConf struct {
 	AWSRegion   string `envconfig:"aws_region" default:"ap-northeast-1"`
 	SQSEndpoint string `envconfig:"sqs_endpoint" default:"http://queue.middleware.svc.cluster.local:9324"`
 
-	AWSGuardDutyQueueURL      string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-guardduty"`
-	AWSAccessAnalyzerQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-accessanalyzer"`
-	AWSAdminCheckerQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-adminchecker"`
-	AWSCloudSploitQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit"`
-	AWSPortscanQueueURL       string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
-
-	GoogleAssetQueueURL       string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
-	GoogleCloudSploitQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
-	GoogleSCCQueueURL         string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
-	GooglePortscanQueueURL    string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
-
-	GitleaksQueueURL         string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
-	GitleaksFullScanQueueURL string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
-
-	SubdomainQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
-	WebsiteQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
-
+	AWSGuardDutyQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-guardduty"`
+	AWSAccessAnalyzerQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-accessanalyzer"`
+	AWSAdminCheckerQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-adminchecker"`
+	AWSCloudSploitQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit"`
+	AWSPortscanQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
+	GoogleAssetQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
+	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
+	GoogleSCCQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
+	GooglePortscanQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
+	GitleaksQueueURL                 string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	GitleaksFullScanQueueURL         string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	SubdomainQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
+	WebsiteQueueURL                  string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
 	DiagnosisWpscanQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-wpscan"`
 	DiagnosisPortscanQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-portscan"`
 	DiagnosisApplicationScanQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-applicationscan"`
@@ -119,6 +116,28 @@ func main() {
 		MaxConnection:  conf.DBMaxConnection,
 	}
 	db := db.NewClient(dbConf, logger)
+	queueConf := &queue.SQSConfig{
+		AWSRegion:   conf.AWSRegion,
+		SQSEndpoint: conf.SQSEndpoint,
+
+		AWSGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
+		AWSAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
+		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
+		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
+		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
+		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
+		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
+		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
+		GitleaksQueueURL:                 conf.GitleaksQueueURL,
+		GitleaksFullScanQueueURL:         conf.GitleaksFullScanQueueURL,
+		SubdomainQueueURL:                conf.SubdomainQueueURL,
+		WebsiteQueueURL:                  conf.WebsiteQueueURL,
+		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
+		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
+		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
+	}
+	q := queue.NewSQSClient(ctx, queueConf, logger)
 	server := server.NewServer(
 		conf.Port,
 		conf.CoreSvcAddr,
@@ -126,6 +145,7 @@ func main() {
 		conf.GoogleCredentialPath,
 		conf.DataKey,
 		db,
+		q,
 		logger,
 	)
 
