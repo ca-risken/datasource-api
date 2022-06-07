@@ -20,11 +20,11 @@ type GoogleRepoInterface interface {
 	DeleteGCP(ctx context.Context, projectID uint32, gcpID uint32) error
 
 	// gcp_data_source
-	ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]gcpDataSource, error)
-	GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error)
-	UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error)
+	ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]GCPDataSource, error)
+	GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*GCPDataSource, error)
+	UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*GCPDataSource, error)
 	DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error
-	ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]gcpDataSource, error)
+	ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]GCPDataSource, error)
 }
 
 var _ GoogleRepoInterface = (*Client)(nil) // verify interface compliance
@@ -140,7 +140,7 @@ func (c *Client) DeleteGCP(ctx context.Context, projectID, gcpID uint32) error {
 	return nil
 }
 
-type gcpDataSource struct {
+type GCPDataSource struct {
 	GCPID              uint32 `gorm:"primary_key column:gcp_id"`
 	GoogleDataSourceID uint32 `gorm:"primary_key"`
 	ProjectID          uint32
@@ -156,7 +156,7 @@ type gcpDataSource struct {
 	GCPProjectID       string  // gcp.gcp_project_id
 }
 
-func (c *Client) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]gcpDataSource, error) {
+func (c *Client) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]GCPDataSource, error) {
 	query := `
 select
   gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
@@ -176,7 +176,7 @@ where
 		query += " and gds.gcp_id = ?"
 		params = append(params, gcpID)
 	}
-	data := []gcpDataSource{}
+	data := []GCPDataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
@@ -194,8 +194,8 @@ where
 	gds.project_id=? and gds.gcp_id=? and gds.google_data_source_id=?
 `
 
-func (c *Client) GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*gcpDataSource, error) {
-	data := gcpDataSource{}
+func (c *Client) GetGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) (*GCPDataSource, error) {
+	data := GCPDataSource{}
 	if err := c.MasterDB.WithContext(ctx).Raw(selectGetGCPDataSource, projectID, gcpID, googleDataSourceID).Scan(&data).Error; err != nil {
 		return nil, err
 	}
@@ -219,7 +219,7 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
-func (c *Client) UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*gcpDataSource, error) {
+func (c *Client) UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*GCPDataSource, error) {
 	// Check master table exists
 	if _, err := c.GetGoogleDataSource(ctx, gcpDataSource.GoogleDataSourceId); err != nil {
 		c.logger.Errorf(ctx, "Not exists google_data_source or DB error: google_data_source_id=%d", gcpDataSource.GoogleDataSourceId)
@@ -253,7 +253,7 @@ func (c *Client) DeleteGCPDataSource(ctx context.Context, projectID, gcpID, goog
 	return nil
 }
 
-func (c *Client) ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]gcpDataSource, error) {
+func (c *Client) ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]GCPDataSource, error) {
 	query := `
 select
   gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
@@ -266,7 +266,7 @@ from
 		query += " where google_data_source_id = ?"
 		params = append(params, googleDataSourceID)
 	}
-	data := []gcpDataSource{}
+	data := []GCPDataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}

@@ -17,8 +17,10 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	activityServer "github.com/ca-risken/datasource-api/pkg/server/activity"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
+	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	"github.com/ca-risken/datasource-api/proto/activity"
 	"github.com/ca-risken/datasource-api/proto/aws"
+	"github.com/ca-risken/datasource-api/proto/google"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -29,21 +31,23 @@ import (
 )
 
 type Server struct {
-	port        string
-	coreSvcAddr string
-	awsRegion   string
-	db          *db.Client
-	queue       *queue.Client
-	logger      logging.Logger
+	port                 string
+	coreSvcAddr          string
+	awsRegion            string
+	googleCredentialPath string
+	db                   *db.Client
+	queue                *queue.Client
+	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion string, db *db.Client, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath string, db *db.Client, logger logging.Logger) *Server {
 	return &Server{
-		port:        port,
-		coreSvcAddr: coreSvcAddr,
-		awsRegion:   awsRegion,
-		db:          db,
-		logger:      logger,
+		port:                 port,
+		coreSvcAddr:          coreSvcAddr,
+		awsRegion:            awsRegion,
+		googleCredentialPath: googleCredentialPath,
+		db:                   db,
+		logger:               logger,
 	}
 }
 
@@ -51,8 +55,9 @@ func (s *Server) Run(ctx context.Context) error {
 	localServerAddr := fmt.Sprintf(":%s", s.port)
 	pjClient := s.newProjectClient(s.coreSvcAddr)
 	awsClient := s.newAWSClient(localServerAddr)
-	awsSvc := awsServer.NewAWSSerevice(ctx, s.db, s.queue, pjClient, s.logger)
-	activitySvc := activityServer.NewActivityService(ctx, awsClient, s.awsRegion, s.logger)
+	awsSvc := awsServer.NewAWSSerevice(s.db, s.queue, pjClient, s.logger)
+	activitySvc := activityServer.NewActivityService(awsClient, s.awsRegion, s.logger)
+	googleSvc := googleServer.NewGoogleService(s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -62,6 +67,7 @@ func (s *Server) Run(ctx context.Context) error {
 				mimosarpc.LoggingUnaryServerInterceptor(s.logger))))
 	aws.RegisterAWSServiceServer(server, awsSvc)
 	activity.RegisterActivityServiceServer(server, activitySvc)
+	google.RegisterGoogleServiceServer(server, googleSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
