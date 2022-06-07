@@ -1,5 +1,11 @@
 package message
 
+const (
+	DataSourceNameWPScan          = "diagnosis:wpscan"
+	DataSourceNamePortScan        = "diagnosis:portscan"
+	DataSourceNameApplicationScan = "diagnosis:application-scan"
+)
+
 // WpscanQueueMessage is the message for SQS queue for Wpscan
 type WpscanQueueMessage struct {
 	DataSource      string `json:"data_source"`
