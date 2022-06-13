@@ -20,9 +20,9 @@ func (c *Client) SendGitleaksMessage(ctx context.Context, msg *message.GitleaksQ
 	if err != nil {
 		return nil, fmt.Errorf("parse error, err=%w", err)
 	}
-	url := c.gitleaksQueueURL
-	if fullScan && c.gitleaksFullScanQueueURL != "" {
-		url = c.gitleaksFullScanQueueURL
+	url := c.codeGitleaksQueueURL
+	if fullScan && c.codeGitleaksFullScanQueueURL != "" {
+		url = c.codeGitleaksFullScanQueueURL
 	}
 	return c.send(ctx, url, &buf)
 }

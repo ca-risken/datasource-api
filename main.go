@@ -41,10 +41,10 @@ type AppConf struct {
 	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
 	GoogleSCCQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
 	GooglePortscanQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
-	GitleaksQueueURL                 string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
-	GitleaksFullScanQueueURL         string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
-	SubdomainQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
-	WebsiteQueueURL                  string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
+	CodeGitleaksQueueURL             string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	CodeGitleaksFullScanQueueURL     string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
+	OSINTSubdomainQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
+	OSINTWebsiteQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
 	DiagnosisWpscanQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-wpscan"`
 	DiagnosisPortscanQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-portscan"`
 	DiagnosisApplicationScanQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-applicationscan"`
@@ -129,10 +129,10 @@ func main() {
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
 		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
-		GitleaksQueueURL:                 conf.GitleaksQueueURL,
-		GitleaksFullScanQueueURL:         conf.GitleaksFullScanQueueURL,
-		SubdomainQueueURL:                conf.SubdomainQueueURL,
-		WebsiteQueueURL:                  conf.WebsiteQueueURL,
+		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
+		CodeGitleaksFullScanQueueURL:     conf.CodeGitleaksFullScanQueueURL,
+		OSINTSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
+		OSINTWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,

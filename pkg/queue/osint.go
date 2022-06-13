@@ -17,11 +17,11 @@ type OSINTQueueAPI interface {
 var _ OSINTQueueAPI = (*Client)(nil) // verify interface compliance
 
 func (c *Client) SendOSINTSubdomainMessage(ctx context.Context, msg *message.OsintQueueMessage) (*sqs.SendMessageOutput, error) {
-	return c.sendOSINTMessage(ctx, c.subdomainQueueURL, msg)
+	return c.sendOSINTMessage(ctx, c.osintSubdomainQueueURL, msg)
 }
 
 func (c *Client) SendOSINTWebsiteMessage(ctx context.Context, msg *message.OsintQueueMessage) (*sqs.SendMessageOutput, error) {
-	return c.sendOSINTMessage(ctx, c.websiteQueueURL, msg)
+	return c.sendOSINTMessage(ctx, c.osintWebsiteQueueURL, msg)
 }
 
 func (c *Client) sendOSINTMessage(ctx context.Context, url string, msg *message.OsintQueueMessage) (*sqs.SendMessageOutput, error) {

@@ -27,12 +27,12 @@ type SQSConfig struct {
 	GooglePortscanQueueURL    string
 
 	// code
-	GitleaksQueueURL         string
-	GitleaksFullScanQueueURL string
+	CodeGitleaksQueueURL         string
+	CodeGitleaksFullScanQueueURL string
 
 	// osint
-	SubdomainQueueURL string
-	WebsiteQueueURL   string
+	OSINTSubdomainQueueURL string
+	OSINTWebsiteQueueURL   string
 
 	// diagnosis
 	DiagnosisWpscanQueueURL          string
@@ -58,12 +58,12 @@ type Client struct {
 	googlePortscanQueueURL    string
 
 	// code
-	gitleaksQueueURL         string
-	gitleaksFullScanQueueURL string
+	codeGitleaksQueueURL         string
+	codeGitleaksFullScanQueueURL string
 
 	// osint
-	subdomainQueueURL string
-	websiteQueueURL   string
+	osintSubdomainQueueURL string
+	osintWebsiteQueueURL   string
 
 	// diagnosis
 	diagnosisWpscanQueueURL          string
@@ -95,10 +95,10 @@ func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Clien
 		googleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		googleSCCQueueURL:                conf.GoogleSCCQueueURL,
 		googlePortscanQueueURL:           conf.GooglePortscanQueueURL,
-		gitleaksQueueURL:                 conf.GitleaksQueueURL,
-		gitleaksFullScanQueueURL:         conf.GitleaksFullScanQueueURL,
-		subdomainQueueURL:                conf.SubdomainQueueURL,
-		websiteQueueURL:                  conf.WebsiteQueueURL,
+		codeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
+		codeGitleaksFullScanQueueURL:     conf.CodeGitleaksFullScanQueueURL,
+		osintSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
+		osintWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
 		diagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		diagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		diagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
