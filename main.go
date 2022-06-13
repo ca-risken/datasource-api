@@ -114,7 +114,7 @@ func main() {
 		LogMode:        conf.DBLogMode,
 		MaxConnection:  conf.DBMaxConnection,
 	}
-	db := db.NewClient(dbConf, logger)
+	d := db.NewClient(dbConf, logger)
 	queueConf := &queue.SQSConfig{
 		AWSRegion:   conf.AWSRegion,
 		SQSEndpoint: conf.SQSEndpoint,
@@ -136,18 +136,18 @@ func main() {
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 	}
 	q := queue.NewSQSClient(ctx, queueConf, logger)
-	server := server.NewServer(
+	s := server.NewServer(
 		conf.Port,
 		conf.CoreSvcAddr,
 		conf.AWSRegion,
 		conf.GoogleCredentialPath,
 		conf.CodeDataKey,
-		db,
+		d,
 		q,
 		logger,
 	)
 
-	err = server.Run(ctx)
+	err = s.Run(ctx)
 	if err != nil {
 		logger.Fatalf(ctx, "failed to run server: %w", err)
 	}

@@ -78,12 +78,12 @@ func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Clien
 	if err != nil {
 		l.Fatalf(ctx, "Failed to create sqs session, err=%w", err)
 	}
-	session := sqs.New(sess, &aws.Config{
+	sqsClient := sqs.New(sess, &aws.Config{
 		Region:   &conf.AWSRegion,
 		Endpoint: &conf.SQSEndpoint,
 	})
 	return &Client{
-		svc:    session,
+		svc:    sqsClient,
 		logger: l,
 
 		AWSGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
