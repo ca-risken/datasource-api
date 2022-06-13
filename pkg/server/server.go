@@ -61,7 +61,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 func (s *Server) Run(ctx context.Context) error {
 	localServerAddr := fmt.Sprintf(":%s", s.port)
 	pjClient := s.newProjectClient(s.coreSvcAddr)
-	awsSvc := awsServer.NewAWSSerevice(s.db, s.queue, pjClient, s.logger)
+	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc := googleServer.NewGoogleService(s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
 	codeSvc := codeServer.NewCodeService(s.coreSvcAddr, s.dataKey, s.db, s.queue, pjClient, s.logger)
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)

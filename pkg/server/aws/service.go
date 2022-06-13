@@ -14,7 +14,7 @@ type AWSService struct {
 	logger        logging.Logger
 }
 
-func NewAWSSerevice(repo db.AWSRepoInterface, q queue.AWSQueueAPI, pj project.ProjectServiceClient, l logging.Logger) *AWSService {
+func NewAWSService(repo db.AWSRepoInterface, q queue.AWSQueueAPI, pj project.ProjectServiceClient, l logging.Logger) *AWSService {
 	return &AWSService{
 		repository:    repo,
 		sqs:           q,
