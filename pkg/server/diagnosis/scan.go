@@ -40,7 +40,7 @@ func (d *DiagnosisService) InvokeScan(ctx context.Context, req *diagnosis.Invoke
 			return nil, err
 		}
 		msg.ScanOnly = req.ScanOnly
-		resp, err = d.sqs.SendWpscanMessage(ctx, msg)
+		resp, err = d.sqs.Send(ctx, d.sqs.DiagnosisWpscanQueueURL, msg)
 		if err != nil {
 			d.logger.Errorf(ctx, "Error occured when sending WPScan message, error: %v", err)
 			return nil, err
@@ -80,7 +80,7 @@ func (d *DiagnosisService) InvokeScan(ctx context.Context, req *diagnosis.Invoke
 				continue
 			}
 			msg.ScanOnly = req.ScanOnly
-			resp, err = d.sqs.SendPortscanMessage(ctx, msg)
+			resp, err = d.sqs.Send(ctx, d.sqs.DiagnosisPortscanQueueURL, msg)
 			if err != nil {
 				d.logger.Errorf(ctx, "Error occured when sending Portscan message, error: %v", err)
 				continue
@@ -121,7 +121,7 @@ func (d *DiagnosisService) InvokeScan(ctx context.Context, req *diagnosis.Invoke
 			return nil, err
 		}
 		msg.ScanOnly = req.ScanOnly
-		resp, err = d.sqs.SendApplicationScanMessage(ctx, msg)
+		resp, err = d.sqs.Send(ctx, d.sqs.DiagnosisApplicationScanQueueURL, msg)
 		if err != nil {
 			return nil, err
 		}

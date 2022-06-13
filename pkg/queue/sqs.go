@@ -2,6 +2,8 @@ package queue
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -27,8 +29,7 @@ type SQSConfig struct {
 	GooglePortscanQueueURL    string
 
 	// code
-	CodeGitleaksQueueURL         string
-	CodeGitleaksFullScanQueueURL string
+	CodeGitleaksQueueURL string
 
 	// osint
 	OSINTSubdomainQueueURL string
@@ -45,30 +46,29 @@ type Client struct {
 	logger logging.Logger
 
 	// aws
-	awsGuardDutyQueueURL      string
-	awsAccessAnalyzerQueueURL string
-	awsAdminCheckerQueueURL   string
-	awsCloudSploitQueueURL    string
-	awsPortscanQueueURL       string
+	AWSGuardDutyQueueURL      string
+	AWSAccessAnalyzerQueueURL string
+	AWSAdminCheckerQueueURL   string
+	AWSCloudSploitQueueURL    string
+	AWSPortscanQueueURL       string
 
 	// google
-	googleAssetQueueURL       string
-	googleCloudSploitQueueURL string
-	googleSCCQueueURL         string
-	googlePortscanQueueURL    string
+	GoogleAssetQueueURL       string
+	GoogleCloudSploitQueueURL string
+	GoogleSCCQueueURL         string
+	GooglePortscanQueueURL    string
 
 	// code
-	codeGitleaksQueueURL         string
-	codeGitleaksFullScanQueueURL string
+	CodeGitleaksQueueURL string
 
 	// osint
-	osintSubdomainQueueURL string
-	osintWebsiteQueueURL   string
+	OSINTSubdomainQueueURL string
+	OSINTWebsiteQueueURL   string
 
 	// diagnosis
-	diagnosisWpscanQueueURL          string
-	diagnosisPortscanQueueURL        string
-	diagnosisApplicationScanQueueURL string
+	DiagnosisWpscanQueueURL          string
+	DiagnosisPortscanQueueURL        string
+	DiagnosisApplicationScanQueueURL string
 }
 
 func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Client {
@@ -86,28 +86,31 @@ func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Clien
 		svc:    session,
 		logger: l,
 
-		awsGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
-		awsAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
-		awsAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
-		awsCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
-		awsPortscanQueueURL:              conf.AWSPortscanQueueURL,
-		googleAssetQueueURL:              conf.GoogleAssetQueueURL,
-		googleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
-		googleSCCQueueURL:                conf.GoogleSCCQueueURL,
-		googlePortscanQueueURL:           conf.GooglePortscanQueueURL,
-		codeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
-		codeGitleaksFullScanQueueURL:     conf.CodeGitleaksFullScanQueueURL,
-		osintSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
-		osintWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
-		diagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
-		diagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
-		diagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
+		AWSGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
+		AWSAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
+		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
+		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
+		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
+		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
+		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
+		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
+		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
+		OSINTSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
+		OSINTWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
+		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
+		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
+		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 	}
 }
 
-func (c *Client) send(ctx context.Context, url string, buf *[]byte) (*sqs.SendMessageOutput, error) {
+func (c *Client) Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error) {
+	buf, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("parse error, err=%w", err)
+	}
 	resp, err := c.svc.SendMessageWithContext(ctx, &sqs.SendMessageInput{
-		MessageBody:  aws.String(string(*buf)),
+		MessageBody:  aws.String(string(buf)),
 		QueueUrl:     &url,
 		DelaySeconds: aws.Int64(1),
 	})

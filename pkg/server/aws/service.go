@@ -9,12 +9,12 @@ import (
 
 type AWSService struct {
 	repository    db.AWSRepoInterface
-	sqs           queue.AWSQueueAPI
+	sqs           *queue.Client
 	projectClient project.ProjectServiceClient
 	logger        logging.Logger
 }
 
-func NewAWSService(repo db.AWSRepoInterface, q queue.AWSQueueAPI, pj project.ProjectServiceClient, l logging.Logger) *AWSService {
+func NewAWSService(repo db.AWSRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) *AWSService {
 	return &AWSService{
 		repository:    repo,
 		sqs:           q,

@@ -14,13 +14,13 @@ import (
 
 type CodeService struct {
 	repository    db.CodeRepoInterface
-	sqs           queue.CodeQueueAPI
+	sqs           *queue.Client
 	cipherBlock   cipher.Block
 	projectClient project.ProjectServiceClient
 	logger        logging.Logger
 }
 
-func NewCodeService(coreSvcAddr, dataKey string, repo db.CodeRepoInterface, q queue.CodeQueueAPI, pj project.ProjectServiceClient, l logging.Logger) code.CodeServiceServer {
+func NewCodeService(coreSvcAddr, dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) code.CodeServiceServer {
 	ctx := context.Background()
 	key := []byte(dataKey)
 	block, err := aes.NewCipher(key)

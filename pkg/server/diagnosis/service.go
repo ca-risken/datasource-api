@@ -9,12 +9,12 @@ import (
 
 type DiagnosisService struct {
 	repository    db.DiagnosisRepoInterface
-	sqs           queue.DiagnosisQueueAPI
+	sqs           *queue.Client
 	projectClient project.ProjectServiceClient
 	logger        logging.Logger
 }
 
-func NewDiagnosisService(repo db.DiagnosisRepoInterface, q queue.DiagnosisQueueAPI, pj project.ProjectServiceClient, l logging.Logger) *DiagnosisService {
+func NewDiagnosisService(repo db.DiagnosisRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) *DiagnosisService {
 	return &DiagnosisService{
 		repository:    repo,
 		sqs:           q,

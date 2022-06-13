@@ -9,12 +9,12 @@ import (
 
 type OsintService struct {
 	repository    db.OSINTRepoInterface
-	sqs           queue.OSINTQueueAPI
+	sqs           *queue.Client
 	projectClient project.ProjectServiceClient
 	logger        logging.Logger
 }
 
-func NewOsintService(repo db.OSINTRepoInterface, q queue.OSINTQueueAPI, pj project.ProjectServiceClient, l logging.Logger) *OsintService {
+func NewOsintService(repo db.OSINTRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) *OsintService {
 	return &OsintService{
 		repository:    repo,
 		sqs:           q,

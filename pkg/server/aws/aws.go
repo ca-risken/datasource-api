@@ -182,15 +182,15 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 	msg.ScanOnly = req.ScanOnly
 	var resp *sqs.SendMessageOutput
 	if msg.DataSource == message.AWSAccessAnalyzerDataSource {
-		resp, err = a.sqs.SendAWSAccessAnalyzerMessage(ctx, msg)
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSAccessAnalyzerQueueURL, msg)
 	} else if msg.DataSource == message.AWSAdminCheckerDataSource {
-		resp, err = a.sqs.SendAWSAdminCheckerMessage(ctx, msg)
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSAdminCheckerQueueURL, msg)
 	} else if msg.DataSource == message.AWSCloudSploitDataSource {
-		resp, err = a.sqs.SendAWSCloudSploitMessage(ctx, msg)
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
 	} else if msg.DataSource == message.AWSGuardDutyDataSource {
-		resp, err = a.sqs.SendAWSGuardDutyMessage(ctx, msg)
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSGuardDutyQueueURL, msg)
 	} else if msg.DataSource == message.AWSPortscanDataSource {
-		resp, err = a.sqs.SendAWSPortscanMessage(ctx, msg)
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSPortscanQueueURL, msg)
 	} else {
 		return nil, fmt.Errorf("unknown datasource, datasource=%s", msg.DataSource)
 	}
