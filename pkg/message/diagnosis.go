@@ -1,5 +1,7 @@
 package message
 
+import "encoding/json"
+
 const (
 	DataSourceNameWPScan          = "diagnosis:wpscan"
 	DataSourceNamePortScan        = "diagnosis:portscan"
@@ -34,4 +36,31 @@ type ApplicationScanQueueMessage struct {
 	Name                string `json:"name"`
 	ApplicationScanType string `json:"application_scan_type"`
 	ScanOnly            bool   `json:"scan_only,string"`
+}
+
+// ParseWpscanMessage parse wpscan message
+func ParseWpscanMessage(msg string) (*WpscanQueueMessage, error) {
+	message := &WpscanQueueMessage{}
+	if err := json.Unmarshal([]byte(msg), message); err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+// ParsePortscanMessage parse portscan message
+func ParsePortscanMessage(msg string) (*PortscanQueueMessage, error) {
+	message := &PortscanQueueMessage{}
+	if err := json.Unmarshal([]byte(msg), message); err != nil {
+		return nil, err
+	}
+	return message, nil
+}
+
+// ParseApplicationScanMessage parse applicationscan message
+func ParseApplicationScanMessage(msg string) (*ApplicationScanQueueMessage, error) {
+	message := &ApplicationScanQueueMessage{}
+	if err := json.Unmarshal([]byte(msg), message); err != nil {
+		return nil, err
+	}
+	return message, nil
 }
