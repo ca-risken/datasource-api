@@ -3,9 +3,7 @@ package message
 import (
 	"encoding/json"
 	"strings"
-	"time"
 
-	"github.com/ca-risken/datasource-api/proto/aws"
 	validation "github.com/go-ozzo/ozzo-validation"
 )
 
@@ -63,24 +61,6 @@ func ParseMessageAWS(msg string) (*AWSQueueMessage, error) {
 		return nil, err
 	}
 	return message, nil
-}
-
-// InitScanStatusAWS return init aws.AttachDataSourceRequest data
-func InitScanStatusAWS(message *AWSQueueMessage) aws.AttachDataSourceRequest {
-	return aws.AttachDataSourceRequest{
-		ProjectId: message.ProjectID,
-		AttachDataSource: &aws.DataSourceForAttach{
-			AwsId:           message.AWSID,
-			AwsDataSourceId: message.AWSDataSourceID,
-			ProjectId:       message.ProjectID,
-			AssumeRoleArn:   message.AssumeRoleArn,
-			ExternalId:      message.ExternalID,
-			ScanAt:          time.Now().Unix(),
-			// to be updated below, after the scan
-			Status:       aws.Status_UNKNOWN,
-			StatusDetail: "",
-		},
-	}
 }
 
 func IsMatchAccountIDArn(accountID, arn string) bool {
