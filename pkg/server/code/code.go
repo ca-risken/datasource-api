@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/ca-risken/core/proto/project"
-	"github.com/ca-risken/datasource-api/pkg/crypto"
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
@@ -125,7 +124,7 @@ func (c *CodeService) PutGitleaks(ctx context.Context, req *code.PutGitleaksRequ
 		return nil, err
 	}
 	if req.Gitleaks.PersonalAccessToken != "" && req.Gitleaks.PersonalAccessToken != maskData {
-		encrypted, err := crypto.EncryptWithBase64(&c.cipherBlock, req.Gitleaks.PersonalAccessToken)
+		encrypted, err := encryptWithBase64(&c.cipherBlock, req.Gitleaks.PersonalAccessToken)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to encrypt PAT: err=%+v", err)
 			return nil, err
