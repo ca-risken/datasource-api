@@ -5,7 +5,7 @@
 ![Build Status](https://codebuild.ap-northeast-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiM09KWEhQRHZEQTZoeDN5dnNxaU9MZDI5TCtLckRvd2dMQVRMUVpBeWd3WVg2S0lFNUVvd0ZsN3l1U014WC9nUW9RWlozcHlpN2FLeFl4ZjZEQm9keGZNPSIsIml2UGFyYW1ldGVyU3BlYyI6IlYzdEFGZFdDdkRsV1QyL04iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=main)
 
 `RISKEN` is a monitoring tool for your cloud platforms, web-site, source-code... 
-`RISKEN DataSource API` is a security monitoring system for datasouces(e.g. aws, google, osint..) that searches, analyzes, evaluate, and alerts on discovered threat information.
+`RISKEN DataSource API` provides APIs for controlling various datasources(e.g. aws, google, osint..). For example, to reference and register scan settings, and to invoke scan execution.
 
 Please check [RISKEN Documentation](https://docs.security-hub.jp/).
 
@@ -42,7 +42,7 @@ Deploy the pre-built containers to the Kubernetes environment on your local mach
 - Follow the [documentation](https://docs.security-hub.jp/admin/infra_local/#risken) to download the Kubernetes manifest sample.
 - Fix the Kubernetes object specs of the manifest file as follows and deploy it.
 
-`k8s-sample/overlays/local/datasource-api.yaml`
+TODO: `k8s-sample/overlays/local/datasource-api.yaml`
 
 | service        | spec                                | before (public images) | after (pre-build images on your machine) |
 | -------------- | ----------------------------------- | ---------------------- | ---------------------------------------- |
