@@ -45,7 +45,7 @@ ENV PORT= \
     DIAGNOSIS_WPSCAN_QUEUE_URL= \
     DIAGNOSIS_APPLICATIONSCAN_QUEUE_URL= \
     DIAGNOSIS_PORTSCAN_QUEUE_URL= \
-    DATA_KEY= \
+    CODE_DATA_KEY= \
     TZ=Asia/Tokyo
 WORKDIR /usr/local/
 ENTRYPOINT ["/usr/local/bin/env-injector", "docker-entrypoint.sh"]

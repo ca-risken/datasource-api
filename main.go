@@ -51,7 +51,7 @@ type AppConf struct {
 
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
-	DataKey              string `split_words:"true" required:"true"`                                // code
+	CodeDataKey          string `split_words:"true" required:"true"`                                // code
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -143,7 +143,7 @@ func main() {
 		conf.CoreSvcAddr,
 		conf.AWSRegion,
 		conf.GoogleCredentialPath,
-		conf.DataKey,
+		conf.CodeDataKey,
 		db,
 		q,
 		logger,
