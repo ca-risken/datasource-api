@@ -45,22 +45,9 @@ proto-without-validate: fmt
 			proto/$$svc/*.proto; \
 	done
 
-# build with protoc-gen-validate
-.PHONY: proto-validate
-proto-validate: fmt
-	for svc in "activity"; do \
-		protoc \
-			--proto_path=proto \
-			--error_format=gcc \
-			-I $(GOPATH)/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v0.6.7 \
-			--go_out=plugins=grpc,paths=source_relative:proto \
-			--validate_out="lang=go,paths=source_relative:proto" \
-			proto/$$svc/*.proto; \
-	done
-
 .PHONY: proto
-# proto : proto-without-validate proto-validate proto-mock 
-proto : proto-without-validate proto-validate  # TODO add proto-mock
+# proto : proto-without-validate proto-mock 
+proto : proto-without-validate # TODO add proto-mock
 
 PHONY: build
 build: test
