@@ -2,7 +2,6 @@ package message
 
 import (
 	"encoding/json"
-	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation"
 )
@@ -61,12 +60,4 @@ func ParseMessageAWS(msg string) (*AWSQueueMessage, error) {
 		return nil, err
 	}
 	return message, nil
-}
-
-func IsMatchAccountIDArn(accountID, arn string) bool {
-	if !strings.Contains(arn, "::") {
-		return false
-	}
-	tmp := strings.Split(arn, "::")[1]
-	return strings.HasPrefix(tmp, accountID)
 }
