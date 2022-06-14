@@ -37,16 +37,7 @@ $ make build
 
 ### Running Apps
 
-Deploy the pre-built containers to the Kubernetes environment on your local machine.
-
-- Follow the [documentation](https://docs.security-hub.jp/admin/infra_local/#risken) to download the Kubernetes manifest sample.
-- Fix the Kubernetes object specs of the manifest file as follows and deploy it.
-
-TODO: `k8s-sample/overlays/local/datasource-api.yaml`
-
-| service        | spec                                | before (public images) | after (pre-build images on your machine) |
-| -------------- | ----------------------------------- | ---------------------- | ---------------------------------------- |
-| datasource-api | spec.template.spec.containers.image | `TBD`                  | `risken-datasource-api:latest`           |
+TODO k8s-sampleに追加したら追加
 
 ## Community
 
