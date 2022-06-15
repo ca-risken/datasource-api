@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	nameSpace   = "datasource-api"
+	nameSpace   = "core"
 	serviceName = "datasource-api"
 )
 
