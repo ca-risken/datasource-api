@@ -3,7 +3,7 @@ version: 0.2
 env:
   variables:
     PUBLIC_REGISTRY: 'public.ecr.aws/risken'
-    IMAGE_NAME: 'datasource-api'
+    IMAGE_NAME: 'risken-datasource-api'
 
 phases:
   pre_build:
