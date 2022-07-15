@@ -12,35 +12,41 @@ type CodeDataSource struct {
 	UpdatedAt        time.Time
 }
 
-// CodeGitleaks entity
-type CodeGitleaks struct {
-	GitleaksID          uint32 `gorm:"primary_key"`
-	CodeDataSourceID    uint32
+// CodeGithubSetting entity
+type CodeGithubSetting struct {
+	CodeGithubSettingID uint32 `gorm:"primary_key"`
 	Name                string
 	ProjectID           uint32
 	Type                string
 	BaseURL             string
 	TargetResource      string
-	RepositoryPattern   string
 	GithubUser          string
 	PersonalAccessToken string
-	ScanPublic          bool
-	ScanInternal        bool
-	ScanPrivate         bool
-	GitleaksConfig      string
-	Status              string
-	StatusDetail        string
-	ScanAt              time.Time
-	ScanSucceededAt     *time.Time
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
 
-// CodeEnterpriseOrg entity
-type CodeEnterpriseOrg struct {
-	GitleaksID uint32 `gorm:"primary_key"`
-	Login      string `gorm:"primary_key"`
-	ProjectID  uint32
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+// CodeGitleaksSetting entity
+type CodeGitleaksSetting struct {
+	CodeGithubSettingID uint32 `gorm:"primary_key"`
+	CodeDataSourceID    uint32
+	ProjectID           uint32
+	RepositoryPattern   string
+	ScanPublic          bool
+	ScanInternal        bool
+	ScanPrivate         bool
+	Status              string
+	StatusDetail        string
+	ScanAt              time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+// CodeGithubEnterpriseOrg entity
+type CodeGithubEnterpriseOrg struct {
+	CodeGithubSettingID uint32 `gorm:"primary_key"`
+	Organization        string `gorm:"primary_key"`
+	ProjectID           uint32
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
