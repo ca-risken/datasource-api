@@ -134,16 +134,16 @@ func (c *CodeService) PutGitleaks(ctx context.Context, req *code.PutGitleaksRequ
 	} else {
 		req.Gitleaks.PersonalAccessToken = "" // for not update token.
 	}
-	registerdGithubSetting, err := c.repository.UpsertGithubSetting(ctx, req.Gitleaks)
+	registeredGithubSetting, err := c.repository.UpsertGithubSetting(ctx, req.Gitleaks)
 	if err != nil {
 		return nil, err
 	}
-	req.Gitleaks.GitleaksId = registerdGithubSetting.CodeGithubSettingID
-	registerdGitleaksSetting, err := c.repository.UpsertGitleaksSetting(ctx, req.Gitleaks)
+	req.Gitleaks.GitleaksId = registeredGithubSetting.CodeGithubSettingID
+	registeredGitleaksSetting, err := c.repository.UpsertGitleaksSetting(ctx, req.Gitleaks)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutGitleaksResponse{Gitleaks: convertGitleaks(registerdGithubSetting, registerdGitleaksSetting, true)}, nil
+	return &code.PutGitleaksResponse{Gitleaks: convertGitleaks(registeredGithubSetting, registeredGitleaksSetting, true)}, nil
 }
 
 func (c *CodeService) DeleteGitleaks(ctx context.Context, req *code.DeleteGitleaksRequest) (*empty.Empty, error) {
@@ -242,11 +242,11 @@ func (c *CodeService) PutEnterpriseOrg(ctx context.Context, req *code.PutEnterpr
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := c.repository.UpsertGithubEnterpriseOrg(ctx, req.EnterpriseOrg)
+	registered, err := c.repository.UpsertGithubEnterpriseOrg(ctx, req.EnterpriseOrg)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutEnterpriseOrgResponse{EnterpriseOrg: convertEnterpriseOrg(registerd)}, nil
+	return &code.PutEnterpriseOrgResponse{EnterpriseOrg: convertEnterpriseOrg(registered)}, nil
 }
 
 func (c *CodeService) DeleteEnterpriseOrg(ctx context.Context, req *code.DeleteEnterpriseOrgRequest) (*empty.Empty, error) {
