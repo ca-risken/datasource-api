@@ -19,21 +19,21 @@ func (m *MockCodeRepository) ListCodeDataSource(ctx context.Context, codeDataSou
 	args := m.Called()
 	return args.Get(0).(*[]model.CodeDataSource), args.Error(1)
 }
-func (m *MockCodeRepository) ListGithubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGithubSetting, error) {
+func (m *MockCodeRepository) ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error) {
 	args := m.Called()
-	return args.Get(0).(*[]model.CodeGithubSetting), args.Error(1)
+	return args.Get(0).(*[]model.CodeGitHubSetting), args.Error(1)
 }
-func (m *MockCodeRepository) UpsertGithubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGithubSetting, error) {
+func (m *MockCodeRepository) UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
 	args := m.Called()
-	return args.Get(0).(*model.CodeGithubSetting), args.Error(1)
+	return args.Get(0).(*model.CodeGitHubSetting), args.Error(1)
 }
-func (m *MockCodeRepository) DeleteGithubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+func (m *MockCodeRepository) DeleteGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
 	args := m.Called()
 	return args.Error(0)
 }
-func (m *MockCodeRepository) GetGithubSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeGithubSetting, error) {
+func (m *MockCodeRepository) GetGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
 	args := m.Called()
-	return args.Get(0).(*model.CodeGithubSetting), args.Error(1)
+	return args.Get(0).(*model.CodeGitHubSetting), args.Error(1)
 }
 func (m *MockCodeRepository) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error) {
 	args := m.Called()
@@ -51,15 +51,15 @@ func (m *MockCodeRepository) DeleteGitleaksSetting(ctx context.Context, projectI
 	args := m.Called()
 	return args.Error(0)
 }
-func (m *MockCodeRepository) ListGithubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGithubEnterpriseOrg, error) {
+func (m *MockCodeRepository) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error) {
 	args := m.Called()
-	return args.Get(0).(*[]model.CodeGithubEnterpriseOrg), args.Error(1)
+	return args.Get(0).(*[]model.CodeGitHubEnterpriseOrg), args.Error(1)
 }
-func (m *MockCodeRepository) UpsertGithubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGithubEnterpriseOrg, error) {
+func (m *MockCodeRepository) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
 	args := m.Called()
-	return args.Get(0).(*model.CodeGithubEnterpriseOrg), args.Error(1)
+	return args.Get(0).(*model.CodeGitHubEnterpriseOrg), args.Error(1)
 }
-func (m *MockCodeRepository) DeleteGithubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
+func (m *MockCodeRepository) DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
 	args := m.Called()
 	return args.Error(0)
 }

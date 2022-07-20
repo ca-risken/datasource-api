@@ -50,13 +50,13 @@ func (c *CodeService) ListDataSource(ctx context.Context, req *code.ListDataSour
 
 const maskData = "xxxxxxxxxx"
 
-func convertGitleaks(githubSetting *model.CodeGithubSetting, gitleaksSetting *model.CodeGitleaksSetting, maskKey bool) *code.Gitleaks {
+func convertGitleaks(githubSetting *model.CodeGitHubSetting, gitleaksSetting *model.CodeGitleaksSetting, maskKey bool) *code.Gitleaks {
 	var gitleaks code.Gitleaks
 	if githubSetting == nil && gitleaksSetting == nil {
 		return &gitleaks
 	}
 	gitleaks = code.Gitleaks{
-		GitleaksId:          githubSetting.CodeGithubSettingID,
+		GitleaksId:          githubSetting.CodeGitHubSettingID,
 		CodeDataSourceId:    gitleaksSetting.CodeDataSourceID,
 		Name:                githubSetting.Name,
 		ProjectId:           githubSetting.ProjectID,
@@ -64,7 +64,7 @@ func convertGitleaks(githubSetting *model.CodeGithubSetting, gitleaksSetting *mo
 		BaseUrl:             githubSetting.BaseURL,
 		TargetResource:      githubSetting.TargetResource,
 		RepositoryPattern:   gitleaksSetting.RepositoryPattern,
-		GithubUser:          githubSetting.GithubUser,
+		GithubUser:          githubSetting.GitHubUser,
 		PersonalAccessToken: githubSetting.PersonalAccessToken,
 		ScanPublic:          gitleaksSetting.ScanPublic,
 		ScanInternal:        gitleaksSetting.ScanInternal,
@@ -87,13 +87,13 @@ func (c *CodeService) ListGitleaks(ctx context.Context, req *code.ListGitleaksRe
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := c.repository.ListGithubSetting(ctx, req.ProjectId, req.GitleaksId)
+	list, err := c.repository.ListGitHubSetting(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		return nil, err
 	}
 	data := code.ListGitleaksResponse{}
 	for _, d := range *list {
-		gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, d.ProjectID, d.CodeGithubSettingID)
+		gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, d.ProjectID, d.CodeGitHubSettingID)
 		if err != nil {
 			return nil, err
 		}
@@ -106,14 +106,14 @@ func (c *CodeService) GetGitleaks(ctx context.Context, req *code.GetGitleaksRequ
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	githubSetting, err := c.repository.GetGithubSetting(ctx, req.ProjectId, req.GitleaksId)
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &code.GetGitleaksResponse{}, nil
 		}
 		return nil, err
 	}
-	gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, githubSetting.ProjectID, githubSetting.CodeGithubSettingID)
+	gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID)
 	if err != nil {
 		return nil, err
 	}
@@ -134,23 +134,23 @@ func (c *CodeService) PutGitleaks(ctx context.Context, req *code.PutGitleaksRequ
 	} else {
 		req.Gitleaks.PersonalAccessToken = "" // for not update token.
 	}
-	registeredGithubSetting, err := c.repository.UpsertGithubSetting(ctx, req.Gitleaks)
+	registeredGitHubSetting, err := c.repository.UpsertGitHubSetting(ctx, req.Gitleaks)
 	if err != nil {
 		return nil, err
 	}
-	req.Gitleaks.GitleaksId = registeredGithubSetting.CodeGithubSettingID
+	req.Gitleaks.GitleaksId = registeredGitHubSetting.CodeGitHubSettingID
 	registeredGitleaksSetting, err := c.repository.UpsertGitleaksSetting(ctx, req.Gitleaks)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutGitleaksResponse{Gitleaks: convertGitleaks(registeredGithubSetting, registeredGitleaksSetting, true)}, nil
+	return &code.PutGitleaksResponse{Gitleaks: convertGitleaks(registeredGitHubSetting, registeredGitleaksSetting, true)}, nil
 }
 
 func (c *CodeService) DeleteGitleaks(ctx context.Context, req *code.DeleteGitleaksRequest) (*empty.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGithubSetting(ctx, req.ProjectId, req.GitleaksId)
+	err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		return nil, err
 	}
@@ -158,12 +158,12 @@ func (c *CodeService) DeleteGitleaks(ctx context.Context, req *code.DeleteGitlea
 	if err != nil {
 		return nil, err
 	}
-	organizations, err := c.repository.ListGithubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId)
+	organizations, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		return nil, err
 	}
 	for _, org := range *organizations {
-		err = c.repository.DeleteGithubEnterpriseOrg(ctx, org.ProjectID, org.CodeGithubSettingID, org.Organization)
+		err = c.repository.DeleteGitHubEnterpriseOrg(ctx, org.ProjectID, org.CodeGitHubSettingID, org.Organization)
 		if err != nil {
 			return nil, err
 		}
@@ -207,12 +207,12 @@ func getStatus(s string) code.Status {
 	}
 }
 
-func convertEnterpriseOrg(data *model.CodeGithubEnterpriseOrg) *code.EnterpriseOrg {
+func convertEnterpriseOrg(data *model.CodeGitHubEnterpriseOrg) *code.EnterpriseOrg {
 	if data == nil {
 		return &code.EnterpriseOrg{}
 	}
 	return &code.EnterpriseOrg{
-		GitleaksId: data.CodeGithubSettingID,
+		GitleaksId: data.CodeGitHubSettingID,
 		Login:      data.Organization,
 		ProjectId:  data.ProjectID,
 		CreatedAt:  data.CreatedAt.Unix(),
@@ -224,7 +224,7 @@ func (c *CodeService) ListEnterpriseOrg(ctx context.Context, req *code.ListEnter
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := c.repository.ListGithubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId)
+	list, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &code.ListEnterpriseOrgResponse{}, nil
@@ -242,7 +242,7 @@ func (c *CodeService) PutEnterpriseOrg(ctx context.Context, req *code.PutEnterpr
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registered, err := c.repository.UpsertGithubEnterpriseOrg(ctx, req.EnterpriseOrg)
+	registered, err := c.repository.UpsertGitHubEnterpriseOrg(ctx, req.EnterpriseOrg)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (c *CodeService) DeleteEnterpriseOrg(ctx context.Context, req *code.DeleteE
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGithubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId, req.Login)
+	err := c.repository.DeleteGitHubEnterpriseOrg(ctx, req.ProjectId, req.GitleaksId, req.Login)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +269,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 	resp, err := c.sqs.Send(ctx, c.sqs.CodeGitleaksQueueURL, &message.GitleaksQueueMessage{
-		GitleaksID: data.CodeGithubSettingID,
+		GitleaksID: data.CodeGitHubSettingID,
 		ProjectID:  data.ProjectID,
 		ScanOnly:   req.ScanOnly,
 	})
@@ -277,7 +277,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 	if _, err = c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksForUpsert{
-		GitleaksId:        data.CodeGithubSettingID,
+		GitleaksId:        data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
 		ProjectId:         data.ProjectID,
 		RepositoryPattern: data.RepositoryPattern,
@@ -314,11 +314,11 @@ func (c *CodeService) InvokeScanAllGitleaks(ctx context.Context, _ *empty.Empty)
 			continue
 		}
 		if _, err := c.InvokeScanGitleaks(ctx, &code.InvokeScanGitleaksRequest{
-			GitleaksId: g.CodeGithubSettingID,
+			GitleaksId: g.CodeGitHubSettingID,
 			ProjectId:  g.ProjectID,
 			ScanOnly:   true,
 		}); err != nil {
-			c.logger.Errorf(ctx, "InvokeScanGitleaks error occured: code_github_setting_id=%d, err=%+v", g.CodeGithubSettingID, err)
+			c.logger.Errorf(ctx, "InvokeScanGitleaks error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
 			return nil, err
 		}
 	}

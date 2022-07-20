@@ -12,23 +12,27 @@ type CodeDataSource struct {
 	UpdatedAt        time.Time
 }
 
-// CodeGithubSetting entity
-type CodeGithubSetting struct {
-	CodeGithubSettingID uint32 `gorm:"primary_key"`
+// CodeGitHubSetting entity
+type CodeGitHubSetting struct {
+	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
 	Name                string
 	ProjectID           uint32
 	Type                string
 	BaseURL             string
 	TargetResource      string
-	GithubUser          string
+	GitHubUser          string `gorm:"column:github_user"`
 	PersonalAccessToken string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
 
+func (CodeGitHubSetting) TableName() string {
+	return "code_github_setting"
+}
+
 // CodeGitleaksSetting entity
 type CodeGitleaksSetting struct {
-	CodeGithubSettingID uint32 `gorm:"primary_key"`
+	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
 	CodeDataSourceID    uint32
 	ProjectID           uint32
 	RepositoryPattern   string
@@ -42,9 +46,9 @@ type CodeGitleaksSetting struct {
 	UpdatedAt           time.Time
 }
 
-// CodeGithubEnterpriseOrg entity
-type CodeGithubEnterpriseOrg struct {
-	CodeGithubSettingID uint32 `gorm:"primary_key"`
+// CodeGitHubEnterpriseOrg entity
+type CodeGitHubEnterpriseOrg struct {
+	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
 	Organization        string `gorm:"primary_key"`
 	ProjectID           uint32
 	CreatedAt           time.Time

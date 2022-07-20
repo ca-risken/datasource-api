@@ -15,21 +15,21 @@ type CodeRepoInterface interface {
 	ListCodeDataSource(ctx context.Context, codeDataSourceID uint32, name string) (*[]model.CodeDataSource, error)
 
 	// code_github_setting
-	ListGithubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGithubSetting, error)
-	GetGithubSetting(ctx context.Context, projectID, GithubSettingID uint32) (*model.CodeGithubSetting, error)
-	UpsertGithubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGithubSetting, error)
-	DeleteGithubSetting(ctx context.Context, projectID uint32, GithubSettingID uint32) error
+	ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error)
+	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
+	UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error)
+	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
 	ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error)
 	GetGitleaksSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeGitleaksSetting, error)
 	UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitleaksSetting, error)
-	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GithubSettingID uint32) error
+	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_github_enterprise_org
-	ListGithubEnterpriseOrg(ctx context.Context, projectID, GithubSettingID uint32) (*[]model.CodeGithubEnterpriseOrg, error)
-	UpsertGithubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGithubEnterpriseOrg, error)
-	DeleteGithubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error
+	ListGitHubEnterpriseOrg(ctx context.Context, projectID, GitHubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error)
+	UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error)
+	DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error
 }
 
 var _ CodeRepoInterface = (*Client)(nil) // verify interface compliance
@@ -52,7 +52,7 @@ func (c *Client) ListCodeDataSource(ctx context.Context, codeDataSourceID uint32
 	return &data, nil
 }
 
-func (c *Client) ListGithubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGithubSetting, error) {
+func (c *Client) ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error) {
 	query := `select * from code_github_setting where 1=1`
 	var params []interface{}
 	if !zero.IsZeroVal(projectID) {
@@ -63,29 +63,29 @@ func (c *Client) ListGithubSetting(ctx context.Context, projectID, githubSetting
 		query += " and code_github_setting_id = ?"
 		params = append(params, githubSettingID)
 	}
-	data := []model.CodeGithubSetting{}
+	data := []model.CodeGitHubSetting{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (c *Client) GetGithubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeGithubSetting, error) {
-	var data model.CodeGithubSetting
+func (c *Client) GetGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
+	var data model.CodeGitHubSetting
 	if err := c.SlaveDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (c *Client) UpsertGithubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGithubSetting, error) {
+func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
 	if data.PersonalAccessToken != "" {
-		return c.UpsertGithubSettingWithToken(ctx, data)
+		return c.UpsertGitHubSettingWithToken(ctx, data)
 	}
-	return c.UpsertGithubSettingWithoutToken(ctx, data)
+	return c.UpsertGitHubSettingWithoutToken(ctx, data)
 }
 
-const upsertGithubWithToken = `
+const upsertGitHubWithToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -108,8 +108,8 @@ ON DUPLICATE KEY UPDATE
 	personal_access_token=VALUES(personal_access_token)
 `
 
-func (c *Client) UpsertGithubSettingWithToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGithubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGithubWithToken,
+func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubWithToken,
 		data.GitleaksId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
@@ -120,10 +120,10 @@ func (c *Client) UpsertGithubSettingWithToken(ctx context.Context, data *code.Gi
 		convertZeroValueToNull(data.PersonalAccessToken)).Error; err != nil {
 		return nil, err
 	}
-	return c.GetGithubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
-const upsertGithubSettingWithoutToken = `
+const upsertGitHubSettingWithoutToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -144,8 +144,8 @@ ON DUPLICATE KEY UPDATE
 	github_user=VALUES(github_user)
 `
 
-func (c *Client) UpsertGithubSettingWithoutToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGithubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGithubSettingWithoutToken,
+func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubSettingWithoutToken,
 		data.GitleaksId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
@@ -155,11 +155,11 @@ func (c *Client) UpsertGithubSettingWithoutToken(ctx context.Context, data *code
 		convertZeroValueToNull(data.GithubUser)).Error; err != nil {
 		return nil, err
 	}
-	return c.GetGithubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
-func (c *Client) DeleteGithubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeGithubSetting{}).Error; err != nil {
+func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeGitHubSetting{}).Error; err != nil {
 		return err
 	}
 	return nil
@@ -235,17 +235,17 @@ func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, gi
 	return nil
 }
 
-const selectGetCodeGithubSettingByUniqueIndex = `select * from code_github_setting where project_id=? and name=?`
+const selectGetCodeGitHubSettingByUniqueIndex = `select * from code_github_setting where project_id=? and name=?`
 
-func (c *Client) GetGithubSettingByUniqueIndex(ctx context.Context, projectID uint32, name string) (*model.CodeGithubSetting, error) {
-	data := model.CodeGithubSetting{}
-	if err := c.MasterDB.WithContext(ctx).Raw(selectGetCodeGithubSettingByUniqueIndex, projectID, name).First(&data).Error; err != nil {
+func (c *Client) GetGitHubSettingByUniqueIndex(ctx context.Context, projectID uint32, name string) (*model.CodeGitHubSetting, error) {
+	data := model.CodeGitHubSetting{}
+	if err := c.MasterDB.WithContext(ctx).Raw(selectGetCodeGitHubSettingByUniqueIndex, projectID, name).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (c *Client) ListGithubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGithubEnterpriseOrg, error) {
+func (c *Client) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error) {
 	query := `select * from code_github_enterprise_org where 1=1`
 	var params []interface{}
 	if !zero.IsZeroVal(projectID) {
@@ -256,15 +256,15 @@ func (c *Client) ListGithubEnterpriseOrg(ctx context.Context, projectID, githubS
 		query += " and code_github_setting_id=?"
 		params = append(params, githubSettingID)
 	}
-	data := []model.CodeGithubEnterpriseOrg{}
+	data := []model.CodeGitHubEnterpriseOrg{}
 	if err := c.MasterDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
 }
 
-func (c *Client) UpsertGithubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGithubEnterpriseOrg, error) {
-	var updated model.CodeGithubEnterpriseOrg
+func (c *Client) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
+	var updated model.CodeGitHubEnterpriseOrg
 	if err := c.MasterDB.WithContext(ctx).
 		Where("code_github_setting_id=? and organization=? and project_id=?", data.GitleaksId, data.Login, data.ProjectId).
 		Assign(map[string]interface{}{
@@ -276,8 +276,8 @@ func (c *Client) UpsertGithubEnterpriseOrg(ctx context.Context, data *code.Enter
 		Error; err != nil {
 		return nil, err
 	}
-	return &model.CodeGithubEnterpriseOrg{
-		CodeGithubSettingID: updated.CodeGithubSettingID,
+	return &model.CodeGitHubEnterpriseOrg{
+		CodeGitHubSettingID: updated.CodeGitHubSettingID,
 		Organization:        updated.Organization,
 		ProjectID:           data.ProjectId,
 		UpdatedAt:           updated.UpdatedAt,
@@ -285,8 +285,8 @@ func (c *Client) UpsertGithubEnterpriseOrg(ctx context.Context, data *code.Enter
 	}, nil
 }
 
-func (c *Client) DeleteGithubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
-	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ? AND organization = ?", projectID, githubSettingID, organization).Delete(&model.CodeGithubEnterpriseOrg{}).Error; err != nil {
+func (c *Client) DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ? AND organization = ?", projectID, githubSettingID, organization).Delete(&model.CodeGitHubEnterpriseOrg{}).Error; err != nil {
 		return err
 	}
 	return nil
