@@ -189,6 +189,13 @@ list-gitleaks:
 		-d '{"project_id":1, "code_data_source_id":1001, "gitleaks_id":1}' \
 		localhost:8081 datasource.code.CodeService.ListGitleaks
 
+.PHONY: get-gitleaks
+get-gitleaks:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1, "gitleaks_id":1}' \
+		localhost:8081 datasource.code.CodeService.GetGitleaks
+
 .PHONY: put-gitleaks
 put-gitleaks:
 	grpcurl \
