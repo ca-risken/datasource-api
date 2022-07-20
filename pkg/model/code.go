@@ -54,3 +54,7 @@ type CodeGitHubEnterpriseOrg struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
+
+func (CodeGitHubEnterpriseOrg) TableName() string {
+	return "code_github_enterprise_org"
+}
