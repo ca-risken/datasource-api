@@ -92,7 +92,7 @@ func TestListGitleaks(t *testing.T) {
 		want                        *code.ListGitleaksResponse
 		mockGitHubSettingResponse   *[]model.CodeGitHubSetting
 		mockGitHubSettingError      error
-		mockGitleaksSettingResponse *model.CodeGitleaksSetting
+		mockGitleaksSettingResponse *[]model.CodeGitleaksSetting
 		mockGitleaksSettingError    error
 		wantErr                     bool
 	}{
@@ -101,14 +101,15 @@ func TestListGitleaks(t *testing.T) {
 			input: &code.ListGitleaksRequest{ProjectId: 1, CodeDataSourceId: 1},
 			want: &code.ListGitleaksResponse{Gitleaks: []*code.Gitleaks{
 				{GitleaksId: 1, CodeDataSourceId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "repo", GithubUser: "user", PersonalAccessToken: maskData, ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
-				{GitleaksId: 2, CodeDataSourceId: 1, Name: "two", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "repo", GithubUser: "user", PersonalAccessToken: maskData, ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				{GitleaksId: 2, CodeDataSourceId: 1, Name: "two", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "repo2", GithubUser: "user", PersonalAccessToken: maskData, ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockGitHubSettingResponse: &[]model.CodeGitHubSetting{
 				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token"},
 				{CodeGitHubSettingID: 2, Name: "two", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token"},
 			},
-			mockGitleaksSettingResponse: &model.CodeGitleaksSetting{
-				CodeGitHubSettingID: 1, CodeDataSourceID: 1, RepositoryPattern: "repo", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			mockGitleaksSettingResponse: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, RepositoryPattern: "repo", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, RepositoryPattern: "repo2", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 		},
 		{
@@ -119,13 +120,13 @@ func TestListGitleaks(t *testing.T) {
 			mockGitHubSettingError:    nil,
 		},
 		{
-			name:  "NG gitleaks_setting not found",
+			name:  "OK return empty when gitleaks_setting is not found",
 			input: &code.ListGitleaksRequest{ProjectId: 1, CodeDataSourceId: 1},
+			want:  &code.ListGitleaksResponse{},
 			mockGitHubSettingResponse: &[]model.CodeGitHubSetting{
 				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token"},
 			},
-			mockGitleaksSettingError: gorm.ErrRecordNotFound,
-			wantErr:                  true,
+			mockGitleaksSettingResponse: &[]model.CodeGitleaksSetting{},
 		},
 		{
 			name:    "NG invalid param",
@@ -154,11 +155,7 @@ func TestListGitleaks(t *testing.T) {
 				mockDB.On("ListGitHubSetting").Return(c.mockGitHubSettingResponse, c.mockGitHubSettingError).Once()
 			}
 			if c.mockGitleaksSettingResponse != nil || c.mockGitleaksSettingError != nil {
-				times := len(*c.mockGitHubSettingResponse)
-				if c.mockGitleaksSettingError != nil {
-					times = 1
-				}
-				mockDB.On("GetGitleaksSetting").Return(c.mockGitleaksSettingResponse, c.mockGitleaksSettingError).Times(times)
+				mockDB.On("ListGitleaksSetting").Return(c.mockGitleaksSettingResponse, c.mockGitleaksSettingError).Once()
 			}
 			got, err := svc.ListGitleaks(ctx, c.input)
 			if !c.wantErr && err != nil {

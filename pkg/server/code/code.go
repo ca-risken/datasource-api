@@ -87,17 +87,25 @@ func (c *CodeService) ListGitleaks(ctx context.Context, req *code.ListGitleaksRe
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	list, err := c.repository.ListGitHubSetting(ctx, req.ProjectId, req.GitleaksId)
+	listGitHubSetting, err := c.repository.ListGitHubSetting(ctx, req.ProjectId, req.GitleaksId)
 	if err != nil {
 		return nil, err
 	}
 	data := code.ListGitleaksResponse{}
-	for _, d := range *list {
-		gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, d.ProjectID, d.CodeGitHubSettingID)
-		if err != nil {
-			return nil, err
+	if len(*listGitHubSetting) == 0 {
+		return &data, nil
+	}
+	listGitleaksSetting, err := c.repository.ListGitleaksSetting(ctx, req.ProjectId)
+	if err != nil {
+		return nil, err
+	}
+	for _, githubSetting := range *listGitHubSetting {
+		for _, gitleaksSetting := range *listGitleaksSetting {
+			if githubSetting.CodeGitHubSettingID == gitleaksSetting.CodeGitHubSettingID {
+				data.Gitleaks = append(data.Gitleaks, convertGitleaks(&githubSetting, &gitleaksSetting, true))
+				break
+			}
 		}
-		data.Gitleaks = append(data.Gitleaks, convertGitleaks(&d, gitleaksSetting, true))
 	}
 	return &data, nil
 }
