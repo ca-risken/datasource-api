@@ -114,7 +114,10 @@ func main() {
 		LogMode:        conf.DBLogMode,
 		MaxConnection:  conf.DBMaxConnection,
 	}
-	d := db.NewClient(dbConf, logger)
+	d, err := db.NewClient(dbConf, logger)
+	if err != nil {
+		logger.Fatalf(ctx, "failed to create database client: %w", err)
+	}
 	queueConf := &queue.SQSConfig{
 		AWSRegion:   conf.AWSRegion,
 		SQSEndpoint: conf.SQSEndpoint,
