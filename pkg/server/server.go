@@ -60,10 +60,19 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 
 func (s *Server) Run(ctx context.Context) error {
 	localServerAddr := fmt.Sprintf(":%s", s.port)
-	pjClient := s.newProjectClient(s.coreSvcAddr)
+	pjClient, err := s.newProjectClient(s.coreSvcAddr)
+	if err != nil {
+		return fmt.Errorf("failed to create project client: %w", err)
+	}
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
-	googleSvc := googleServer.NewGoogleService(s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
-	codeSvc := codeServer.NewCodeService(s.coreSvcAddr, s.dataKey, s.db, s.queue, pjClient, s.logger)
+	googleSvc, err := googleServer.NewGoogleService(ctx, s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create google service: %w", err)
+	}
+	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create code service: %w", err)
+	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
 	hsvc := health.NewServer()
@@ -144,13 +153,13 @@ func healthCheck(ctx context.Context, addr string) error {
 	return nil
 }
 
-func (s *Server) newProjectClient(svcAddr string) project.ProjectServiceClient {
+func (s *Server) newProjectClient(svcAddr string) (project.ProjectServiceClient, error) {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
-		s.logger.Fatalf(ctx, "failed to get grpc connection: err=%+v", err)
+		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
-	return project.NewProjectServiceClient(conn)
+	return project.NewProjectServiceClient(conn), nil
 }
 
 func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {
