@@ -178,7 +178,7 @@ func (c *Client) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]
 
 func (c *Client) GetGitleaksSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeGitleaksSetting, error) {
 	var data model.CodeGitleaksSetting
-	if err := c.SlaveDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
