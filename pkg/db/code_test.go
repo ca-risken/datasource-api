@@ -342,6 +342,21 @@ func TestListGitleaksSetting(t *testing.T) {
 			},
 		},
 		{
+			name: "OK project_id 0 value",
+			args: args{ProjectID: 0},
+			want: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: false, ScanInternal: true, ScanPrivate: false, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("select * from code_gitleaks_setting")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "scan_public", "scan_internal", "scan_private", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), true, true, true, "OK", now, now, now).
+					AddRow(uint32(2), uint32(1), uint32(1), false, true, false, "OK", now, now, now))
+			},
+		},
+		{
 			name:    "NG DB error",
 			args:    args{ProjectID: 1},
 			want:    nil,

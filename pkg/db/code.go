@@ -166,9 +166,12 @@ func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, gith
 }
 
 func (c *Client) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error) {
-	query := `select * from code_gitleaks_setting where project_id = ?`
+	query := `select * from code_gitleaks_setting`
 	var params []interface{}
-	params = append(params, projectID)
+	if !zero.IsZeroVal(projectID) {
+		query += " where project_id = ?"
+		params = append(params, projectID)
+	}
 	data := []model.CodeGitleaksSetting{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
