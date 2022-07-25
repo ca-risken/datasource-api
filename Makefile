@@ -182,60 +182,74 @@ list-code-datasource:
 		-d '{"code_data_source_id":1001, "name":"code:gitleaks"}' \
 		localhost:8081 datasource.code.CodeService.ListDataSource
 
-.PHONY: list-gitleaks
-list-gitleaks:
+.PHONY: list-github-setting
+list-github-setting:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "code_data_source_id":1001, "gitleaks_id":1}' \
-		localhost:8081 datasource.code.CodeService.ListGitleaks
+		-d '{"project_id":1001}' \
+		localhost:8081 datasource.code.CodeService.ListGitHubSetting
 
-.PHONY: get-gitleaks
-get-gitleaks:
+.PHONY: get-github-setting
+get-github-setting:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "gitleaks_id":1}' \
-		localhost:8081 datasource.code.CodeService.GetGitleaks
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.GetGitHubSetting
 
-.PHONY: put-gitleaks
-put-gitleaks:
+.PHONY: put-github-setting
+put-github-setting:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "gitleaks": {"gitleaks_id":1, "code_data_source_id":1001, "name":"test-gitleaks", "project_id":1, "type":2, "target_resource":"pipe-cd"}}' \
-		localhost:8081 datasource.code.CodeService.PutGitleaks
+		-d '{"project_id":1001, "github_setting": {"github_setting_id":1001, "name":"test-github-setting", "project_id":1001, "type":2, "target_resource":"target"}}' \
+		localhost:8081 datasource.code.CodeService.PutGitHubSetting
+				
+.PHONY: delete-github-setting
+delete-github-setting:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.DeleteGitHubSetting
 
-.PHONY: delete-gitleaks
-delete-gitleaks:
+.PHONY: put-gitleaks-setting
+put-gitleaks-setting:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "gitleaks_id":1}' \
-		localhost:8081 datasource.code.CodeService.DeleteGitleaks
+		-d '{"project_id":1001, "gitleaks_setting": {"github_setting_id":1001, "code_data_source_id":1001, "project_id":1001}}' \
+		localhost:8081 datasource.code.CodeService.PutGitleaksSetting
+		
+.PHONY: delete-gitleaks-setting
+delete-gitleaks-setting:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.DeleteGitleaksSetting
 
-.PHONY: list-enterprise-org
-list-enterprise-org:
+.PHONY: list-github-enterprise-org
+list-github-enterprise-org:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id": 1001, "gitleaks_id":1}' \
-		localhost:8081 datasource.code.CodeService.ListEnterpriseOrg
+		-d '{"project_id": 1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.ListGitHubEnterpriseOrg
 
-.PHONY: put-enterprise-org
-put-enterprise-org:
+.PHONY: put-github-enterprise-org
+put-github-enterprise-org:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "enterprise_org": {"gitleaks_id":1, "login":"login", "project_id":1}}' \
-		localhost:8081 datasource.code.CodeService.PutEnterpriseOrg
+		-d '{"project_id":1001, "github_enterprise_org": {"github_setting_id":1001, "organization":"organization", "project_id":1001}}' \
+		localhost:8081 datasource.code.CodeService.PutGitHubEnterpriseOrg
 
-.PHONY: delete-enterprise-org
-delete-enterprise-org:
+.PHONY: delete-github-enterprise-org
+delete-github-enterprise-org:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "gitleaks_id":1, "login": "login"}' \
-		localhost:8081 datasource.code.CodeService.DeleteEnterpriseOrg
+		-d '{"project_id":1001, "github_setting_id":1001, "organization": "organization"}' \
+		localhost:8081 datasource.code.CodeService.DeleteGitHubEnterpriseOrg
 
 .PHONY: invoke-scan-gitleaks
 invoke-scan-gitleaks:
 	grpcurl \
 		-plaintext \
-		-d '{"project_id":1, "gitleaks_id":4}' \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
 		localhost:8081 datasource.code.CodeService.InvokeScanGitleaks
 
 .PHONY: invoke-scan-all-gitleaks

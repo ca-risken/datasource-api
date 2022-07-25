@@ -17,28 +17,35 @@ message CodeDataSource {
   int64 updated_at = 6;
 }
 
-// Gitleaks
-message Gitleaks {
-  uint32 gitleaks_id = 1;
-  uint32 code_data_source_id = 2;
+// GitHubSetting
+message GitHubSetting {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
   string name = 3;
-  uint32 project_id = 4;
-  Type type = 5;
-  string base_url = 6;
-  string target_resource = 7;
-  string repository_pattern = 8;
-  string github_user = 9;
-  string personal_access_token = 10;
-  bool scan_public = 11;
-  bool scan_internal = 12;
-  bool scan_private = 13;
-  string gitleaks_config = 14;
-  Status status = 15;
-  string status_detail = 16;
-  int64 scan_at = 17;
-  int64 created_at = 18;
-  int64 updated_at = 19;
-  int64 scan_succeeded_at = 20;
+  string github_user = 4;
+  string personal_access_token = 5;
+  Type type = 6;
+  string base_url = 7;
+  string target_resource = 8;
+  int64 created_at = 9;
+  int64 updated_at = 10;
+  GitleaksSetting gitleaks_setting = 11;
+}
+
+// GitleaksSetting
+message GitleaksSetting {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
+  uint32 code_data_source_id = 3;
+  string repository_pattern = 4;
+  bool scan_public = 5;
+  bool scan_internal = 6;
+  bool scan_private = 7;
+  Status status = 8;
+  string status_detail = 9;
+  int64 scan_at = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
 }
 
 // Type
@@ -58,40 +65,44 @@ enum Status {
   ERROR = 4;
 }
 
-// GitleaksForUpsert
-message GitleaksForUpsert {
-  uint32 gitleaks_id = 1; // Unique key for Gitleaks entity.
-  uint32 code_data_source_id = 2;
+// GitHubSettingForUpsert
+message GitHubSettingForUpsert {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
   string name = 3;
-  uint32 project_id = 4;
-  Type type = 5;
-  string base_url = 6;
-  string target_resource = 7;
-  string repository_pattern = 8;
-  string github_user = 9;
-  string personal_access_token = 10;
-  bool scan_public = 11;
-  bool scan_internal = 12;
-  bool scan_private = 13;
-  string gitleaks_config = 14;
-  Status status = 15;
-  string status_detail = 16;
-  int64 scan_at = 17;
-  int64 scan_succeeded_at = 18;
+  string github_user = 4;
+  string personal_access_token = 5;
+  Type type = 6;
+  string base_url = 7;
+  string target_resource = 8;
 }
 
-// EnterpriseOrg
-message EnterpriseOrg {
-  uint32 gitleaks_id = 1;
-  string login = 2;
+// GitleaksSettingForUpsert
+message GitleaksSettingForUpsert {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
+  uint32 code_data_source_id = 3;
+  string repository_pattern = 4;
+  bool scan_public = 5;
+  bool scan_internal = 6;
+  bool scan_private = 7;
+  Status status = 8;
+  string status_detail = 9;
+  int64 scan_at = 10;
+}
+
+// GitHubEnterpriseOrg
+message GitHubEnterpriseOrg {
+  uint32 github_setting_id = 1;
+  string organization = 2;
   uint32 project_id = 3;
   int64 created_at = 4;
   int64 updated_at = 5;
 }
 
-// EnterpriseOrgForUpsert
-message EnterpriseOrgForUpsert {
-  uint32 gitleaks_id = 1;
-  string login = 2;
+// GitHubEnterpriseOrgForUpsert
+message GitHubEnterpriseOrgForUpsert {
+  uint32 github_setting_id = 1;
+  string organization = 2;
   uint32 project_id = 3;
 }
