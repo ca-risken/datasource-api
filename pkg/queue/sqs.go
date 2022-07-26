@@ -71,12 +71,12 @@ type Client struct {
 	DiagnosisApplicationScanQueueURL string
 }
 
-func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Client {
+func NewClient(conf *SQSConfig, l logging.Logger) (*Client, error) {
 	sess, err := session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	})
 	if err != nil {
-		l.Fatalf(ctx, "Failed to create sqs session, err=%w", err)
+		return nil, fmt.Errorf("failed to create sqs session, err=%w", err)
 	}
 	sqsClient := sqs.New(sess, &aws.Config{
 		Region:   &conf.AWSRegion,
@@ -101,7 +101,7 @@ func NewSQSClient(ctx context.Context, conf *SQSConfig, l logging.Logger) *Clien
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
-	}
+	}, nil
 }
 
 func (c *Client) Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error) {

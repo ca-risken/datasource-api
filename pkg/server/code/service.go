@@ -1,9 +1,9 @@
 package code
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
+	"fmt"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/project"
@@ -20,12 +20,11 @@ type CodeService struct {
 	logger        logging.Logger
 }
 
-func NewCodeService(coreSvcAddr, dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) code.CodeServiceServer {
-	ctx := context.Background()
+func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) (code.CodeServiceServer, error) {
 	key := []byte(dataKey)
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		l.Fatal(ctx, err.Error())
+		return nil, fmt.Errorf("failed to create cipher, err=%w", err)
 	}
 	return &CodeService{
 		repository:    repo,
@@ -33,5 +32,5 @@ func NewCodeService(coreSvcAddr, dataKey string, repo db.CodeRepoInterface, q *q
 		cipherBlock:   block,
 		projectClient: pj,
 		logger:        l,
-	}
+	}, nil
 }

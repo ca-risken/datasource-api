@@ -20,21 +20,20 @@ type ResourceManagerClient struct {
 	svc    *cloudresourcemanager.Service
 }
 
-func newResourceManagerClient(credentialPath string, logger logging.Logger) ResourceManagerServiceClient {
-	ctx := context.Background()
+func newResourceManagerClient(ctx context.Context, credentialPath string, logger logging.Logger) (ResourceManagerServiceClient, error) {
 	svc, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
-		logger.Fatalf(ctx, "Failed to create new Cloud Resource Manager service: %w", err)
+		return nil, fmt.Errorf("failed to create new Cloud Resource Manager service: err=%w", err)
 	}
 
 	// Remove credential file for Security
 	if err := os.Remove(credentialPath); err != nil {
-		logger.Fatalf(ctx, "Failed to remove file: path=%s, err=%w", credentialPath, err)
+		return nil, fmt.Errorf("failed to remove file: path=%s, err=%w", credentialPath, err)
 	}
 	return &ResourceManagerClient{
 		svc:    svc,
 		logger: logger,
-	}
+	}, nil
 }
 
 const (
