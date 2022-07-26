@@ -8,25 +8,25 @@ import (
 func TestValidateGitHub(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *GitHubQueueMessage
+		input   *CodeQueueMessage
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &GitHubQueueMessage{GitHubSettingID: 1, ProjectID: 1},
+			input: &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1},
 		},
 		{
 			name:  "OK(scan_only)",
-			input: &GitHubQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
+			input: &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
 			name:    "NG Required(gitlekas_id)",
-			input:   &GitHubQueueMessage{ProjectID: 1},
+			input:   &CodeQueueMessage{ProjectID: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &GitHubQueueMessage{GitHubSettingID: 1},
+			input:   &CodeQueueMessage{GitHubSettingID: 1},
 			wantErr: true,
 		},
 	}
@@ -46,18 +46,18 @@ func TestParseMessageGitHub(t *testing.T) {
 	cases := []struct {
 		name    string
 		input   string
-		want    *GitHubQueueMessage
+		want    *CodeQueueMessage
 		wantErr bool
 	}{
 		{
 			name:  "OK",
 			input: `{"github_setting_id":1, "project_id":1}`,
-			want:  &GitHubQueueMessage{GitHubSettingID: 1, ProjectID: 1},
+			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1},
 		},
 		{
 			name:  "OK(scan_only)",
 			input: `{"github_setting_id":1, "project_id":1, "scan_only":"true"}`,
-			want:  &GitHubQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
+			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
 			name:    "NG Json parse erroro",
