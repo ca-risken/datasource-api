@@ -10,18 +10,28 @@ service CodeService {
   // Code DataSource
   rpc ListDataSource(ListDataSourceRequest) returns (ListDataSourceResponse);
 
-  // Gitleaks
-  rpc ListGitleaks(ListGitleaksRequest) returns (ListGitleaksResponse);
-  rpc GetGitleaks(GetGitleaksRequest) returns (GetGitleaksResponse);
-  rpc PutGitleaks(PutGitleaksRequest) returns (PutGitleaksResponse);
-  rpc DeleteGitleaks(DeleteGitleaksRequest) returns (google.protobuf.Empty);
+  // GitHubSetting
+  rpc ListGitHubSetting(ListGitHubSettingRequest)
+      returns (ListGitHubSettingResponse);
+  rpc GetGitHubSetting(GetGitHubSettingRequest)
+      returns (GetGitHubSettingResponse);
+  rpc PutGitHubSetting(PutGitHubSettingRequest)
+      returns (PutGitHubSettingResponse);
+  rpc DeleteGitHubSetting(DeleteGitHubSettingRequest)
+      returns (google.protobuf.Empty);
+
+  // GitleaksSetting
+  rpc PutGitleaksSetting(PutGitleaksSettingRequest)
+      returns (PutGitleaksSettingResponse);
+  rpc DeleteGitleaksSetting(DeleteGitleaksSettingRequest)
+      returns (google.protobuf.Empty);
 
   // Enterprise
-  rpc ListEnterpriseOrg(ListEnterpriseOrgRequest)
-      returns (ListEnterpriseOrgResponse);
-  rpc PutEnterpriseOrg(PutEnterpriseOrgRequest)
-      returns (PutEnterpriseOrgResponse);
-  rpc DeleteEnterpriseOrg(DeleteEnterpriseOrgRequest)
+  rpc ListGitHubEnterpriseOrg(ListGitHubEnterpriseOrgRequest)
+      returns (ListGitHubEnterpriseOrgResponse);
+  rpc PutGitHubEnterpriseOrg(PutGitHubEnterpriseOrgRequest)
+      returns (PutGitHubEnterpriseOrgResponse);
+  rpc DeleteGitHubEnterpriseOrg(DeleteGitHubEnterpriseOrgRequest)
       returns (google.protobuf.Empty);
 
   // Scan
@@ -38,55 +48,70 @@ message ListDataSourceRequest {
 
 message ListDataSourceResponse { repeated CodeDataSource code_data_source = 1; }
 
-message ListGitleaksRequest {
+message ListGitHubSettingRequest { 
   uint32 project_id = 1;
-  uint32 code_data_source_id = 2;
-  uint32 gitleaks_id = 3;
+  uint32 github_setting_id = 2;
+ }
+
+message ListGitHubSettingResponse { repeated GitHubSetting github_setting = 1; }
+
+message GetGitHubSettingRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
 }
 
-message ListGitleaksResponse { repeated Gitleaks gitleaks = 1; }
+message GetGitHubSettingResponse { GitHubSetting github_setting = 1; }
 
-message GetGitleaksRequest {
+message PutGitHubSettingRequest {
   uint32 project_id = 1;
-  uint32 gitleaks_id = 2;
+  GitHubSettingForUpsert github_setting = 2;
 }
 
-message GetGitleaksResponse { Gitleaks gitleaks = 1; }
+message PutGitHubSettingResponse { GitHubSetting github_setting = 1; }
 
-message PutGitleaksRequest {
+message DeleteGitHubSettingRequest {
   uint32 project_id = 1;
-  GitleaksForUpsert gitleaks = 2;
+  uint32 github_setting_id = 2;
 }
 
-message PutGitleaksResponse { Gitleaks gitleaks = 1; }
-
-message DeleteGitleaksRequest {
+message PutGitleaksSettingRequest {
   uint32 project_id = 1;
-  uint32 gitleaks_id = 2;
+  GitleaksSettingForUpsert gitleaks_setting = 2;
 }
 
-message ListEnterpriseOrgRequest {
+message PutGitleaksSettingResponse { GitleaksSetting gitleaks_setting = 1; }
+
+message DeleteGitleaksSettingRequest {
   uint32 project_id = 1;
-  uint32 gitleaks_id = 2;
+  uint32 github_setting_id = 2;
 }
 
-message ListEnterpriseOrgResponse { repeated EnterpriseOrg enterprise_org = 1; }
-
-message PutEnterpriseOrgRequest {
+message ListGitHubEnterpriseOrgRequest {
   uint32 project_id = 1;
-  EnterpriseOrgForUpsert enterprise_org = 2;
+  uint32 github_setting_id = 2;
 }
 
-message PutEnterpriseOrgResponse { EnterpriseOrg enterprise_org = 1; }
+message ListGitHubEnterpriseOrgResponse {
+  repeated GitHubEnterpriseOrg github_enterprise_org = 1;
+}
 
-message DeleteEnterpriseOrgRequest {
+message PutGitHubEnterpriseOrgRequest {
   uint32 project_id = 1;
-  uint32 gitleaks_id = 2;
-  string login = 3;
+  GitHubEnterpriseOrgForUpsert github_enterprise_org = 2;
+}
+
+message PutGitHubEnterpriseOrgResponse {
+  GitHubEnterpriseOrg github_enterprise_org = 1;
+}
+
+message DeleteGitHubEnterpriseOrgRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string organization = 3;
 }
 
 message InvokeScanGitleaksRequest {
   uint32 project_id = 1;
-  uint32 gitleaks_id = 2;
+  uint32 github_setting_id = 2;
   bool scan_only = 3;
 }

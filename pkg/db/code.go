@@ -17,18 +17,18 @@ type CodeRepoInterface interface {
 	// code_github_setting
 	ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error)
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
-	UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error)
+	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
 	ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error)
 	GetGitleaksSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeGitleaksSetting, error)
-	UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitleaksSetting, error)
+	UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksSettingForUpsert) (*model.CodeGitleaksSetting, error)
 	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_github_enterprise_org
 	ListGitHubEnterpriseOrg(ctx context.Context, projectID, GitHubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error)
-	UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error)
+	UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error)
 	DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error
 }
 
@@ -78,7 +78,7 @@ func (c *Client) GetGitHubSetting(ctx context.Context, projectID uint32, githubS
 	return &data, nil
 }
 
-func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
 	if data.PersonalAccessToken != "" {
 		return c.UpsertGitHubSettingWithToken(ctx, data)
 	}
@@ -108,9 +108,9 @@ ON DUPLICATE KEY UPDATE
 	personal_access_token=VALUES(personal_access_token)
 `
 
-func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
 	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubWithToken,
-		data.GitleaksId,
+		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
 		data.Type.String(),
@@ -144,9 +144,9 @@ ON DUPLICATE KEY UPDATE
 	github_user=VALUES(github_user)
 `
 
-func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
 	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubSettingWithoutToken,
-		data.GitleaksId,
+		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
 		data.Type.String(),
@@ -213,9 +213,9 @@ ON DUPLICATE KEY UPDATE
 	scan_at=VALUES(scan_at)
 `
 
-func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitleaksSetting, error) {
+func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksSettingForUpsert) (*model.CodeGitleaksSetting, error) {
 	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitleaksWithToken,
-		data.GitleaksId,
+		data.GithubSettingId,
 		data.CodeDataSourceId,
 		data.ProjectId,
 		convertZeroValueToNull(data.RepositoryPattern),
@@ -227,7 +227,7 @@ func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksF
 		time.Unix(data.ScanAt, 0)).Error; err != nil {
 		return nil, err
 	}
-	return c.GetGitleaksSetting(ctx, data.ProjectId, data.GitleaksId)
+	return c.GetGitleaksSetting(ctx, data.ProjectId, data.GithubSettingId)
 
 }
 
@@ -266,13 +266,13 @@ func (c *Client) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubS
 	return &data, nil
 }
 
-func (c *Client) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
+func (c *Client) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
 	var updated model.CodeGitHubEnterpriseOrg
 	if err := c.MasterDB.WithContext(ctx).
-		Where("code_github_setting_id=? and organization=? and project_id=?", data.GitleaksId, data.Login, data.ProjectId).
+		Where("code_github_setting_id=? and organization=? and project_id=?", data.GithubSettingId, data.Organization, data.ProjectId).
 		Assign(map[string]interface{}{
-			"code_github_setting_id": data.GitleaksId,
-			"organization":           data.Login,
+			"code_github_setting_id": data.GithubSettingId,
+			"organization":           data.Organization,
 			"project_id":             data.ProjectId,
 		}).
 		FirstOrCreate(&updated).

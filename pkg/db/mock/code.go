@@ -23,7 +23,7 @@ func (m *MockCodeRepository) ListGitHubSetting(ctx context.Context, projectID, g
 	args := m.Called()
 	return args.Get(0).(*[]model.CodeGitHubSetting), args.Error(1)
 }
-func (m *MockCodeRepository) UpsertGitHubSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitHubSetting, error) {
+func (m *MockCodeRepository) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
 	args := m.Called()
 	return args.Get(0).(*model.CodeGitHubSetting), args.Error(1)
 }
@@ -43,7 +43,7 @@ func (m *MockCodeRepository) GetGitleaksSetting(ctx context.Context, projectID, 
 	args := m.Called()
 	return args.Get(0).(*model.CodeGitleaksSetting), args.Error(1)
 }
-func (m *MockCodeRepository) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksForUpsert) (*model.CodeGitleaksSetting, error) {
+func (m *MockCodeRepository) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksSettingForUpsert) (*model.CodeGitleaksSetting, error) {
 	args := m.Called()
 	return args.Get(0).(*model.CodeGitleaksSetting), args.Error(1)
 }
@@ -55,7 +55,7 @@ func (m *MockCodeRepository) ListGitHubEnterpriseOrg(ctx context.Context, projec
 	args := m.Called()
 	return args.Get(0).(*[]model.CodeGitHubEnterpriseOrg), args.Error(1)
 }
-func (m *MockCodeRepository) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.EnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
+func (m *MockCodeRepository) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
 	args := m.Called()
 	return args.Get(0).(*model.CodeGitHubEnterpriseOrg), args.Error(1)
 }

@@ -45,19 +45,19 @@ func TestValidate_ListDataSourceRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_ListGitleaksRequest(t *testing.T) {
+func TestValidate_ListGitHubSettingRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *ListGitleaksRequest
+		input   *ListGitHubSettingRequest
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &ListGitleaksRequest{ProjectId: 1, CodeDataSourceId: 1, GitleaksId: 1},
+			input: &ListGitHubSettingRequest{ProjectId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &ListGitleaksRequest{CodeDataSourceId: 1, GitleaksId: 1},
+			input:   &ListGitHubSettingRequest{},
 			wantErr: true,
 		},
 	}
@@ -73,24 +73,24 @@ func TestValidate_ListGitleaksRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_GetGitleaksRequest(t *testing.T) {
+func TestValidate_GetGitHubSettingRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *GetGitleaksRequest
+		input   *GetGitHubSettingRequest
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &GetGitleaksRequest{ProjectId: 1, GitleaksId: 1},
+			input: &GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &GetGitleaksRequest{GitleaksId: 1},
+			input:   &GetGitHubSettingRequest{GithubSettingId: 1},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(gitleaks_id)",
-			input:   &GetGitleaksRequest{ProjectId: 1},
+			name:    "NG Required(github_setting_id)",
+			input:   &GetGitHubSettingRequest{GithubSettingId: 1},
 			wantErr: true,
 		},
 	}
@@ -106,28 +106,98 @@ func TestValidate_GetGitleaksRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_PutGitleaksRequest(t *testing.T) {
+func TestValidate_PutGitHubSettingRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *PutGitHubSettingRequest
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+			}},
+		},
+		{
+			name:    "NG No github_setting",
+			input:   &PutGitHubSettingRequest{ProjectId: 1},
+			wantErr: true,
+		},
+		{
+			name: "NG Invalid project_id",
+			input: &PutGitHubSettingRequest{ProjectId: 999, GithubSetting: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+			}},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_DeleteGitHubSettingRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *DeleteGitHubSettingRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &DeleteGitHubSettingRequest{GithubSettingId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(github_setting_id)",
+			input:   &DeleteGitHubSettingRequest{ProjectId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_PutGitleaksSettingRequest(t *testing.T) {
 	now := time.Now()
 	cases := []struct {
 		name    string
-		input   *PutGitleaksRequest
+		input   *PutGitleaksSettingRequest
 		wantErr bool
 	}{
 		{
 			name: "OK",
-			input: &PutGitleaksRequest{ProjectId: 1, Gitleaks: &GitleaksForUpsert{
-				CodeDataSourceId: 1, ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "", Status: Status_OK, ScanAt: now.Unix(),
+			input: &PutGitleaksSettingRequest{ProjectId: 1, GitleaksSetting: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
 			}},
 		},
 		{
-			name:    "NG No gitleaks",
-			input:   &PutGitleaksRequest{ProjectId: 1},
+			name:    "NG No gitleaks_setting",
+			input:   &PutGitleaksSettingRequest{ProjectId: 1},
 			wantErr: true,
 		},
 		{
 			name: "NG Invalid project_id",
-			input: &PutGitleaksRequest{ProjectId: 999, Gitleaks: &GitleaksForUpsert{
-				CodeDataSourceId: 1, ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "", Status: Status_OK, ScanAt: now.Unix(),
+			input: &PutGitleaksSettingRequest{GitleaksSetting: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
 			}},
 			wantErr: true,
 		},
@@ -144,24 +214,24 @@ func TestValidate_PutGitleaksRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_DeleteGitleaksRequest(t *testing.T) {
+func TestValidate_DeleteGitleaksSettingRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *DeleteGitleaksRequest
+		input   *DeleteGitleaksSettingRequest
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &DeleteGitleaksRequest{ProjectId: 1, GitleaksId: 1},
+			input: &DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &DeleteGitleaksRequest{GitleaksId: 1},
+			input:   &DeleteGitleaksSettingRequest{GithubSettingId: 1},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(gitleaks_id)",
-			input:   &DeleteGitleaksRequest{ProjectId: 1},
+			name:    "NG Required(github_setting_id)",
+			input:   &DeleteGitleaksSettingRequest{ProjectId: 1},
 			wantErr: true,
 		},
 	}
@@ -177,24 +247,24 @@ func TestValidate_DeleteGitleaksRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_ListEnterpriseOrgRequest(t *testing.T) {
+func TestValidate_ListGitHubEnterpriseOrgRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *ListEnterpriseOrgRequest
+		input   *ListGitHubEnterpriseOrgRequest
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &ListEnterpriseOrgRequest{ProjectId: 1, GitleaksId: 1},
+			input: &ListGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &ListEnterpriseOrgRequest{GitleaksId: 1},
+			input:   &ListGitHubEnterpriseOrgRequest{GithubSettingId: 1},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(gitleaks_id)",
-			input:   &ListEnterpriseOrgRequest{ProjectId: 1},
+			name:    "NG Required(github_setting_id)",
+			input:   &ListGitHubEnterpriseOrgRequest{ProjectId: 1},
 			wantErr: true,
 		},
 	}
@@ -210,27 +280,27 @@ func TestValidate_ListEnterpriseOrgRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_PutEnterpriseOrgRequest(t *testing.T) {
+func TestValidate_PutGitHubEnterpriseOrgRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *PutEnterpriseOrgRequest
+		input   *PutGitHubEnterpriseOrgRequest
 		wantErr bool
 	}{
 		{
 			name: "OK",
-			input: &PutEnterpriseOrgRequest{ProjectId: 1, EnterpriseOrg: &EnterpriseOrgForUpsert{
-				GitleaksId: 1, ProjectId: 1, Login: "login",
+			input: &PutGitHubEnterpriseOrgRequest{ProjectId: 1, GithubEnterpriseOrg: &GitHubEnterpriseOrgForUpsert{
+				GithubSettingId: 1, ProjectId: 1, Organization: "org",
 			}},
 		},
 		{
-			name:    "NG No enterprise_org",
-			input:   &PutEnterpriseOrgRequest{ProjectId: 1},
+			name:    "NG No github_enterprise_org",
+			input:   &PutGitHubEnterpriseOrgRequest{ProjectId: 1},
 			wantErr: true,
 		},
 		{
 			name: "NG Invalid project_id",
-			input: &PutEnterpriseOrgRequest{ProjectId: 999, EnterpriseOrg: &EnterpriseOrgForUpsert{
-				GitleaksId: 1, ProjectId: 1, Login: "login",
+			input: &PutGitHubEnterpriseOrgRequest{ProjectId: 999, GithubEnterpriseOrg: &GitHubEnterpriseOrgForUpsert{
+				GithubSettingId: 1, ProjectId: 1, Organization: "org",
 			}},
 			wantErr: true,
 		},
@@ -247,29 +317,29 @@ func TestValidate_PutEnterpriseOrgRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_DeleteEnterpriseOrgRequest(t *testing.T) {
+func TestValidate_DeleteGitHubEnterpriseOrgRequest(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *DeleteEnterpriseOrgRequest
+		input   *DeleteGitHubEnterpriseOrgRequest
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &DeleteEnterpriseOrgRequest{ProjectId: 1, GitleaksId: 1, Login: "lgoin"},
+			input: &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1, Organization: "org"},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &DeleteEnterpriseOrgRequest{GitleaksId: 1, Login: "lgoin"},
+			input:   &DeleteGitHubEnterpriseOrgRequest{GithubSettingId: 1, Organization: "org"},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(gitleaks_id)",
-			input:   &DeleteEnterpriseOrgRequest{ProjectId: 1, Login: "lgoin"},
+			input:   &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, Organization: "org"},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(login)",
-			input:   &DeleteEnterpriseOrgRequest{ProjectId: 1, GitleaksId: 1},
+			name:    "NG Required(organization)",
+			input:   &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
 			wantErr: true,
 		},
 	}
@@ -293,15 +363,15 @@ func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			input: &InvokeScanGitleaksRequest{ProjectId: 1, GitleaksId: 1},
+			input: &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &InvokeScanGitleaksRequest{GitleaksId: 1},
+			input:   &InvokeScanGitleaksRequest{GithubSettingId: 1},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(gitleaks_id)",
+			name:    "NG Required(github_setting_id)",
 			input:   &InvokeScanGitleaksRequest{ProjectId: 1},
 			wantErr: true,
 		},
@@ -318,134 +388,77 @@ func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_GitleaksForUpsert(t *testing.T) {
-	now := time.Now()
+func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *GitleaksForUpsert
+		input   *GitHubSettingForUpsert
 		wantErr bool
 	}{
 		{
 			name: "OK",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), ScanSucceededAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 		},
 		{
 			name: "OK minimize",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
-			},
-		},
-		{
-			name: "NG Required(code_data_source_id)",
-			input: &GitleaksForUpsert{
+			input: &GitHubSettingForUpsert{
 				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
-			wantErr: true,
 		},
 		{
 			name: "NG Length(name)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: stringLength65, ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: stringLength65, ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(project_id)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: "name", Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(base_url)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: stringLength129, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: stringLength129, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Not URL(base_url)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: "not URL pattern", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: "not URL pattern", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(targetResource)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(targetResource)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: stringLength129, RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Length(RepositoryPattern)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: stringLength129, GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Uncompilable(RepositoryPattern)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "*xxx", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: stringLength129, GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(github_user)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: stringLength65, PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: stringLength65,
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(personal_access_token)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: stringLength256, GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Length(status_detail)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Min(scan_at)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: unixtime19691231T235959,
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Max(scan_at)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanAt: unixtime100000101T000000,
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Min(scan_succeeded_at)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanSucceededAt: unixtime19691231T235959,
-			},
-			wantErr: true,
-		},
-		{
-			name: "NG Max(scan_succeeded_at)",
-			input: &GitleaksForUpsert{
-				CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "some-repo", GithubUser: "user", PersonalAccessToken: "xxx", GitleaksConfig: "xxxx", Status: Status_OK, ScanSucceededAt: unixtime100000101T000000,
+			input: &GitHubSettingForUpsert{
+				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: stringLength256,
 			},
 			wantErr: true,
 		},
@@ -462,34 +475,122 @@ func TestValidate_GitleaksForUpsert(t *testing.T) {
 	}
 }
 
-func TestValidate_EnterpriseOrgForUpsert(t *testing.T) {
+func TestValidate_GitleaksSettingForUpsert(t *testing.T) {
+	now := time.Now()
 	cases := []struct {
 		name    string
-		input   *EnterpriseOrgForUpsert
+		input   *GitleaksSettingForUpsert
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+		},
+		{
+			name: "OK minimize",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1,
+			},
+		},
+		{
+			name: "NG Required(github_setting_id)",
+			input: &GitleaksSettingForUpsert{
+				CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(code_data_source_id)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(project_id)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Length(RepositoryPattern)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: stringLength129, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Uncompilable(RepositoryPattern)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "*xxx", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Length(status_detail)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Min(scan_at)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime19691231T235959,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Max(scan_at)",
+			input: &GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_GitHubEnterpriseOrgForUpsert(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *GitHubEnterpriseOrgForUpsert
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &EnterpriseOrgForUpsert{GitleaksId: 1, Login: "login", ProjectId: 1},
+			input: &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "org", ProjectId: 1},
 		},
 		{
-			name:    "NG Required(gitleaks_id)",
-			input:   &EnterpriseOrgForUpsert{Login: "login", ProjectId: 1},
+			name:    "NG Required(github_setting_id)",
+			input:   &GitHubEnterpriseOrgForUpsert{Organization: "org", ProjectId: 1},
 			wantErr: true,
 		},
 		{
-			name:    "NG Required(login)",
-			input:   &EnterpriseOrgForUpsert{GitleaksId: 1, ProjectId: 1},
+			name:    "NG Required(organization)",
+			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, ProjectId: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Length(login)",
-			input:   &EnterpriseOrgForUpsert{GitleaksId: 1, Login: stringLength129, ProjectId: 1},
+			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: stringLength129, ProjectId: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &EnterpriseOrgForUpsert{GitleaksId: 1, Login: "login"},
+			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "login"},
 			wantErr: true,
 		},
 	}

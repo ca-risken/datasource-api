@@ -189,7 +189,7 @@ func TestGetGitHubSetting(t *testing.T) {
 func TestUpsertGitHubSetting(t *testing.T) {
 	now := time.Now()
 	type args struct {
-		data *code.GitleaksForUpsert
+		data *code.GitHubSettingForUpsert
 	}
 
 	cases := []struct {
@@ -202,7 +202,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 		{
 			name: "OK with token",
 			args: args{
-				data: &code.GitleaksForUpsert{GitleaksId: 1, CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
 			},
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
@@ -216,7 +216,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 		{
 			name: "OK without token",
 			args: args{
-				data: &code.GitleaksForUpsert{GitleaksId: 1, CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user"},
 			},
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
@@ -230,7 +230,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.GitleaksForUpsert{GitleaksId: 1, CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
 			},
 			want:    nil,
 			wantErr: true,
@@ -448,7 +448,7 @@ func TestGetGitleaksSetting(t *testing.T) {
 func TestUpsertGitleaksSetting(t *testing.T) {
 	now := time.Now()
 	type args struct {
-		data *code.GitleaksForUpsert
+		data *code.GitleaksSettingForUpsert
 	}
 
 	cases := []struct {
@@ -461,7 +461,7 @@ func TestUpsertGitleaksSetting(t *testing.T) {
 		{
 			name: "OK",
 			args: args{
-				data: &code.GitleaksForUpsert{GitleaksId: 1, CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "repo", ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: code.Status_OK, StatusDetail: "detail", GithubUser: "user", PersonalAccessToken: "token", ScanAt: now.Unix()},
+				data: &code.GitleaksSettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
 			want:    &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
@@ -475,7 +475,7 @@ func TestUpsertGitleaksSetting(t *testing.T) {
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.GitleaksForUpsert{GitleaksId: 1, CodeDataSourceId: 1, Name: "name", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", RepositoryPattern: "repo", ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: code.Status_OK, StatusDetail: "detail", GithubUser: "user", PersonalAccessToken: "token", ScanAt: now.Unix()},
+				data: &code.GitleaksSettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: true, ScanInternal: true, ScanPrivate: true, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
 			want:    nil,
 			wantErr: true,
@@ -622,7 +622,7 @@ func TestListGithubEnterpriseOrg(t *testing.T) {
 func TestUpsertGithubEnterpriseOrg(t *testing.T) {
 	now := time.Now()
 	type args struct {
-		data *code.EnterpriseOrgForUpsert
+		data *code.GitHubEnterpriseOrgForUpsert
 	}
 
 	cases := []struct {
@@ -634,7 +634,7 @@ func TestUpsertGithubEnterpriseOrg(t *testing.T) {
 		{
 			name: "OK Update",
 			args: args{
-				data: &code.EnterpriseOrgForUpsert{GitleaksId: 1, Login: "name", ProjectId: 1},
+				data: &code.GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "name", ProjectId: 1},
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
@@ -649,7 +649,7 @@ func TestUpsertGithubEnterpriseOrg(t *testing.T) {
 		{
 			name: "OK Insert",
 			args: args{
-				data: &code.EnterpriseOrgForUpsert{GitleaksId: 1, Login: "name", ProjectId: 1},
+				data: &code.GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "name", ProjectId: 1},
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
@@ -663,7 +663,7 @@ func TestUpsertGithubEnterpriseOrg(t *testing.T) {
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.EnterpriseOrgForUpsert{GitleaksId: 1, Login: "name", ProjectId: 1},
+				data: &code.GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "name", ProjectId: 1},
 			},
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {

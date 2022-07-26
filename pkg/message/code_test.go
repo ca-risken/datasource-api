@@ -5,28 +5,28 @@ import (
 	"testing"
 )
 
-func TestValidateGitleaks(t *testing.T) {
+func TestValidateGitHub(t *testing.T) {
 	cases := []struct {
 		name    string
-		input   *GitleaksQueueMessage
+		input   *CodeQueueMessage
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: &GitleaksQueueMessage{GitleaksID: 1, ProjectID: 1},
+			input: &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1},
 		},
 		{
 			name:  "OK(scan_only)",
-			input: &GitleaksQueueMessage{GitleaksID: 1, ProjectID: 1, ScanOnly: true},
+			input: &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
 			name:    "NG Required(gitlekas_id)",
-			input:   &GitleaksQueueMessage{ProjectID: 1},
+			input:   &CodeQueueMessage{ProjectID: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(project_id)",
-			input:   &GitleaksQueueMessage{GitleaksID: 1},
+			input:   &CodeQueueMessage{GitHubSettingID: 1},
 			wantErr: true,
 		},
 	}
@@ -42,22 +42,22 @@ func TestValidateGitleaks(t *testing.T) {
 	}
 }
 
-func TestParseMessageGitleaks(t *testing.T) {
+func TestParseMessageGitHub(t *testing.T) {
 	cases := []struct {
 		name    string
 		input   string
-		want    *GitleaksQueueMessage
+		want    *CodeQueueMessage
 		wantErr bool
 	}{
 		{
 			name:  "OK",
-			input: `{"gitleaks_id":1, "project_id":1}`,
-			want:  &GitleaksQueueMessage{GitleaksID: 1, ProjectID: 1},
+			input: `{"github_setting_id":1, "project_id":1}`,
+			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1},
 		},
 		{
 			name:  "OK(scan_only)",
-			input: `{"gitleaks_id":1, "project_id":1, "scan_only":"true"}`,
-			want:  &GitleaksQueueMessage{GitleaksID: 1, ProjectID: 1, ScanOnly: true},
+			input: `{"github_setting_id":1, "project_id":1, "scan_only":"true"}`,
+			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
 			name:    "NG Json parse erroro",
@@ -72,7 +72,7 @@ func TestParseMessageGitleaks(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := ParseMessageGitleaks(c.input)
+			got, err := ParseMessageGitHub(c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("Unexpected error occured, wantErr=%t, err=%+v", c.wantErr, err)
 			}
