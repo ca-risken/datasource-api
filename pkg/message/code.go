@@ -11,24 +11,24 @@ const (
 	GitleaksDataSource = "code:gitleaks"
 )
 
-// GitleaksQueueMessage is the message for SQS queue
-type GitleaksQueueMessage struct {
-	GitleaksID uint32 `json:"gitleaks_id"`
-	ProjectID  uint32 `json:"project_id"`
-	ScanOnly   bool   `json:"scan_only,string"`
+// GitHubQueueMessage is the message for SQS queue
+type GitHubQueueMessage struct {
+	GitHubSettingID uint32 `json:"github_setting_id"`
+	ProjectID       uint32 `json:"project_id"`
+	ScanOnly        bool   `json:"scan_only,string"`
 }
 
 // Validate is the validation to GuardDutyMessage
-func (g *GitleaksQueueMessage) Validate() error {
+func (g *GitHubQueueMessage) Validate() error {
 	return validation.ValidateStruct(g,
-		validation.Field(&g.GitleaksID, validation.Required),
+		validation.Field(&g.GitHubSettingID, validation.Required),
 		validation.Field(&g.ProjectID, validation.Required),
 	)
 }
 
 // ParseMessage parse message & validation
-func ParseMessageGitleaks(msg string) (*GitleaksQueueMessage, error) {
-	message := &GitleaksQueueMessage{}
+func ParseMessageGitHub(msg string) (*GitHubQueueMessage, error) {
+	message := &GitHubQueueMessage{}
 	if err := json.Unmarshal([]byte(msg), message); err != nil {
 		return nil, err
 	}

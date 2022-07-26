@@ -317,10 +317,10 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.sqs.Send(ctx, c.sqs.CodeGitleaksQueueURL, &message.GitleaksQueueMessage{
-		GitleaksID: data.CodeGitHubSettingID,
-		ProjectID:  data.ProjectID,
-		ScanOnly:   req.ScanOnly,
+	resp, err := c.sqs.Send(ctx, c.sqs.CodeGitleaksQueueURL, &message.GitHubQueueMessage{
+		GitHubSettingID: data.CodeGitHubSettingID,
+		ProjectID:       data.ProjectID,
+		ScanOnly:        req.ScanOnly,
 	})
 	if err != nil {
 		return nil, err
