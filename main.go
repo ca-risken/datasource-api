@@ -138,7 +138,10 @@ func main() {
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 	}
-	q := queue.NewSQSClient(ctx, queueConf, logger)
+	q, err := queue.NewClient(queueConf, logger)
+	if err != nil {
+		logger.Fatalf(ctx, "failed to create sqs client: %w", err)
+	}
 	s := server.NewServer(
 		conf.Port,
 		conf.CoreSvcAddr,
