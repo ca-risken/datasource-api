@@ -164,16 +164,12 @@ func (d *DiagnosisService) InvokeScan(ctx context.Context, req *diagnosis.Invoke
 			return nil, err
 		}
 		for _, target := range *portscanTargets {
-			msg, err := makePortscanMessage(data.ProjectID, data.PortscanSettingID, target.PortscanTargetID, target.Target)
-			if err != nil {
-				d.logger.Errorf(ctx, "Error occured when making Portscan message, error: %v", err)
-				continue
-			}
+			msg := makePortscanMessage(data.ProjectID, data.PortscanSettingID, target.PortscanTargetID, target.Target)
 			msg.ScanOnly = req.ScanOnly
 			resp, err = d.sqs.Send(ctx, d.sqs.DiagnosisPortscanQueueURL, msg)
 			if err != nil {
 				d.logger.Errorf(ctx, "Error occured when sending Portscan message, error: %v", err)
-				continue
+				return nil, err
 			}
 			var scanAt time.Time
 			if !zero.IsZeroVal(target.ScanAt) {
