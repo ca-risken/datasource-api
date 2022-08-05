@@ -3,10 +3,13 @@ package code
 import (
 	"context"
 	"crypto/aes"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/ca-risken/common/pkg/logging"
 	mockdb "github.com/ca-risken/datasource-api/pkg/db/mock"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
@@ -715,4 +718,94 @@ func TestDeleteGitHubEnterpriseOrg(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInvokeScan(t *testing.T) {
+	var ctx context.Context
+	now := time.Now()
+	cases := []struct {
+		name                       string
+		input                      *code.InvokeScanGitleaksRequest
+		mockGetGitleaksResponse    *model.CodeGitleaksSetting
+		mockGetGitleaksError       error
+		mockQueue                  CodeQueue
+		mockUpsertGitleaksResponse *model.CodeGitleaksSetting
+		mockUpsertGitleaksError    error
+		wantErr                    bool
+	}{
+		{
+			name:  "OK",
+			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockQueue:                  newFakeCodeQueue("succeed", nil),
+			mockUpsertGitleaksResponse: &model.CodeGitleaksSetting{},
+		},
+		{
+			name:    "NG invalid param",
+			input:   &code.InvokeScanGitleaksRequest{ProjectId: 1},
+			wantErr: true,
+		},
+		{
+			name:                 "NG db error when GetGitHubSetting",
+			input:                &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksError: gorm.ErrRecordNotFound,
+			wantErr:              true,
+		},
+		{
+			name:  "NG fail sending queue",
+			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockQueue: newFakeCodeQueue("failure", errors.New("something error")),
+			wantErr:   true,
+		},
+		{
+			name:  "NG NG db error when UpsertGitleaksSetting",
+			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockQueue:               newFakeCodeQueue("succeed", nil),
+			mockUpsertGitleaksError: gorm.ErrInvalidDB,
+			wantErr:                 true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mockdb.MockCodeRepository{}
+			svc := CodeService{repository: &mockDB, sqs: c.mockQueue, logger: logging.NewLogger()}
+			if c.mockGetGitleaksResponse != nil || c.mockGetGitleaksError != nil {
+				mockDB.On("GetGitleaksSetting").Return(c.mockGetGitleaksResponse, c.mockGetGitleaksError).Once()
+			}
+			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
+				mockDB.On("UpsertGitleaksSetting").Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
+			}
+			_, err := svc.InvokeScanGitleaks(ctx, c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+		})
+	}
+}
+
+type FakeCodeQueue struct {
+	resp *sqs.SendMessageOutput
+	err  error
+}
+
+func newFakeCodeQueue(msg string, err error) *FakeCodeQueue {
+	return &FakeCodeQueue{
+		resp: &sqs.SendMessageOutput{MessageId: &msg},
+		err:  err,
+	}
+}
+
+func (c *FakeCodeQueue) Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error) {
+	return c.resp, c.err
 }

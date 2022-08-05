@@ -1,10 +1,12 @@
 package code
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -13,11 +15,16 @@ import (
 )
 
 type CodeService struct {
-	repository    db.CodeRepoInterface
-	sqs           *queue.Client
-	cipherBlock   cipher.Block
-	projectClient project.ProjectServiceClient
-	logger        logging.Logger
+	repository           db.CodeRepoInterface
+	sqs                  CodeQueue
+	cipherBlock          cipher.Block
+	projectClient        project.ProjectServiceClient
+	logger               logging.Logger
+	codeGitleaksQueueURL string
+}
+
+type CodeQueue interface {
+	Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error)
 }
 
 func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) (code.CodeServiceServer, error) {
@@ -27,10 +34,11 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		return nil, fmt.Errorf("failed to create cipher, err=%w", err)
 	}
 	return &CodeService{
-		repository:    repo,
-		sqs:           q,
-		cipherBlock:   block,
-		projectClient: pj,
-		logger:        l,
+		repository:           repo,
+		sqs:                  q,
+		cipherBlock:          block,
+		projectClient:        pj,
+		logger:               l,
+		codeGitleaksQueueURL: q.CodeGitleaksQueueURL,
 	}, nil
 }
