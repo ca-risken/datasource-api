@@ -26,6 +26,12 @@ type CodeRepoInterface interface {
 	UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksSettingForUpsert) (*model.CodeGitleaksSetting, error)
 	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
+	// code_dependency_setting
+	ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error)
+	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
+	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
+	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
+
 	// code_github_enterprise_org
 	ListGitHubEnterpriseOrg(ctx context.Context, projectID, GitHubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error)
 	UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error)
@@ -168,7 +174,7 @@ func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, gith
 func (c *Client) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error) {
 	query := `select * from code_gitleaks_setting`
 	var params []interface{}
-	if !zero.IsZeroVal(projectID) {
+	if projectID != 0 {
 		query += " where project_id = ?"
 		params = append(params, projectID)
 	}
@@ -233,6 +239,51 @@ func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksS
 
 func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeGitleaksSetting{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {
+	query := `select * from code_dependency_setting`
+	var params []interface{}
+	if projectID != 0 {
+		query += " where project_id = ?"
+		params = append(params, projectID)
+	}
+	data := []model.CodeDependencySetting{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (c *Client) GetDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeDependencySetting, error) {
+	var data model.CodeDependencySetting
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (c *Client) UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error) {
+	param := model.CodeDependencySetting{
+		CodeGitHubSettingID: data.GithubSettingId,
+		CodeDataSourceID:    data.CodeDataSourceId,
+		ProjectID:           data.ProjectId,
+		Status:              data.Status.String(),
+		StatusDetail:        data.StatusDetail,
+		ScanAt:              time.Unix(data.ScanAt, 0),
+	}
+	var savedData model.CodeDependencySetting
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", param.ProjectID, param.CodeGitHubSettingID).Assign(param).FirstOrCreate(&savedData).Error; err != nil {
+		return nil, err
+	}
+	return &savedData, nil
+}
+
+func (c *Client) DeleteDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeDependencySetting{}).Error; err != nil {
 		return err
 	}
 	return nil

@@ -9,6 +9,8 @@ import (
 const (
 	// GitleaksDataSource is the specific data_source label for gitleaks
 	GitleaksDataSource = "code:gitleaks"
+	// DependencyDataSource is the specific data_source label for gitleaks
+	DependencyDataSource = "code:dependency"
 )
 
 // CodeQueueMessage is the message for SQS queue

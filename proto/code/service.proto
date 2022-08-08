@@ -26,6 +26,12 @@ service CodeService {
   rpc DeleteGitleaksSetting(DeleteGitleaksSettingRequest)
       returns (google.protobuf.Empty);
 
+  // DependencySetting
+  rpc PutDependencySetting(PutDependencySettingRequest)
+      returns (PutDependencySettingResponse);
+  rpc DeleteDependencySetting(DeleteDependencySettingRequest)
+      returns (google.protobuf.Empty);
+
   // Enterprise
   rpc ListGitHubEnterpriseOrg(ListGitHubEnterpriseOrgRequest)
       returns (ListGitHubEnterpriseOrgResponse);
@@ -37,7 +43,9 @@ service CodeService {
   // Scan
   rpc InvokeScanGitleaks(InvokeScanGitleaksRequest)
       returns (google.protobuf.Empty); // For ondeamnd
-  rpc InvokeScanAllGitleaks(google.protobuf.Empty)
+  rpc InvokeScanDependency(InvokeScanDependencyRequest)
+      returns (google.protobuf.Empty); // For ondeamnd
+  rpc InvokeScanAll(google.protobuf.Empty)
       returns (google.protobuf.Empty); // For scheduled
 }
 
@@ -48,10 +56,10 @@ message ListDataSourceRequest {
 
 message ListDataSourceResponse { repeated CodeDataSource code_data_source = 1; }
 
-message ListGitHubSettingRequest { 
+message ListGitHubSettingRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
- }
+}
 
 message ListGitHubSettingResponse { repeated GitHubSetting github_setting = 1; }
 
@@ -86,6 +94,20 @@ message DeleteGitleaksSettingRequest {
   uint32 github_setting_id = 2;
 }
 
+message PutDependencySettingRequest {
+  uint32 project_id = 1;
+  DependencySettingForUpsert dependency_setting = 2;
+}
+
+message PutDependencySettingResponse {
+  DependencySetting dependency_setting = 1;
+}
+
+message DeleteDependencySettingRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+}
+
 message ListGitHubEnterpriseOrgRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
@@ -111,6 +133,12 @@ message DeleteGitHubEnterpriseOrgRequest {
 }
 
 message InvokeScanGitleaksRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  bool scan_only = 3;
+}
+
+message InvokeScanDependencyRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;

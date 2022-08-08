@@ -247,6 +247,77 @@ func TestValidate_DeleteGitleaksSettingRequest(t *testing.T) {
 	}
 }
 
+func TestValidate_PutDependencySettingRequest(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *PutDependencySettingRequest
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &PutDependencySettingRequest{ProjectId: 1, DependencySetting: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			}},
+		},
+		{
+			name:    "NG No github_setting_id",
+			input:   &PutDependencySettingRequest{ProjectId: 1},
+			wantErr: true,
+		},
+		{
+			name: "NG Invalid project_id",
+			input: &PutDependencySettingRequest{DependencySetting: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			}},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_DeleteDependencySettingRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *DeleteDependencySettingRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &DeleteDependencySettingRequest{ProjectId: 1, GithubSettingId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &DeleteDependencySettingRequest{GithubSettingId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(github_setting_id)",
+			input:   &DeleteDependencySettingRequest{ProjectId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_ListGitHubEnterpriseOrgRequest(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -373,6 +444,39 @@ func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 		{
 			name:    "NG Required(github_setting_id)",
 			input:   &InvokeScanGitleaksRequest{ProjectId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_InvokeScanDependencyRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *InvokeScanDependencyRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &InvokeScanDependencyRequest{GithubSettingId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(github_setting_id)",
+			input:   &InvokeScanDependencyRequest{ProjectId: 1},
 			wantErr: true,
 		},
 	}
@@ -547,6 +651,80 @@ func TestValidate_GitleaksSettingForUpsert(t *testing.T) {
 			name: "NG Max(scan_at)",
 			input: &GitleaksSettingForUpsert{
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_DependencySettingForUpsert(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *DependencySettingForUpsert
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+		},
+		{
+			name: "OK minimize",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1,
+			},
+		},
+		{
+			name: "NG Required(github_setting_id)",
+			input: &DependencySettingForUpsert{
+				CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(code_data_source_id)",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(project_id)",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Length(status_detail)",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Min(scan_at)",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime19691231T235959,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Max(scan_at)",
+			input: &DependencySettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
 			},
 			wantErr: true,
 		},

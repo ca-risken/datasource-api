@@ -558,6 +558,269 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 	}
 }
 
+func TestListDependencySetting(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		ProjectID uint32
+	}
+
+	cases := []struct {
+		name        string
+		args        args
+		want        *[]model.CodeDependencySetting
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: args{ProjectID: 1},
+			want: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("select * from code_dependency_setting where project_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now).
+					AddRow(uint32(2), uint32(1), uint32(1), "OK", now, now, now))
+			},
+		},
+		{
+			name: "OK project_id 0 value",
+			args: args{ProjectID: 0},
+			want: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("select * from code_dependency_setting")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now).
+					AddRow(uint32(2), uint32(1), uint32(1), "OK", now, now, now))
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    args{ProjectID: 1},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("select * from code_dependency_setting where project_id = ?")).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.ListDependencySetting(ctx, c.args.ProjectID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestGetDependencySetting(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		ProjectID           uint32
+		CodeGitHubSettingID uint32
+	}
+
+	cases := []struct {
+		name        string
+		args        args
+		want        *model.CodeDependencySetting
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK",
+			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now))
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.GetDependencySetting(ctx, c.args.ProjectID, c.args.CodeGitHubSettingID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestUpsertDependencySetting(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		data *code.DependencySettingForUpsert
+	}
+
+	cases := []struct {
+		name        string
+		args        args
+		want        *model.CodeDependencySetting
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK update",
+			args: args{
+				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+			},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now))
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("UPDATE `code_dependency_setting` SET `code_data_source_id`=?,`code_github_setting_id`=?,`project_id`=?,`scan_at`=?,`status`=?,`status_detail`=?,`updated_at`=? WHERE (project_id = ? AND code_github_setting_id = ?) AND `code_github_setting_id` = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name: "OK insert",
+			args: args{
+				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+			},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}))
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `code_dependency_setting` (`code_data_source_id`,`project_id`,`status`,`status_detail`,`scan_at`,`created_at`,`updated_at`,`code_github_setting_id`) VALUES (?,?,?,?,?,?,?,?)")).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name: "NG DB error",
+			args: args{
+				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+			},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.UpsertDependencySetting(ctx, c.args.data)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			// 自動生成されるタイムスタンプをwantで指定できないのでそれ以外の値を比較
+			if c.want != nil && !((got.CodeGitHubSettingID == c.want.CodeGitHubSettingID) && (got.CodeDataSourceID == c.want.CodeDataSourceID) && (got.ProjectID == c.want.ProjectID) && (got.Status == c.want.Status) && (got.StatusDetail == c.want.StatusDetail)) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestDeleteDependencySetting(t *testing.T) {
+	type args struct {
+		ProjectID           uint32
+		CodeGitHubSettingID uint32
+	}
+
+	cases := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK",
+			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			err = db.DeleteDependencySetting(ctx, c.args.ProjectID, c.args.CodeGitHubSettingID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestListGithubEnterpriseOrg(t *testing.T) {
 	now := time.Now()
 	type args struct {

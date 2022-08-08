@@ -15,12 +15,13 @@ import (
 )
 
 type CodeService struct {
-	repository           db.CodeRepoInterface
-	sqs                  CodeQueue
-	cipherBlock          cipher.Block
-	projectClient        project.ProjectServiceClient
-	logger               logging.Logger
-	codeGitleaksQueueURL string
+	repository             db.CodeRepoInterface
+	sqs                    CodeQueue
+	cipherBlock            cipher.Block
+	projectClient          project.ProjectServiceClient
+	logger                 logging.Logger
+	codeGitleaksQueueURL   string
+	codeDependencyQueueURL string
 }
 
 type CodeQueue interface {
@@ -34,11 +35,12 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		return nil, fmt.Errorf("failed to create cipher, err=%w", err)
 	}
 	return &CodeService{
-		repository:           repo,
-		sqs:                  q,
-		cipherBlock:          block,
-		projectClient:        pj,
-		logger:               l,
-		codeGitleaksQueueURL: q.CodeGitleaksQueueURL,
+		repository:             repo,
+		sqs:                    q,
+		cipherBlock:            block,
+		projectClient:          pj,
+		logger:                 l,
+		codeGitleaksQueueURL:   q.CodeGitleaksQueueURL,
+		codeDependencyQueueURL: q.CodeDependencyQueueURL,
 	}, nil
 }

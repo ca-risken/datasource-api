@@ -224,6 +224,20 @@ delete-gitleaks-setting:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		localhost:8081 datasource.code.CodeService.DeleteGitleaksSetting
 
+.PHONY: put-dependency-setting
+put-dependency-setting:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1001, "dependency_setting": {"github_setting_id":1001, "code_data_source_id":1001, "project_id":1001, "status": "CONFIGURED"}}' \
+		localhost:8081 datasource.code.CodeService.PutDependencySetting
+		
+.PHONY: delete-dependency-setting
+delete-dependency-setting:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.DeleteDependencySetting
+
 .PHONY: list-github-enterprise-org
 list-github-enterprise-org:
 	grpcurl \
@@ -252,9 +266,16 @@ invoke-scan-gitleaks:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		localhost:8081 datasource.code.CodeService.InvokeScanGitleaks
 
-.PHONY: invoke-scan-all-gitleaks
-invoke-scan-all-gitleaks:
-	grpcurl -plaintext localhost:8081 datasource.code.CodeService.InvokeScanAllGitleaks
+.PHONY: invoke-scan-dependency
+invoke-scan-dependency:
+	grpcurl \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		localhost:8081 datasource.code.CodeService.InvokeScanDependency
+
+.PHONY: invoke-scan-all-code
+invoke-scan-all-code:
+	grpcurl -plaintext localhost:8081 datasource.code.CodeService.InvokeScanAll
 
 ####################################################
 ## Diagnosis

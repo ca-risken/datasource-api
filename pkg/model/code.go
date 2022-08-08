@@ -46,6 +46,18 @@ type CodeGitleaksSetting struct {
 	UpdatedAt           time.Time
 }
 
+// CodeDependencySetting entity
+type CodeDependencySetting struct {
+	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
+	CodeDataSourceID    uint32
+	ProjectID           uint32
+	Status              string
+	StatusDetail        string
+	ScanAt              time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
 // CodeGitHubEnterpriseOrg entity
 type CodeGitHubEnterpriseOrg struct {
 	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
