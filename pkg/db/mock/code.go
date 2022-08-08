@@ -51,6 +51,22 @@ func (m *MockCodeRepository) DeleteGitleaksSetting(ctx context.Context, projectI
 	args := m.Called()
 	return args.Error(0)
 }
+func (m *MockCodeRepository) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {
+	args := m.Called()
+	return args.Get(0).(*[]model.CodeDependencySetting), args.Error(1)
+}
+func (m *MockCodeRepository) GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error) {
+	args := m.Called()
+	return args.Get(0).(*model.CodeDependencySetting), args.Error(1)
+}
+func (m *MockCodeRepository) UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error) {
+	args := m.Called()
+	return args.Get(0).(*model.CodeDependencySetting), args.Error(1)
+}
+func (m *MockCodeRepository) DeleteDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	args := m.Called()
+	return args.Error(0)
+}
 func (m *MockCodeRepository) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error) {
 	args := m.Called()
 	return args.Get(0).(*[]model.CodeGitHubEnterpriseOrg), args.Error(1)

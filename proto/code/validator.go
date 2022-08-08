@@ -73,6 +73,27 @@ func (d *DeleteGitleaksSettingRequest) Validate() error {
 	)
 }
 
+// Validate PutDependencySettingRequest
+func (p *PutDependencySettingRequest) Validate() error {
+	if p.DependencySetting == nil {
+		return errors.New("required DependencySetting")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required, validation.In(p.DependencySetting.ProjectId)),
+	); err != nil {
+		return err
+	}
+	return p.DependencySetting.Validate()
+}
+
+// Validate DeleteDependencySettingRequest
+func (d *DeleteDependencySettingRequest) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.ProjectId, validation.Required),
+		validation.Field(&d.GithubSettingId, validation.Required),
+	)
+}
+
 // Validate ListEnterpriseOrgRequest
 func (l *ListGitHubEnterpriseOrgRequest) Validate() error {
 	return validation.ValidateStruct(l,
@@ -111,6 +132,14 @@ func (i *InvokeScanGitleaksRequest) Validate() error {
 	)
 }
 
+// Validate InvokeScanRequest
+func (i *InvokeScanDependencyRequest) Validate() error {
+	return validation.ValidateStruct(i,
+		validation.Field(&i.ProjectId, validation.Required),
+		validation.Field(&i.GithubSettingId, validation.Required),
+	)
+}
+
 /**
  * Entity
 **/
@@ -134,6 +163,17 @@ func (g *GitleaksSettingForUpsert) Validate() error {
 		validation.Field(&g.CodeDataSourceId, validation.Required),
 		validation.Field(&g.ProjectId, validation.Required),
 		validation.Field(&g.RepositoryPattern, validation.Length(0, 128), validation.By(compilableRegexp(g.RepositoryPattern))),
+		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
+// Validate DependencySettingForUpsert
+func (g *DependencySettingForUpsert) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.GithubSettingId, validation.Required),
+		validation.Field(&g.CodeDataSourceId, validation.Required),
+		validation.Field(&g.ProjectId, validation.Required),
 		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
