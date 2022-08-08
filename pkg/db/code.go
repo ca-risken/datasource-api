@@ -174,7 +174,7 @@ func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, gith
 func (c *Client) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error) {
 	query := `select * from code_gitleaks_setting`
 	var params []interface{}
-	if !zero.IsZeroVal(projectID) {
+	if projectID != 0 {
 		query += " where project_id = ?"
 		params = append(params, projectID)
 	}
