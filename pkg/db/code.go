@@ -247,7 +247,7 @@ func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, gi
 func (c *Client) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {
 	query := `select * from code_dependency_setting`
 	var params []interface{}
-	if !zero.IsZeroVal(projectID) {
+	if projectID != 0 {
 		query += " where project_id = ?"
 		params = append(params, projectID)
 	}
