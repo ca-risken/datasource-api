@@ -47,7 +47,7 @@ proto-without-validate: fmt
 
 .PHONY: proto
 # proto : proto-without-validate proto-mock 
-proto : proto-without-validate # TODO add proto-mock
+proto : proto-without-validate proto-mock
 
 PHONY: build
 build: test
@@ -89,8 +89,7 @@ test:
 lint: FAKE
 	GO111MODULE=on golangci-lint run --timeout 5m
 
-.PHONY: generate-mock
-generate-mock: proto-mock
+.PHONY: proto-mock
 proto-mock: $(MOCK_TARGETS)
 %.mock: FAKE
 	sh hack/generate-mock.sh proto/$(*)
