@@ -5,6 +5,8 @@ IMAGE_TAG=latest
 MANIFEST_TAG=latest
 IMAGE_NAME=datasource-api
 IMAGE_REGISTRY=local
+GRPCURL=kubectl run grpcurl --image=fullstorydev/grpcurl -n core --restart=Never --rm -it --
+DATASOURCE_API_ADDR=datasource-api.core.svc.cluster.local:8081
 
 .PHONY: all
 all: run
@@ -110,584 +112,584 @@ help:
 ####################################################
 .PHONY: list-aws-service
 list-aws-service:
-	grpcurl -plaintext localhost:8081 list datasource.aws.AWSService
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.aws.AWSService
 
 .PHONY: list-aws
 list-aws:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws_id":1}' \
-		localhost:8081 datasource.aws.AWSService.ListAWS
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.ListAWS
 
 .PHONY: put-aws
 put-aws:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws":{"name":"account-01", "project_id":1, "aws_account_id":"123456789001"}}' \
-		localhost:8081 datasource.aws.AWSService.PutAWS
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.PutAWS
 
 .PHONY: delete-aws
 delete-aws:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws_id":2}' \
-		localhost:8081 datasource.aws.AWSService.DeleteAWS
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.DeleteAWS
 
 .PHONY: list-aws-data-source
 list-aws-data-source:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws_id":1}' \
-		localhost:8081 datasource.aws.AWSService.ListDataSource
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.ListDataSource
 
 .PHONY: attach-aws-data-source
 attach-aws-data-source:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "attach_data_source": {"aws_id":1, "aws_data_source_id":1004, "project_id":1, "assume_role_arn":"arn:aws:iam::123456789012:role/role-name", "external_id":"test", "status":"CONFIGURED"}}' \
-		localhost:8081 datasource.aws.AWSService.AttachDataSource
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.AttachDataSource
 
 .PHONY: detach-aws-data-source
 detach-aws-data-source:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws_id":1, "aws_data_source_id":1004}' \
-		localhost:8081 datasource.aws.AWSService.DetachDataSource
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.DetachDataSource
 
 .PHONY: invoke-aws-scan
 invoke-aws-scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "aws_id":1, "aws_data_source_id":1001}' \
-		localhost:8081 datasource.aws.AWSService.InvokeScan
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScan
 
 .PHONY: invoke-aws-scan-all
 invoke-aws-scan-all:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
-		localhost:8081 datasource.aws.AWSService.InvokeScanAll
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScanAll
 
 ####################################################
 ## Code
 ####################################################
 .PHONY: list-code-service
 list-code-service:
-	grpcurl -plaintext localhost:8081 list datasource.code.CodeService
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.code.CodeService
 
 .PHONY: list-code-datasource
 list-code-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"code_data_source_id":1001, "name":"code:gitleaks"}' \
-		localhost:8081 datasource.code.CodeService.ListDataSource
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.ListDataSource
 
 .PHONY: list-github-setting
 list-github-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001}' \
-		localhost:8081 datasource.code.CodeService.ListGitHubSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.ListGitHubSetting
 
 .PHONY: get-github-setting
 get-github-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.GetGitHubSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.GetGitHubSetting
 
 .PHONY: put-github-setting
 put-github-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting": {"github_setting_id":1001, "name":"test-github-setting", "project_id":1001, "type":2, "target_resource":"target"}}' \
-		localhost:8081 datasource.code.CodeService.PutGitHubSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutGitHubSetting
 				
 .PHONY: delete-github-setting
 delete-github-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.DeleteGitHubSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitHubSetting
 
 .PHONY: put-gitleaks-setting
 put-gitleaks-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "gitleaks_setting": {"github_setting_id":1001, "code_data_source_id":1001, "project_id":1001}}' \
-		localhost:8081 datasource.code.CodeService.PutGitleaksSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutGitleaksSetting
 		
 .PHONY: delete-gitleaks-setting
 delete-gitleaks-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.DeleteGitleaksSetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitleaksSetting
 
 .PHONY: put-dependency-setting
 put-dependency-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "dependency_setting": {"github_setting_id":1001, "code_data_source_id":1001, "project_id":1001, "status": "CONFIGURED"}}' \
-		localhost:8081 datasource.code.CodeService.PutDependencySetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutDependencySetting
 		
 .PHONY: delete-dependency-setting
 delete-dependency-setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.DeleteDependencySetting
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteDependencySetting
 
 .PHONY: list-github-enterprise-org
 list-github-enterprise-org:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id": 1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.ListGitHubEnterpriseOrg
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.ListGitHubEnterpriseOrg
 
 .PHONY: put-github-enterprise-org
 put-github-enterprise-org:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_enterprise_org": {"github_setting_id":1001, "organization":"organization", "project_id":1001}}' \
-		localhost:8081 datasource.code.CodeService.PutGitHubEnterpriseOrg
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutGitHubEnterpriseOrg
 
 .PHONY: delete-github-enterprise-org
 delete-github-enterprise-org:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001, "organization": "organization"}' \
-		localhost:8081 datasource.code.CodeService.DeleteGitHubEnterpriseOrg
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitHubEnterpriseOrg
 
 .PHONY: invoke-scan-gitleaks
 invoke-scan-gitleaks:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.InvokeScanGitleaks
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.InvokeScanGitleaks
 
 .PHONY: invoke-scan-dependency
 invoke-scan-dependency:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
-		localhost:8081 datasource.code.CodeService.InvokeScanDependency
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.InvokeScanDependency
 
 .PHONY: invoke-scan-all-code
 invoke-scan-all-code:
-	grpcurl -plaintext localhost:8081 datasource.code.CodeService.InvokeScanAll
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) datasource.code.CodeService.InvokeScanAll
 
 ####################################################
 ## Diagnosis
 ####################################################
 .PHONY: list-diagnosis-service
 list-diagnosis-service:
-	grpcurl -plaintext localhost:8081 list datasource.diagnosis.DiagnosisService
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.diagnosis.DiagnosisService
 
 .PHONY: list-diagnosis_datasource
 list-diagnosis_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListDiagnosisDataSource
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListDiagnosisDataSource
 
 .PHONY: get-diagnosis_datasource
 get-diagnosis_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "diagnosis_data_source_id":1001}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetDiagnosisDataSource
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetDiagnosisDataSource
 
 .PHONY: put-diagnosis_datasource
 put-diagnosis_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1 ,"diagnosis_data_source":{"name":"test_ds","description":"for_test","max_score":10}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutDiagnosisDataSource
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutDiagnosisDataSource
 
 .PHONY: delete-diagnosis_datasource
 delete-diagnosis_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "diagnosis_data_source_id":1002}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeleteDiagnosisDataSource
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeleteDiagnosisDataSource
 
 .PHONY: list-wpscan_setting
 list-wpscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListWpscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListWpscanSetting
 
 .PHONY: get-wpscan_setting
 get-wpscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "wpscan_setting_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetWpscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetWpscanSetting
 
 .PHONY: put-wpscan_setting
 put-wpscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "wpscan_setting": {"diagnosis_data_source_id":1002, "project_id":1, "target_url":"http://example.com", "status":"CONFIGURED", "options":"{}"}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutWpscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutWpscanSetting
 
 .PHONY: delete-wpscan_setting
 delete-wpscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "wpscan_setting_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeleteWpscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeleteWpscanSetting
 
 .PHONY: list-portscan_setting
 list-portscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListPortscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListPortscanSetting
 
 .PHONY: get-portscan_setting
 get-portscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_setting_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetPortscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetPortscanSetting
 
 .PHONY: put-portscan_setting
 put-portscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_setting": {"diagnosis_data_source_id":1003, "project_id":1, "name":"test_portscan"}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutPortscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutPortscanSetting
 
 .PHONY: delete-portscan_setting
 delete-portscan_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_setting_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeletePortscanSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeletePortscanSetting
 
 .PHONY: list-portscan_target
 list-portscan_target:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListPortscanTarget
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListPortscanTarget
 
 .PHONY: get-portscan_target
 get-portscan_target:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_target_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetPortscanTarget
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetPortscanTarget
 
 .PHONY: put-portscan_target
 put-portscan_target:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_target": {"portscan_setting_id":1, "project_id":1, "target":"127.0.0.1", "status":"CONFIGURED"}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutPortscanTarget
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutPortscanTarget
 
 .PHONY: delete-portscan_target
 delete-portscan_target:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "portscan_target_id":1001}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeletePortscanTarget
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeletePortscanTarget
 
 .PHONY: list-application_scan
 list-application_scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListApplicationScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListApplicationScan
 
 .PHONY: get-application_scan
 get-application_scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan_id":1001}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetApplicationScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetApplicationScan
 
 .PHONY: put-application_scan
 put-application_scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan": {"diagnosis_data_source_id":1004, "project_id":1, "name":"test_target","scan_type":"BASIC","status":"CONFIGURED"}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutApplicationScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutApplicationScan
 
 .PHONY: delete-application_scan
 delete-application_scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan_id":1002}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeleteApplicationScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeleteApplicationScan
 
 .PHONY: list-application_scan_basic_setting
 list-application_scan_basic_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.ListApplicationScanBasicSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.ListApplicationScanBasicSetting
 
 .PHONY: get-application_scan_basic_setting
 get-application_scan_basic_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan_id":1001}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.GetApplicationScanBasicSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.GetApplicationScanBasicSetting
 
 .PHONY: put-application_scan_basic_setting
 put-application_scan_basic_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan_basic_setting": {"application_scan_id":1, "project_id":1, "target":"http://localhost:8080", "max_depth":10, "max_children": 10}}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.PutApplicationScanBasicSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.PutApplicationScanBasicSetting
 
 .PHONY: delete-application_scan_basic_setting
 delete-application_scan_basic_setting:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "application_scan_basic_setting_id":1}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.DeleteApplicationScanBasicSetting
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.DeleteApplicationScanBasicSetting
 
 .PHONY: invoke-scan-wpscan
 invoke-scan-wpscan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "setting_id":1,"diagnosis_data_source_id":1002}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.InvokeScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.InvokeScan
 
 .PHONY: invoke-scan-portscan
 invoke-scan-portscan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "setting_id":1,"diagnosis_data_source_id":1003}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.InvokeScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.InvokeScan
 
 .PHONY: invoke-scan-application-scan
 invoke-scan-application-scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "setting_id":1,"diagnosis_data_source_id":1004}' \
-		localhost:8081 datasource.diagnosis.DiagnosisService.InvokeScan
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.InvokeScan
 
 .PHONY: invoke-diagnosis-scan-all
 invoke-diagnosis-scan-all:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
-		localhost:8081 datasource.diagnosis.DiagnosisService.InvokeScanAll
+		$(DATASOURCE_API_ADDR) datasource.diagnosis.DiagnosisService.InvokeScanAll
 
 ####################################################
 ## Google
 ####################################################
 .PHONY: list-google-service
 list-google-service:
-	grpcurl -plaintext localhost:8081 list datasource.google.GoogleService
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.google.GoogleService
 
 .PHONY: list-google-datasource
 list-google-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"google_data_source_id":1001}' \
-		localhost:8081 datasource.google.GoogleService.ListGoogleDataSource
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.ListGoogleDataSource
 
 .PHONY: list-gcp
 list-gcp:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.google.GoogleService.ListGCP
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.ListGCP
 
 .PHONY: get-gcp
 get-gcp:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1}' \
-		localhost:8081 datasource.google.GoogleService.GetGCP
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.GetGCP
 
 .PHONY: put-gcp
 put-gcp:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp": {"name":"1", "project_id":1, "gcp_project_id":"my-project", "verification_code":"xxxxxxxx"}}' \
-		localhost:8081 datasource.google.GoogleService.PutGCP
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.PutGCP
 
 .PHONY: delete-gcp
 delete-gcp:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1}' \
-		localhost:8081 datasource.google.GoogleService.DeleteGCP
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.DeleteGCP
 
 .PHONY: list-gcp-datasource
 list-gcp-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1}' \
-		localhost:8081 datasource.google.GoogleService.ListGCPDataSource
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.ListGCPDataSource
 
 .PHONY: get-gcp-datasource
 get-gcp-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1, "google_data_source_id":1001}' \
-		localhost:8081 datasource.google.GoogleService.GetGCPDataSource
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.GetGCPDataSource
 
 .PHONY: attach-gcp-datasource
 attach-gcp-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_data_source": {"gcp_id":1, "google_data_source_id":1001 "project_id":1}}' \
-		localhost:8081 datasource.google.GoogleService.AttachGCPDataSource
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.AttachGCPDataSource
 
 .PHONY: detach-gcp-datasource
 detach-gcp-datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1, "google_data_source_id":1001}' \
-		localhost:8081 datasource.google.GoogleService.DetachGCPDataSource
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.DetachGCPDataSource
 
 .PHONY: invoke-scan-gcp
 invoke-scan-gcp:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "gcp_id":1, "google_data_source_id":1001}' \
-		localhost:8081 datasource.google.GoogleService.InvokeScanGCP
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.InvokeScanGCP
 
 .PHONY: invoke-google-scan-all
 invoke-google-scan-all:
-	grpcurl -plaintext localhost:8081 datasource.google.GoogleService.InvokeScanAll
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) datasource.google.GoogleService.InvokeScanAll
 
 ####################################################
 ## OSINT
 ####################################################
 .PHONY: list-osint-service
 list-osint-service:
-	grpcurl -plaintext localhost:8081 list datasource.osint.OsintService
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.osint.OsintService
 
 .PHONY: list-osint
 list-osint:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.osint.OsintService.ListOsint
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.ListOsint
 
 .PHONY: get-osint
 get-osint:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_id":1}' \
-		localhost:8081 datasource.osint.OsintService.GetOsint
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.GetOsint
 
 .PHONY: put-osint
 put-osint:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1 ,"osint":{"resource_type":"Domain","resource_name":"cyberagent.co.jp","project_id":1}}' \
-		localhost:8081 datasource.osint.OsintService.PutOsint
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.PutOsint
 
 .PHONY: delete-osint
 delete-osint:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_id":2}' \
-		localhost:8081 datasource.osint.OsintService.DeleteOsint
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.DeleteOsint
 
 .PHONY: list-osint_datasource
 list-osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.osint.OsintService.ListOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.ListOsintDataSource
 
 .PHONY: get-osint_datasource
 get-osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_data_source_id":1001}' \
-		localhost:8081 datasource.osint.OsintService.GetOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.GetOsintDataSource
 
 .PHONY: put-osint_datasource
 put-osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1 ,"osint_data_source":{"name":"test_ds","description":"for_test","max_score":10}}' \
-		localhost:8081 datasource.osint.OsintService.PutOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.PutOsintDataSource
 
 .PHONY: delete-osint_datasource
 delete-osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_data_source_id":1002}' \
-		localhost:8081 datasource.osint.OsintService.DeleteOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.DeleteOsintDataSource
 
 .PHONY: list-rel_osint_datasource
 list-rel_osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.osint.OsintService.ListRelOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.ListRelOsintDataSource
 
 .PHONY: get-rel_osint_datasource
 get-rel_osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "rel_osint_data_source_id":1001}' \
-		localhost:8081 datasource.osint.OsintService.GetRelOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.GetRelOsintDataSource
 
 .PHONY: put-rel_osint_datasource
 put-rel_osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "rel_osint_data_source": {"osint_id":1, "osint_data_source_id":1001, "project_id":1, "status":"CONFIGURED"}}' \
-		localhost:8081 datasource.osint.OsintService.PutRelOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.PutRelOsintDataSource
 
 .PHONY: delete-rel_osint_datasource
 delete-rel_osint_datasource:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "rel_osint_data_source_id":1}' \
-		localhost:8081 datasource.osint.OsintService.DeleteRelOsintDataSource
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.DeleteRelOsintDataSource
 
 .PHONY: list-osint_detect_word
 list-osint_detect_word:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1}' \
-		localhost:8081 datasource.osint.OsintService.ListOsintDetectWord
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.ListOsintDetectWord
 
 .PHONY: get-osint_detect_word
 get-osint_detect_word:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_detect_word_id":1}' \
-		localhost:8081 datasource.osint.OsintService.GetOsintDetectWord
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.GetOsintDetectWord
 
 .PHONY: put-osint_detect_word
 put-osint_detect_word:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_detect_word": {"word":"fuga","rel_osint_data_source_id":1, "project_id":1}}' \
-		localhost:8081 datasource.osint.OsintService.PutOsintDetectWord
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.PutOsintDetectWord
 
 .PHONY: delete-osint_detect_word
 delete-osint_detect_word:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "osint_detect_word_id":1}' \
-		localhost:8081 datasource.osint.OsintService.DeleteOsintDetectWord
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.DeleteOsintDetectWord
 
 .PHONY: invoke-osint-scan
 invoke-osint-scan:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1, "rel_osint_data_source_id":1}' \
-		localhost:8081 datasource.osint.OsintService.InvokeScan
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.InvokeScan
 
 .PHONY: invoke-osint-scan_all
 invoke-osint-scan_all:
-	grpcurl \
+	$(GRPCURL) \
 		-plaintext \
-		localhost:8081 datasource.osint.OsintService.InvokeScanAll
+		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.InvokeScanAll
 
