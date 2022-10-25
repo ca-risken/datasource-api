@@ -1,4 +1,4 @@
-FROM golang:1.17 as builder
+FROM golang:1.18.2 as builder
 WORKDIR /src/
 
 COPY go.mod .
@@ -6,7 +6,7 @@ COPY go.sum .
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/datasource-api
+RUN CGO_ENABLED=0 GOOS=linux go build -buildvcs=false -o /bin/datasource-api
 
 FROM public.ecr.aws/risken/base/risken-base:v0.0.1
 COPY --from=builder /bin/datasource-api /usr/local/bin/
