@@ -76,6 +76,7 @@ func (d *DeleteGitleaksSettingRequest) Validate() error {
 // Validate GetGitleaksCacheRequest
 func (g *GetGitleaksCacheRequest) Validate() error {
 	return validation.ValidateStruct(g,
+		validation.Field(&g.ProjectId, validation.Required),
 		validation.Field(&g.GithubSettingId, validation.Required),
 		validation.Field(&g.RepositoryFullName, validation.Required, validation.Length(0, 255)),
 	)
@@ -85,6 +86,11 @@ func (g *GetGitleaksCacheRequest) Validate() error {
 func (p *PutGitleaksCacheRequest) Validate() error {
 	if p.GitleaksCache == nil {
 		return errors.New("required gitleaks_cache")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required),
+	); err != nil {
+		return err
 	}
 	return p.GitleaksCache.Validate()
 }

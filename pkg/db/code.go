@@ -26,6 +26,10 @@ type CodeRepoInterface interface {
 	UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksSettingForUpsert) (*model.CodeGitleaksSetting, error)
 	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
+	// code_gitleaks_cache
+	GetGitleaksCache(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksCache, error)
+	UpsertGitleaksCache(ctx context.Context, projectID uint32, data *code.GitleaksCacheForUpsert) (*model.CodeGitleaksCache, error)
+
 	// code_dependency_setting
 	ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error)
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
@@ -234,7 +238,6 @@ func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksS
 		return nil, err
 	}
 	return c.GetGitleaksSetting(ctx, data.ProjectId, data.GithubSettingId)
-
 }
 
 func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
@@ -242,6 +245,52 @@ func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, gi
 		return err
 	}
 	return nil
+}
+
+const selectGetGitleaksCache = `
+select
+  cache.*
+from 
+  code_gitleaks_cache cache
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and cache.code_github_setting_id = ? 
+  and cache.repository_full_name = ?
+`
+
+func (c *Client) GetGitleaksCache(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksCache, error) {
+	db := c.SlaveDB
+	if immediately {
+		db = c.MasterDB
+	}
+	var data model.CodeGitleaksCache
+	if err := db.WithContext(ctx).Raw(selectGetGitleaksCache, projectID, githubSettingID, repositoryFullName).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const upsertGitleaksCache = `
+INSERT INTO code_gitleaks_cache (
+  code_github_setting_id,
+  repository_full_name,
+  scan_at
+)
+VALUES (?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	scan_at=VALUES(scan_at)
+`
+
+func (c *Client) UpsertGitleaksCache(ctx context.Context, projectID uint32, data *code.GitleaksCacheForUpsert) (*model.CodeGitleaksCache, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(
+		upsertGitleaksCache,
+		data.GithubSettingId,
+		data.RepositoryFullName,
+		time.Unix(data.ScanAt, 0)).Error; err != nil {
+		return nil, err
+	}
+	return c.GetGitleaksCache(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 }
 
 func (c *Client) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {

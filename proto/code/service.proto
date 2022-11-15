@@ -101,13 +101,17 @@ message DeleteGitleaksSettingRequest {
 }
 
 message GetGitleaksCacheRequest {
-  uint32 github_setting_id = 1;
-  string repository_full_name = 2;
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string repository_full_name = 3;
 }
 
 message GetGitleaksCacheResponse { GitleaksCache gitleaks_cache = 1; }
 
-message PutGitleaksCacheRequest { GitleaksCacheForUpsert gitleaks_cache = 1; }
+message PutGitleaksCacheRequest {
+  uint32 project_id = 1;
+  GitleaksCacheForUpsert gitleaks_cache = 2;
+}
 
 message PutGitleaksCacheResponse { GitleaksCache gitleaks_cache = 1; }
 

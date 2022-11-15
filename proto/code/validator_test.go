@@ -255,11 +255,16 @@ func TestValidate_GetGitleaksCacheRequest(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			input: &GetGitleaksCacheRequest{GithubSettingId: 1, RepositoryFullName: "repo"},
+			input: &GetGitleaksCacheRequest{ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "repo"},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &GetGitleaksCacheRequest{GithubSettingId: 1, RepositoryFullName: "repo"},
+			wantErr: true,
 		},
 		{
 			name:    "NG Required(github_setting_id)",
-			input:   &GetGitleaksCacheRequest{RepositoryFullName: "repo"},
+			input:   &GetGitleaksCacheRequest{ProjectId: 1, RepositoryFullName: "repo"},
 			wantErr: true,
 		},
 		{
@@ -295,13 +300,23 @@ func TestValidate_PutGitleaksCacheRequest(t *testing.T) {
 		{
 			name: "OK",
 			input: &PutGitleaksCacheRequest{
+				ProjectId: 1,
 				GitleaksCache: &GitleaksCacheForUpsert{
 					GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: now.Unix(),
 				},
 			},
 		},
 		{
-			name:    "NG No gitleaks_chache",
+			name: "NG Required project_id",
+			input: &PutGitleaksCacheRequest{
+				GitleaksCache: &GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: now.Unix(),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required gitleaks_chache",
 			input:   &PutGitleaksCacheRequest{},
 			wantErr: true,
 		},
