@@ -49,6 +49,15 @@ message GitleaksSetting {
   int64 updated_at = 12;
 }
 
+// GitleaksCache
+message GitleaksCache {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  int64 scan_at = 3;
+  int64 created_at = 4;
+  int64 updated_at = 5;
+}
+
 // DependencySetting
 message DependencySetting {
   uint32 github_setting_id = 1;
@@ -102,6 +111,13 @@ message GitleaksSettingForUpsert {
   Status status = 8;
   string status_detail = 9;
   int64 scan_at = 10;
+}
+
+// GitleaksCacheForUpsert
+message GitleaksCacheForUpsert {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  int64 scan_at = 3;
 }
 
 // DependencySettingForUpsert

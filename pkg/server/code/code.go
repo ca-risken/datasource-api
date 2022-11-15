@@ -260,6 +260,22 @@ func (c *CodeService) DeleteGitleaksSetting(ctx context.Context, req *code.Delet
 	return &empty.Empty{}, nil
 }
 
+func (c *CodeService) GetGitleaksCache(ctx context.Context, req *code.GetGitleaksCacheRequest) (*code.GetGitleaksCacheResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// TODO
+	return &code.GetGitleaksCacheResponse{}, nil
+}
+
+func (c *CodeService) PutGitleaksCache(ctx context.Context, req *code.PutGitleaksCacheRequest) (*code.PutGitleaksCacheResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// TODO
+	return &code.PutGitleaksCacheResponse{}, nil
+}
+
 func (c *CodeService) PutDependencySetting(ctx context.Context, req *code.PutDependencySettingRequest) (*code.PutDependencySettingResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
@@ -383,6 +399,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		GitHubSettingID: data.CodeGitHubSettingID,
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
+		FullScan:        req.FullScan,
 	})
 	if err != nil {
 		return nil, err
