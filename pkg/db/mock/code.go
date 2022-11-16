@@ -59,6 +59,10 @@ func (m *MockCodeRepository) UpsertGitleaksCache(ctx context.Context, projectID 
 	args := m.Called()
 	return args.Get(0).(*model.CodeGitleaksCache), args.Error(1)
 }
+func (m *MockCodeRepository) DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error {
+	args := m.Called()
+	return args.Error(0)
+}
 func (m *MockCodeRepository) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {
 	args := m.Called()
 	return args.Get(0).(*[]model.CodeDependencySetting), args.Error(1)

@@ -701,6 +701,58 @@ func TestUpsertGitleaksCache(t *testing.T) {
 	}
 }
 
+func TestDeleteGitleaksCache(t *testing.T) {
+	type args struct {
+		CodeGitHubSettingID uint32
+	}
+	cases := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK",
+			args:    args{CodeGitHubSettingID: 1},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec("DELETE FROM .*").
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    args{CodeGitHubSettingID: 1},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec("DELETE FROM .*").
+					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			err = db.DeleteGitleaksCache(ctx, c.args.CodeGitHubSettingID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestListDependencySetting(t *testing.T) {
 	now := time.Now()
 	type args struct {

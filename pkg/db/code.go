@@ -29,6 +29,7 @@ type CodeRepoInterface interface {
 	// code_gitleaks_cache
 	GetGitleaksCache(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksCache, error)
 	UpsertGitleaksCache(ctx context.Context, projectID uint32, data *code.GitleaksCacheForUpsert) (*model.CodeGitleaksCache, error)
+	DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error
 
 	// code_dependency_setting
 	ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error)
@@ -291,6 +292,16 @@ func (c *Client) UpsertGitleaksCache(ctx context.Context, projectID uint32, data
 		return nil, err
 	}
 	return c.GetGitleaksCache(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func (c *Client) DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).
+		Where("code_github_setting_id = ?", githubSettingID).
+		Delete(&model.CodeGitleaksCache{}).
+		Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {

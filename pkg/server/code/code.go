@@ -213,16 +213,13 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksCache(ctx, req.GithubSettingId); err != nil {
 		return nil, err
 	}
-	err = c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
-	err = c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	organizations, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GithubSettingId)
@@ -234,6 +231,9 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 		if err != nil {
 			return nil, err
 		}
+	}
+	if err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
 	}
 	return &empty.Empty{}, nil
 }
@@ -253,8 +253,10 @@ func (c *CodeService) DeleteGitleaksSetting(ctx context.Context, req *code.Delet
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksCache(ctx, req.GithubSettingId); err != nil {
+		return nil, err
+	}
+	if err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	return &empty.Empty{}, nil
