@@ -316,7 +316,7 @@ func TestValidate_PutGitleaksCacheRequest(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "NG Required gitleaks_chache",
+			name:    "NG Required gitleaks_cache",
 			input:   &PutGitleaksCacheRequest{},
 			wantErr: true,
 		},
@@ -774,7 +774,7 @@ func TestValidate_GitleaksCacheForUpsert(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NG Required(code_data_source_id)",
+			name: "NG Required(respository_full_name)",
 			input: &GitleaksCacheForUpsert{
 				GithubSettingId: 1, ScanAt: now.Unix(),
 			},
