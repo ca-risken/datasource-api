@@ -754,8 +754,8 @@ func TestGetGitleaksCache(t *testing.T) {
 
 func TestPutGitleaksCache(t *testing.T) {
 	now := time.Now()
-	type GetGitHubSettingResponse struct {
-		Resp *model.CodeGitHubSetting
+	type GetGitleaksSettingResponse struct {
+		Resp *model.CodeGitleaksSetting
 		Err  error
 	}
 	type UpsertGitleaksCacheResponse struct {
@@ -766,7 +766,7 @@ func TestPutGitleaksCache(t *testing.T) {
 		name                    string
 		input                   *code.PutGitleaksCacheRequest
 		want                    *code.PutGitleaksCacheResponse
-		mockGetGitHubSetting    *GetGitHubSettingResponse
+		mockGetGitleaksSetting  *GetGitleaksSettingResponse
 		mockUpsertGitleaksCache *UpsertGitleaksCacheResponse
 		wantErr                 bool
 	}{
@@ -781,8 +781,8 @@ func TestPutGitleaksCache(t *testing.T) {
 			want: &code.PutGitleaksCacheResponse{
 				GitleaksCache: &code.GitleaksCache{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
-			mockGetGitHubSetting: &GetGitHubSettingResponse{
-				Resp: &model.CodeGitHubSetting{CodeGitHubSettingID: 1},
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
+				Resp: &model.CodeGitleaksSetting{CodeGitHubSettingID: 1},
 				Err:  nil,
 			},
 			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
@@ -800,7 +800,7 @@ func TestPutGitleaksCache(t *testing.T) {
 				},
 			},
 			want:                    nil,
-			mockGetGitHubSetting:    nil,
+			mockGetGitleaksSetting:  nil,
 			mockUpsertGitleaksCache: nil,
 			wantErr:                 true,
 		},
@@ -813,7 +813,7 @@ func TestPutGitleaksCache(t *testing.T) {
 				},
 			},
 			want: nil,
-			mockGetGitHubSetting: &GetGitHubSettingResponse{
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
 				Resp: nil,
 				Err:  gorm.ErrRecordNotFound,
 			},
@@ -829,8 +829,8 @@ func TestPutGitleaksCache(t *testing.T) {
 				},
 			},
 			want: nil,
-			mockGetGitHubSetting: &GetGitHubSettingResponse{
-				Resp: &model.CodeGitHubSetting{CodeGitHubSettingID: 1},
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
+				Resp: &model.CodeGitleaksSetting{CodeGitHubSettingID: 1},
 				Err:  nil,
 			},
 			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
@@ -844,8 +844,8 @@ func TestPutGitleaksCache(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mockdb.MockCodeRepository{}
 			svc := CodeService{repository: &mockDB}
-			if c.mockGetGitHubSetting != nil {
-				mockDB.On("GetGitHubSetting").Return(c.mockGetGitHubSetting.Resp, c.mockGetGitHubSetting.Err).Once()
+			if c.mockGetGitleaksSetting != nil {
+				mockDB.On("GetGitleaksSetting").Return(c.mockGetGitleaksSetting.Resp, c.mockGetGitleaksSetting.Err).Once()
 			}
 			if c.mockUpsertGitleaksCache != nil {
 				mockDB.On("UpsertGitleaksCache").Return(c.mockUpsertGitleaksCache.Resp, c.mockUpsertGitleaksCache.Err).Once()

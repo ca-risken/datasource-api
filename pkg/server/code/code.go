@@ -297,8 +297,8 @@ func (c *CodeService) PutGitleaksCache(ctx context.Context, req *code.PutGitleak
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	// github setting data in project must be exists
-	if _, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GitleaksCache.GithubSettingId); err != nil {
+	// gitleaks setting data in project must be exists
+	if _, err := c.repository.GetGitleaksSetting(ctx, req.ProjectId, req.GitleaksCache.GithubSettingId); err != nil {
 		return nil, err
 	}
 	data, err := c.repository.UpsertGitleaksCache(ctx, req.ProjectId, req.GitleaksCache)
