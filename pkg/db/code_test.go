@@ -558,6 +558,149 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 	}
 }
 
+var codeGitleaksCacheTableColumn = []string{"code_github_setting_id", "repository_full_name", "scan_at", "created_at", "updated_at"}
+
+func TestGetGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		ProjectID           uint32
+		CodeGitHubSettingID uint32
+		RepositoryFullName  string
+		Immediately         bool
+	}
+	cases := []struct {
+		name        string
+		args        *args
+		want        *model.CodeGitleaksCache
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK(immediately: true)",
+			args:    &args{ProjectID: 1, CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", Immediately: true},
+			want:    &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectGetGitleaksCache)).
+					WillReturnRows(sqlmock.NewRows(codeGitleaksCacheTableColumn).
+						AddRow(uint32(1), "owner/repo", now, now, now),
+					)
+			},
+		},
+		{
+			name:    "OK(immediately: false)",
+			args:    &args{ProjectID: 1, CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", Immediately: false},
+			want:    &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectGetGitleaksCache)).
+					WillReturnRows(sqlmock.NewRows(codeGitleaksCacheTableColumn).
+						AddRow(uint32(1), "owner/repo", now, now, now))
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    &args{ProjectID: 1, CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo"},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectGetGitleaksCache)).
+					WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%+v' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.GetGitleaksCache(context.TODO(), c.args.ProjectID, c.args.CodeGitHubSettingID, c.args.RepositoryFullName, false)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestUpsertGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		ProjectID uint32
+		Data      *code.GitleaksCacheForUpsert
+	}
+
+	cases := []struct {
+		name        string
+		args        args
+		want        *model.CodeGitleaksCache
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: args{
+				ProjectID: 1,
+				Data:      &code.GitleaksCacheForUpsert{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix()},
+			},
+			want:    &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(
+					regexp.QuoteMeta(upsertGitleaksCache)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectGetGitleaksCache)).
+					WillReturnRows(sqlmock.NewRows(codeGitleaksCacheTableColumn).
+						AddRow(uint32(1), "owner/repo", now, now, now))
+			},
+		},
+		{
+			name: "NG DB error",
+			args: args{
+				ProjectID: 1,
+				Data:      &code.GitleaksCacheForUpsert{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix()},
+			},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(
+					regexp.QuoteMeta(upsertGitleaksCache)).
+					WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.UpsertGitleaksCache(context.TODO(), c.args.ProjectID, c.args.Data)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestListDependencySetting(t *testing.T) {
 	now := time.Now()
 	type args struct {

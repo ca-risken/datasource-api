@@ -671,6 +671,197 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 	}
 }
 
+func TestGetGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type GetGitleaksCacheResponse struct {
+		Resp *model.CodeGitleaksCache
+		Err  error
+	}
+	cases := []struct {
+		name     string
+		input    *code.GetGitleaksCacheRequest
+		want     *code.GetGitleaksCacheResponse
+		mockResp *GetGitleaksCacheResponse
+		wantErr  bool
+	}{
+		{
+			name: "OK",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			want: &code.GetGitleaksCacheResponse{
+				GitleaksCache: &code.GitleaksCache{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				Err:  nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "OK(RecordNotFound)",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			want: &code.GetGitleaksCacheResponse{},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: nil,
+				Err:  gorm.ErrRecordNotFound,
+			},
+			wantErr: false,
+		},
+		{
+			name: "NG(invalid param)",
+			input: &code.GetGitleaksCacheRequest{
+				GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG(DB error)",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: nil,
+				Err:  gorm.ErrInvalidDB,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mockdb.MockCodeRepository{}
+			svc := CodeService{repository: &mockDB}
+			if c.mockResp != nil {
+				mockDB.On("GetGitleaksCache").Return(c.mockResp.Resp, c.mockResp.Err).Once()
+			}
+			got, err := svc.GetGitleaksCache(context.TODO(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestPutGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type GetGitHubSettingResponse struct {
+		Resp *model.CodeGitHubSetting
+		Err  error
+	}
+	type UpsertGitleaksCacheResponse struct {
+		Resp *model.CodeGitleaksCache
+		Err  error
+	}
+	cases := []struct {
+		name                    string
+		input                   *code.PutGitleaksCacheRequest
+		want                    *code.PutGitleaksCacheResponse
+		mockGetGitHubSetting    *GetGitHubSettingResponse
+		mockUpsertGitleaksCache *UpsertGitleaksCacheResponse
+		wantErr                 bool
+	}{
+		{
+			name: "OK",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: &code.PutGitleaksCacheResponse{
+				GitleaksCache: &code.GitleaksCache{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			},
+			mockGetGitHubSetting: &GetGitHubSettingResponse{
+				Resp: &model.CodeGitHubSetting{CodeGitHubSettingID: 1},
+				Err:  nil,
+			},
+			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
+				Resp: &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				Err:  nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "NG(invalid param)",
+			input: &code.PutGitleaksCacheRequest{
+				// ProjectId: 1, // required param
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want:                    nil,
+			mockGetGitHubSetting:    nil,
+			mockUpsertGitleaksCache: nil,
+			wantErr:                 true,
+		},
+		{
+			name: "NG(No GitHub setting)",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: nil,
+			mockGetGitHubSetting: &GetGitHubSettingResponse{
+				Resp: nil,
+				Err:  gorm.ErrRecordNotFound,
+			},
+			mockUpsertGitleaksCache: nil,
+			wantErr:                 true,
+		},
+		{
+			name: "NG(PutGitleaksCache error)",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: nil,
+			mockGetGitHubSetting: &GetGitHubSettingResponse{
+				Resp: &model.CodeGitHubSetting{CodeGitHubSettingID: 1},
+				Err:  nil,
+			},
+			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
+				Resp: nil,
+				Err:  errors.New("something error"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mockdb.MockCodeRepository{}
+			svc := CodeService{repository: &mockDB}
+			if c.mockGetGitHubSetting != nil {
+				mockDB.On("GetGitHubSetting").Return(c.mockGetGitHubSetting.Resp, c.mockGetGitHubSetting.Err).Once()
+			}
+			if c.mockUpsertGitleaksCache != nil {
+				mockDB.On("UpsertGitleaksCache").Return(c.mockUpsertGitleaksCache.Resp, c.mockUpsertGitleaksCache.Err).Once()
+			}
+			got, err := svc.PutGitleaksCache(context.TODO(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
 func TestPutDependencySetting(t *testing.T) {
 	var ctx context.Context
 	now := time.Now()
