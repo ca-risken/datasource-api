@@ -46,6 +46,15 @@ type CodeGitleaksSetting struct {
 	UpdatedAt           time.Time
 }
 
+// CodeGitleaksCashe entity
+type CodeGitleaksCache struct {
+	CodeGitHubSettingID uint32 `gorm:"column:code_github_setting_id"`
+	RepositoryFullName  string
+	ScanAt              time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
 // CodeDependencySetting entity
 type CodeDependencySetting struct {
 	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`

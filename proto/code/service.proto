@@ -26,6 +26,12 @@ service CodeService {
   rpc DeleteGitleaksSetting(DeleteGitleaksSettingRequest)
       returns (google.protobuf.Empty);
 
+  // GitleaksCache
+  rpc GetGitleaksCache(GetGitleaksCacheRequest)
+      returns (GetGitleaksCacheResponse);
+  rpc PutGitleaksCache(PutGitleaksCacheRequest)
+      returns (PutGitleaksCacheResponse);
+
   // DependencySetting
   rpc PutDependencySetting(PutDependencySettingRequest)
       returns (PutDependencySettingResponse);
@@ -94,6 +100,21 @@ message DeleteGitleaksSettingRequest {
   uint32 github_setting_id = 2;
 }
 
+message GetGitleaksCacheRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string repository_full_name = 3;
+}
+
+message GetGitleaksCacheResponse { GitleaksCache gitleaks_cache = 1; }
+
+message PutGitleaksCacheRequest {
+  uint32 project_id = 1;
+  GitleaksCacheForUpsert gitleaks_cache = 2;
+}
+
+message PutGitleaksCacheResponse { GitleaksCache gitleaks_cache = 1; }
+
 message PutDependencySettingRequest {
   uint32 project_id = 1;
   DependencySettingForUpsert dependency_setting = 2;
@@ -136,6 +157,7 @@ message InvokeScanGitleaksRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
+  bool full_scan = 4;
 }
 
 message InvokeScanDependencyRequest {

@@ -213,16 +213,13 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksCache(ctx, req.GithubSettingId); err != nil {
 		return nil, err
 	}
-	err = c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
-	err = c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	organizations, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GithubSettingId)
@@ -234,6 +231,9 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 		if err != nil {
 			return nil, err
 		}
+	}
+	if err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
 	}
 	return &empty.Empty{}, nil
 }
@@ -253,11 +253,59 @@ func (c *CodeService) DeleteGitleaksSetting(ctx context.Context, req *code.Delet
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	if err := c.repository.DeleteGitleaksCache(ctx, req.GithubSettingId); err != nil {
+		return nil, err
+	}
+	if err := c.repository.DeleteGitleaksSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	return &empty.Empty{}, nil
+}
+
+func convertGitleaksCache(data *model.CodeGitleaksCache) *code.GitleaksCache {
+	var converted code.GitleaksCache
+	if data == nil {
+		return &converted
+	}
+	converted = code.GitleaksCache{
+		GithubSettingId:    data.CodeGitHubSettingID,
+		RepositoryFullName: data.RepositoryFullName,
+		CreatedAt:          data.CreatedAt.Unix(),
+		UpdatedAt:          data.UpdatedAt.Unix(),
+	}
+	if !data.ScanAt.IsZero() {
+		converted.ScanAt = data.ScanAt.Unix()
+	}
+	return &converted
+}
+
+func (c *CodeService) GetGitleaksCache(ctx context.Context, req *code.GetGitleaksCacheRequest) (*code.GetGitleaksCacheResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	data, err := c.repository.GetGitleaksCache(ctx, req.ProjectId, req.GithubSettingId, req.RepositoryFullName, false)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &code.GetGitleaksCacheResponse{}, nil
+		}
+		return nil, err
+	}
+	return &code.GetGitleaksCacheResponse{GitleaksCache: convertGitleaksCache(data)}, nil
+}
+
+func (c *CodeService) PutGitleaksCache(ctx context.Context, req *code.PutGitleaksCacheRequest) (*code.PutGitleaksCacheResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// gitleaks setting data in project must be exists
+	if _, err := c.repository.GetGitleaksSetting(ctx, req.ProjectId, req.GitleaksCache.GithubSettingId); err != nil {
+		return nil, err
+	}
+	data, err := c.repository.UpsertGitleaksCache(ctx, req.ProjectId, req.GitleaksCache)
+	if err != nil {
+		return nil, err
+	}
+	return &code.PutGitleaksCacheResponse{GitleaksCache: convertGitleaksCache(data)}, nil
 }
 
 func (c *CodeService) PutDependencySetting(ctx context.Context, req *code.PutDependencySettingRequest) (*code.PutDependencySettingResponse, error) {
@@ -383,6 +431,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		GitHubSettingID: data.CodeGitHubSettingID,
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
+		FullScan:        req.FullScan,
 	})
 	if err != nil {
 		return nil, err

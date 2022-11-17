@@ -426,112 +426,113 @@ func TestPutGitHubSetting(t *testing.T) {
 func TestDeleteGitHubSetting(t *testing.T) {
 	var ctx context.Context
 	now := time.Now()
+	type ListEnterpriseOrgResp struct {
+		Resp *[]model.CodeGitHubEnterpriseOrg
+		Err  error
+	}
 	cases := []struct {
 		name                         string
 		input                        *code.DeleteGitHubSettingRequest
-		isCalledDeleteGithubSetting  bool
-		mockError                    error
-		isCalledDeleteGitleaks       bool
-		mockGitleaksError            error
-		isCalledDeleteDependency     bool
-		mockDependencyError          error
-		isCalledListEnterpriseOrg    bool
-		mockListEnterpriseOrg        *[]model.CodeGitHubEnterpriseOrg
-		mockEnterpriserOrgError      error
-		isCalledDeleteEnterpriseOrg  bool
-		mockDeleteEnterpriseOrgError error
+		mockDeleteGitleaksCacheResp  error
+		mockDeleteGitleaksResp       error
+		mockDeleteDependencyResp     error
+		mockListEnterpriseOrg        *ListEnterpriseOrgResp
+		mockDeleteEnterpriserOrgResp error
+		mockDeleteGithubSettingResp  error
 		wantErr                      bool
 	}{
 		{
 			name:                        "OK",
 			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           nil,
-			isCalledDeleteDependency:    true,
-			mockDependencyError:         nil,
-			isCalledListEnterpriseOrg:   true,
-			mockListEnterpriseOrg: &[]model.CodeGitHubEnterpriseOrg{
-				{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    nil,
+			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
+				Resp: &[]model.CodeGitHubEnterpriseOrg{
+					{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
+				},
+				Err: nil,
 			},
-			mockEnterpriserOrgError:      nil,
-			isCalledDeleteEnterpriseOrg:  true,
-			mockDeleteEnterpriseOrgError: nil,
+			mockDeleteEnterpriserOrgResp: nil,
+			mockDeleteGithubSettingResp:  nil,
+			wantErr:                      false,
 		},
 		{
 			name:                        "OK enterprise org empty",
 			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           nil,
-			isCalledDeleteDependency:    true,
-			mockDependencyError:         nil,
-			isCalledListEnterpriseOrg:   true,
-			mockListEnterpriseOrg:       &[]model.CodeGitHubEnterpriseOrg{},
-		},
-		{
-			name:                        "NG invalid param",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1},
-			isCalledDeleteGithubSetting: false,
-			wantErr:                     true,
-		},
-		{
-			name:                        "Invalid DB error",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			mockError:                   gorm.ErrInvalidDB,
-			isCalledDeleteGithubSetting: true,
-			wantErr:                     true,
-		},
-		{
-			name:                        "Invalid DB error (deleteGitleaks)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           gorm.ErrInvalidDB,
-			wantErr:                     true,
-		},
-		{
-			name:                        "Invalid DB error (deleteGitleaks)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           nil,
-			isCalledDeleteDependency:    true,
-			mockDependencyError:         gorm.ErrInvalidDB,
-			wantErr:                     true,
-		},
-		{
-			name:                        "Invalid DB error (listEnterpriseOrg)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           nil,
-			isCalledDeleteDependency:    true,
-			mockDependencyError:         nil,
-			isCalledListEnterpriseOrg:   true,
-			mockEnterpriserOrgError:     gorm.ErrInvalidDB,
-			wantErr:                     true,
-		},
-		{
-			name:                        "Invalid DB error (deleteEnterpriseOrg)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			isCalledDeleteGithubSetting: true,
-			mockError:                   nil,
-			isCalledDeleteGitleaks:      true,
-			mockGitleaksError:           nil,
-			isCalledDeleteDependency:    true,
-			mockDependencyError:         nil,
-			isCalledListEnterpriseOrg:   true,
-			mockListEnterpriseOrg: &[]model.CodeGitHubEnterpriseOrg{
-				{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    nil,
+			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
+				Resp: &[]model.CodeGitHubEnterpriseOrg{},
+				Err:  nil,
 			},
-			isCalledDeleteEnterpriseOrg:  true,
-			mockDeleteEnterpriseOrgError: gorm.ErrInvalidDB,
+			mockDeleteEnterpriserOrgResp: nil,
+			mockDeleteGithubSettingResp:  nil,
+			wantErr:                      false,
+		},
+		{
+			name:    "NG invalid param",
+			input:   &code.DeleteGitHubSettingRequest{ProjectId: 1},
+			wantErr: true,
+		},
+		{
+			name:                        "NG DB error (delete gitleaks cache)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: errors.New("something error"),
+			wantErr:                     true,
+		},
+		{
+			name:                        "NG DB error (delete gitleaks)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      errors.New("something error"),
+			wantErr:                     true,
+		},
+		{
+			name:                        "NG DB error (delete dependency)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    errors.New("something error"),
+			wantErr:                     true,
+		},
+		{
+			name:                        "NG DB error (list enterprise org)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    nil,
+			mockListEnterpriseOrg:       &ListEnterpriseOrgResp{Err: errors.New("something error")},
+			wantErr:                     true,
+		},
+		{
+			name:                        "NG DB error (delete enterprise org)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    nil,
+			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
+				Resp: &[]model.CodeGitHubEnterpriseOrg{
+					{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
+				},
+				Err: nil,
+			},
+			mockDeleteEnterpriserOrgResp: errors.New("something error"),
+			wantErr:                      true,
+		},
+		{
+			name:                        "NG DB error (delete github setting)",
+			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: nil,
+			mockDeleteGitleaksResp:      nil,
+			mockDeleteDependencyResp:    nil,
+			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
+				Resp: &[]model.CodeGitHubEnterpriseOrg{},
+				Err:  nil,
+			},
+			mockDeleteEnterpriserOrgResp: nil,
+			mockDeleteGithubSettingResp:  errors.New("something error"),
 			wantErr:                      true,
 		},
 	}
@@ -539,21 +540,14 @@ func TestDeleteGitHubSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mockdb.MockCodeRepository{}
 			svc := CodeService{repository: &mockDB}
-			if c.isCalledDeleteGithubSetting {
-				mockDB.On("DeleteGitHubSetting").Return(c.mockError).Once()
+			mockDB.On("DeleteGitleaksCache").Return(c.mockDeleteGitleaksCacheResp).Once()
+			mockDB.On("DeleteGitleaksSetting").Return(c.mockDeleteGitleaksResp).Once()
+			mockDB.On("DeleteDependencySetting").Return(c.mockDeleteDependencyResp).Once()
+			if c.mockListEnterpriseOrg != nil {
+				mockDB.On("ListGitHubEnterpriseOrg").Return(c.mockListEnterpriseOrg.Resp, c.mockListEnterpriseOrg.Err).Once()
 			}
-			if c.isCalledDeleteGitleaks {
-				mockDB.On("DeleteGitleaksSetting").Return(c.mockGitleaksError).Once()
-			}
-			if c.isCalledDeleteDependency {
-				mockDB.On("DeleteDependencySetting").Return(c.mockDependencyError).Once()
-			}
-			if c.isCalledListEnterpriseOrg {
-				mockDB.On("ListGitHubEnterpriseOrg").Return(c.mockListEnterpriseOrg, c.mockEnterpriserOrgError).Once()
-			}
-			if c.isCalledDeleteEnterpriseOrg {
-				mockDB.On("DeleteGitHubEnterpriseOrg").Return(c.mockDeleteEnterpriseOrgError).Once()
-			}
+			mockDB.On("DeleteGitHubEnterpriseOrg").Return(c.mockDeleteEnterpriserOrgResp).Once()
+			mockDB.On("DeleteGitHubSetting").Return(c.mockDeleteGithubSettingResp).Once()
 			_, err := svc.DeleteGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
@@ -637,10 +631,11 @@ func TestPutGitleaksSetting(t *testing.T) {
 func TestDeleteGitleaksSetting(t *testing.T) {
 	var ctx context.Context
 	cases := []struct {
-		name      string
-		input     *code.DeleteGitleaksSettingRequest
-		mockError error
-		wantErr   bool
+		name                          string
+		input                         *code.DeleteGitleaksSettingRequest
+		mockDeleteGitleaksCacheResp   error
+		mockDeleteGitleaksSettingResp error
+		wantErr                       bool
 	}{
 		{
 			name:  "OK",
@@ -652,20 +647,218 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:      "Invalid DB error",
-			input:     &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
+			name:                        "NG(DeleteGitleaksCache error)",
+			input:                       &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksCacheResp: gorm.ErrInvalidDB,
+			wantErr:                     true,
+		},
+		{
+			name:                          "NG(DeleteGitleaksSetting error)",
+			input:                         &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockDeleteGitleaksSettingResp: gorm.ErrInvalidDB,
+			wantErr:                       true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mockdb.MockCodeRepository{}
 			svc := CodeService{repository: &mockDB}
-			mockDB.On("DeleteGitleaksSetting").Return(c.mockError).Once()
+			mockDB.On("DeleteGitleaksCache").Return(c.mockDeleteGitleaksCacheResp).Once()
+			mockDB.On("DeleteGitleaksSetting").Return(c.mockDeleteGitleaksSettingResp).Once()
 			_, err := svc.DeleteGitleaksSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+		})
+	}
+}
+
+func TestGetGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type GetGitleaksCacheResponse struct {
+		Resp *model.CodeGitleaksCache
+		Err  error
+	}
+	cases := []struct {
+		name     string
+		input    *code.GetGitleaksCacheRequest
+		want     *code.GetGitleaksCacheResponse
+		mockResp *GetGitleaksCacheResponse
+		wantErr  bool
+	}{
+		{
+			name: "OK",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			want: &code.GetGitleaksCacheResponse{
+				GitleaksCache: &code.GitleaksCache{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				Err:  nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "OK(RecordNotFound)",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			want: &code.GetGitleaksCacheResponse{},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: nil,
+				Err:  gorm.ErrRecordNotFound,
+			},
+			wantErr: false,
+		},
+		{
+			name: "NG(invalid param)",
+			input: &code.GetGitleaksCacheRequest{
+				GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG(DB error)",
+			input: &code.GetGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "owner/repo",
+			},
+			mockResp: &GetGitleaksCacheResponse{
+				Resp: nil,
+				Err:  gorm.ErrInvalidDB,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mockdb.MockCodeRepository{}
+			svc := CodeService{repository: &mockDB}
+			if c.mockResp != nil {
+				mockDB.On("GetGitleaksCache").Return(c.mockResp.Resp, c.mockResp.Err).Once()
+			}
+			got, err := svc.GetGitleaksCache(context.TODO(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestPutGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type GetGitleaksSettingResponse struct {
+		Resp *model.CodeGitleaksSetting
+		Err  error
+	}
+	type UpsertGitleaksCacheResponse struct {
+		Resp *model.CodeGitleaksCache
+		Err  error
+	}
+	cases := []struct {
+		name                    string
+		input                   *code.PutGitleaksCacheRequest
+		want                    *code.PutGitleaksCacheResponse
+		mockGetGitleaksSetting  *GetGitleaksSettingResponse
+		mockUpsertGitleaksCache *UpsertGitleaksCacheResponse
+		wantErr                 bool
+	}{
+		{
+			name: "OK",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: &code.PutGitleaksCacheResponse{
+				GitleaksCache: &code.GitleaksCache{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			},
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
+				Resp: &model.CodeGitleaksSetting{CodeGitHubSettingID: 1},
+				Err:  nil,
+			},
+			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
+				Resp: &model.CodeGitleaksCache{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				Err:  nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "NG(invalid param)",
+			input: &code.PutGitleaksCacheRequest{
+				// ProjectId: 1, // required param
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want:                    nil,
+			mockGetGitleaksSetting:  nil,
+			mockUpsertGitleaksCache: nil,
+			wantErr:                 true,
+		},
+		{
+			name: "NG(No GitHub setting)",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: nil,
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
+				Resp: nil,
+				Err:  gorm.ErrRecordNotFound,
+			},
+			mockUpsertGitleaksCache: nil,
+			wantErr:                 true,
+		},
+		{
+			name: "NG(PutGitleaksCache error)",
+			input: &code.PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &code.GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(),
+				},
+			},
+			want: nil,
+			mockGetGitleaksSetting: &GetGitleaksSettingResponse{
+				Resp: &model.CodeGitleaksSetting{CodeGitHubSettingID: 1},
+				Err:  nil,
+			},
+			mockUpsertGitleaksCache: &UpsertGitleaksCacheResponse{
+				Resp: nil,
+				Err:  errors.New("something error"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mockdb.MockCodeRepository{}
+			svc := CodeService{repository: &mockDB}
+			if c.mockGetGitleaksSetting != nil {
+				mockDB.On("GetGitleaksSetting").Return(c.mockGetGitleaksSetting.Resp, c.mockGetGitleaksSetting.Err).Once()
+			}
+			if c.mockUpsertGitleaksCache != nil {
+				mockDB.On("UpsertGitleaksCache").Return(c.mockUpsertGitleaksCache.Resp, c.mockUpsertGitleaksCache.Err).Once()
+			}
+			got, err := svc.PutGitleaksCache(context.TODO(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
 			}
 		})
 	}

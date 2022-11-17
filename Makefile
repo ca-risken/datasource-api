@@ -228,6 +228,20 @@ delete-gitleaks-setting:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitleaksSetting
 
+.PHONY: get-gitleaks-cache
+get-gitleaks-cache:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "github_setting_id":1001, "repository_full_name":"owener/repo"}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.GetGitleaksCache
+
+.PHONY: put-gitleaks-cache
+put-gitleaks-cache:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "gitleaks_cache": {"github_setting_id":1001, "repository_full_name":"owener/repo","scan_at":1668519962}}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutGitleaksCache
+
 .PHONY: put-dependency-setting
 put-dependency-setting:
 	$(GRPCURL) \

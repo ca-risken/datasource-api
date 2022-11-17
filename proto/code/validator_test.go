@@ -247,6 +247,92 @@ func TestValidate_DeleteGitleaksSettingRequest(t *testing.T) {
 	}
 }
 
+func TestValidate_GetGitleaksCacheRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *GetGitleaksCacheRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &GetGitleaksCacheRequest{ProjectId: 1, GithubSettingId: 1, RepositoryFullName: "repo"},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &GetGitleaksCacheRequest{GithubSettingId: 1, RepositoryFullName: "repo"},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(github_setting_id)",
+			input:   &GetGitleaksCacheRequest{ProjectId: 1, RepositoryFullName: "repo"},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(repository_full_name)",
+			input:   &GetGitleaksCacheRequest{GithubSettingId: 1},
+			wantErr: true,
+		},
+		{
+			name:    "NG Length(repository_full_name)",
+			input:   &GetGitleaksCacheRequest{GithubSettingId: 1, RepositoryFullName: stringLength256},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_PutGitleaksCacheRequest(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *PutGitleaksCacheRequest
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &PutGitleaksCacheRequest{
+				ProjectId: 1,
+				GitleaksCache: &GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: now.Unix(),
+				},
+			},
+		},
+		{
+			name: "NG Required project_id",
+			input: &PutGitleaksCacheRequest{
+				GitleaksCache: &GitleaksCacheForUpsert{
+					GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: now.Unix(),
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required gitleaks_cache",
+			input:   &PutGitleaksCacheRequest{},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_PutDependencySettingRequest(t *testing.T) {
 	now := time.Now()
 	cases := []struct {
@@ -651,6 +737,67 @@ func TestValidate_GitleaksSettingForUpsert(t *testing.T) {
 			name: "NG Max(scan_at)",
 			input: &GitleaksSettingForUpsert{
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestValidate_GitleaksCacheForUpsert(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *GitleaksCacheForUpsert
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &GitleaksCacheForUpsert{
+				GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: now.Unix(),
+			},
+		},
+		{
+			name: "NG Required(github_setting_id)",
+			input: &GitleaksCacheForUpsert{
+				RepositoryFullName: "repo", ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(respository_full_name)",
+			input: &GitleaksCacheForUpsert{
+				GithubSettingId: 1, ScanAt: now.Unix(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(scan_at)",
+			input: &GitleaksCacheForUpsert{
+				GithubSettingId: 1, RepositoryFullName: "repo",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Min(scan_at)",
+			input: &GitleaksCacheForUpsert{
+				GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: unixtime19691231T235959,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Max(scan_at)",
+			input: &GitleaksCacheForUpsert{
+				GithubSettingId: 1, RepositoryFullName: "repo", ScanAt: unixtime100000101T000000,
 			},
 			wantErr: true,
 		},
