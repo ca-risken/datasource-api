@@ -40,29 +40,6 @@ func (_m *CodeServiceServer) DeleteDependencySetting(_a0 context.Context, _a1 *c
 	return r0, r1
 }
 
-// DeleteGitHubEnterpriseOrg provides a mock function with given fields: _a0, _a1
-func (_m *CodeServiceServer) DeleteGitHubEnterpriseOrg(_a0 context.Context, _a1 *code.DeleteGitHubEnterpriseOrgRequest) (*emptypb.Empty, error) {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 *emptypb.Empty
-	if rf, ok := ret.Get(0).(func(context.Context, *code.DeleteGitHubEnterpriseOrgRequest) *emptypb.Empty); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*emptypb.Empty)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.DeleteGitHubEnterpriseOrgRequest) error); ok {
-		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // DeleteGitHubSetting provides a mock function with given fields: _a0, _a1
 func (_m *CodeServiceServer) DeleteGitHubSetting(_a0 context.Context, _a1 *code.DeleteGitHubSettingRequest) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
@@ -247,29 +224,6 @@ func (_m *CodeServiceServer) ListDataSource(_a0 context.Context, _a1 *code.ListD
 	return r0, r1
 }
 
-// ListGitHubEnterpriseOrg provides a mock function with given fields: _a0, _a1
-func (_m *CodeServiceServer) ListGitHubEnterpriseOrg(_a0 context.Context, _a1 *code.ListGitHubEnterpriseOrgRequest) (*code.ListGitHubEnterpriseOrgResponse, error) {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 *code.ListGitHubEnterpriseOrgResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *code.ListGitHubEnterpriseOrgRequest) *code.ListGitHubEnterpriseOrgResponse); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*code.ListGitHubEnterpriseOrgResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.ListGitHubEnterpriseOrgRequest) error); ok {
-		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListGitHubSetting provides a mock function with given fields: _a0, _a1
 func (_m *CodeServiceServer) ListGitHubSetting(_a0 context.Context, _a1 *code.ListGitHubSettingRequest) (*code.ListGitHubSettingResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -308,29 +262,6 @@ func (_m *CodeServiceServer) PutDependencySetting(_a0 context.Context, _a1 *code
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutDependencySettingRequest) error); ok {
-		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// PutGitHubEnterpriseOrg provides a mock function with given fields: _a0, _a1
-func (_m *CodeServiceServer) PutGitHubEnterpriseOrg(_a0 context.Context, _a1 *code.PutGitHubEnterpriseOrgRequest) (*code.PutGitHubEnterpriseOrgResponse, error) {
-	ret := _m.Called(_a0, _a1)
-
-	var r0 *code.PutGitHubEnterpriseOrgResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitHubEnterpriseOrgRequest) *code.PutGitHubEnterpriseOrgResponse); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*code.PutGitHubEnterpriseOrgResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitHubEnterpriseOrgRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)

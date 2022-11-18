@@ -36,11 +36,6 @@ type CodeRepoInterface interface {
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
-
-	// code_github_enterprise_org
-	ListGitHubEnterpriseOrg(ctx context.Context, projectID, GitHubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error)
-	UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error)
-	DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error
 }
 
 var _ CodeRepoInterface = (*Client)(nil) // verify interface compliance
@@ -357,51 +352,4 @@ func (c *Client) GetGitHubSettingByUniqueIndex(ctx context.Context, projectID ui
 		return nil, err
 	}
 	return &data, nil
-}
-
-func (c *Client) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error) {
-	query := `select * from code_github_enterprise_org where 1=1`
-	var params []interface{}
-	if !zero.IsZeroVal(projectID) {
-		query += " and project_id=?"
-		params = append(params, projectID)
-	}
-	if !zero.IsZeroVal(githubSettingID) {
-		query += " and code_github_setting_id=?"
-		params = append(params, githubSettingID)
-	}
-	data := []model.CodeGitHubEnterpriseOrg{}
-	if err := c.MasterDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
-		return nil, err
-	}
-	return &data, nil
-}
-
-func (c *Client) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
-	var updated model.CodeGitHubEnterpriseOrg
-	if err := c.MasterDB.WithContext(ctx).
-		Where("code_github_setting_id=? and organization=? and project_id=?", data.GithubSettingId, data.Organization, data.ProjectId).
-		Assign(map[string]interface{}{
-			"code_github_setting_id": data.GithubSettingId,
-			"organization":           data.Organization,
-			"project_id":             data.ProjectId,
-		}).
-		FirstOrCreate(&updated).
-		Error; err != nil {
-		return nil, err
-	}
-	return &model.CodeGitHubEnterpriseOrg{
-		CodeGitHubSettingID: updated.CodeGitHubSettingID,
-		Organization:        updated.Organization,
-		ProjectID:           data.ProjectId,
-		UpdatedAt:           updated.UpdatedAt,
-		CreatedAt:           updated.CreatedAt,
-	}, nil
-}
-
-func (c *Client) DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
-	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ? AND organization = ?", projectID, githubSettingID, organization).Delete(&model.CodeGitHubEnterpriseOrg{}).Error; err != nil {
-		return err
-	}
-	return nil
 }

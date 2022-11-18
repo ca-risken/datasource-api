@@ -106,18 +106,18 @@ func TestListGitHubSetting(t *testing.T) {
 			name:  "OK",
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
-				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
-				{GithubSettingId: 2, Name: "two", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				{GithubSettingId: 2, Name: "two", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo2", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
 			}},
 			mockResponse: &[]model.CodeGitHubSetting{
-				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
-				{CodeGitHubSettingID: 2, Name: "two", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, Name: "two", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			},
 			mockGitleaksResponse: &[]model.CodeGitleaksSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
@@ -140,11 +140,11 @@ func TestListGitHubSetting(t *testing.T) {
 			name:  "OK gitleaks setting empty",
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
-				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
-				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
 			mockGitleaksResponse: &[]model.CodeGitleaksSetting{},
 			mockDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
@@ -154,11 +154,11 @@ func TestListGitHubSetting(t *testing.T) {
 			name:  "OK dependency setting empty",
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
-				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
-				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
 			mockGitleaksResponse: &[]model.CodeGitleaksSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
@@ -179,7 +179,7 @@ func TestListGitHubSetting(t *testing.T) {
 			name:  "Invalid DB error when getGitleaksSetting",
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			mockResponse: &[]model.CodeGitHubSetting{
-				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			},
 			mockGitleaksResponse: nil,
 			mockGitleaksError:    gorm.ErrInvalidDB,
@@ -189,7 +189,7 @@ func TestListGitHubSetting(t *testing.T) {
 			name:  "Invalid DB error when getDependencySetting",
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			mockResponse: &[]model.CodeGitHubSetting{
-				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			},
 			mockGitleaksResponse: &[]model.CodeGitleaksSetting{},
 			mockDependencyError:  gorm.ErrInvalidDB,
@@ -241,12 +241,12 @@ func TestGetGitHubSetting(t *testing.T) {
 		{
 			name:  "OK",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
 			},
 			mockGitleaksResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -264,11 +264,11 @@ func TestGetGitHubSetting(t *testing.T) {
 		{
 			name:  "OK gitleaks setting empty",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			mockGitleaksError: gorm.ErrRecordNotFound,
 			mockDependencyResponse: &model.CodeDependencySetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -277,11 +277,11 @@ func TestGetGitHubSetting(t *testing.T) {
 		{
 			name:  "OK dependency setting empty",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			mockGitleaksResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
@@ -302,7 +302,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			name:  "Invalid DB error when GetGitleaksSetting",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
 			},
 			mockGitleaksError: gorm.ErrInvalidDB,
 			wantErr:           true,
@@ -311,7 +311,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			name:  "Invalid DB error when GetDependencySetting",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
 			},
 			mockGitleaksResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -364,25 +364,25 @@ func TestPutGitHubSetting(t *testing.T) {
 		{
 			name: "OK",
 			input: &code.PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &code.GitHubSettingForUpsert{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
 			},
 			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
 			},
 		},
 		{
 			name: "OK(empty)",
 			input: &code.PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &code.GitHubSettingForUpsert{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
 			},
 			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ENTERPRISE", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
 			},
 		},
 		{
@@ -393,7 +393,7 @@ func TestPutGitHubSetting(t *testing.T) {
 		{
 			name: "Invalid DB error",
 			input: &code.PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &code.GitHubSettingForUpsert{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData},
 			},
 			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
@@ -425,21 +425,14 @@ func TestPutGitHubSetting(t *testing.T) {
 
 func TestDeleteGitHubSetting(t *testing.T) {
 	var ctx context.Context
-	now := time.Now()
-	type ListEnterpriseOrgResp struct {
-		Resp *[]model.CodeGitHubEnterpriseOrg
-		Err  error
-	}
 	cases := []struct {
-		name                         string
-		input                        *code.DeleteGitHubSettingRequest
-		mockDeleteGitleaksCacheResp  error
-		mockDeleteGitleaksResp       error
-		mockDeleteDependencyResp     error
-		mockListEnterpriseOrg        *ListEnterpriseOrgResp
-		mockDeleteEnterpriserOrgResp error
-		mockDeleteGithubSettingResp  error
-		wantErr                      bool
+		name                        string
+		input                       *code.DeleteGitHubSettingRequest
+		mockDeleteGitleaksCacheResp error
+		mockDeleteGitleaksResp      error
+		mockDeleteDependencyResp    error
+		mockDeleteGithubSettingResp error
+		wantErr                     bool
 	}{
 		{
 			name:                        "OK",
@@ -447,29 +440,8 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			mockDeleteGitleaksCacheResp: nil,
 			mockDeleteGitleaksResp:      nil,
 			mockDeleteDependencyResp:    nil,
-			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
-				Resp: &[]model.CodeGitHubEnterpriseOrg{
-					{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
-				},
-				Err: nil,
-			},
-			mockDeleteEnterpriserOrgResp: nil,
-			mockDeleteGithubSettingResp:  nil,
-			wantErr:                      false,
-		},
-		{
-			name:                        "OK enterprise org empty",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			mockDeleteGitleaksCacheResp: nil,
-			mockDeleteGitleaksResp:      nil,
-			mockDeleteDependencyResp:    nil,
-			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
-				Resp: &[]model.CodeGitHubEnterpriseOrg{},
-				Err:  nil,
-			},
-			mockDeleteEnterpriserOrgResp: nil,
-			mockDeleteGithubSettingResp:  nil,
-			wantErr:                      false,
+			mockDeleteGithubSettingResp: nil,
+			wantErr:                     false,
 		},
 		{
 			name:    "NG invalid param",
@@ -498,42 +470,13 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			wantErr:                     true,
 		},
 		{
-			name:                        "NG DB error (list enterprise org)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			mockDeleteGitleaksCacheResp: nil,
-			mockDeleteGitleaksResp:      nil,
-			mockDeleteDependencyResp:    nil,
-			mockListEnterpriseOrg:       &ListEnterpriseOrgResp{Err: errors.New("something error")},
-			wantErr:                     true,
-		},
-		{
-			name:                        "NG DB error (delete enterprise org)",
-			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			mockDeleteGitleaksCacheResp: nil,
-			mockDeleteGitleaksResp:      nil,
-			mockDeleteDependencyResp:    nil,
-			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
-				Resp: &[]model.CodeGitHubEnterpriseOrg{
-					{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
-				},
-				Err: nil,
-			},
-			mockDeleteEnterpriserOrgResp: errors.New("something error"),
-			wantErr:                      true,
-		},
-		{
 			name:                        "NG DB error (delete github setting)",
 			input:                       &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			mockDeleteGitleaksCacheResp: nil,
 			mockDeleteGitleaksResp:      nil,
 			mockDeleteDependencyResp:    nil,
-			mockListEnterpriseOrg: &ListEnterpriseOrgResp{
-				Resp: &[]model.CodeGitHubEnterpriseOrg{},
-				Err:  nil,
-			},
-			mockDeleteEnterpriserOrgResp: nil,
-			mockDeleteGithubSettingResp:  errors.New("something error"),
-			wantErr:                      true,
+			mockDeleteGithubSettingResp: errors.New("something error"),
+			wantErr:                     true,
 		},
 	}
 	for _, c := range cases {
@@ -543,10 +486,6 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			mockDB.On("DeleteGitleaksCache").Return(c.mockDeleteGitleaksCacheResp).Once()
 			mockDB.On("DeleteGitleaksSetting").Return(c.mockDeleteGitleaksResp).Once()
 			mockDB.On("DeleteDependencySetting").Return(c.mockDeleteDependencyResp).Once()
-			if c.mockListEnterpriseOrg != nil {
-				mockDB.On("ListGitHubEnterpriseOrg").Return(c.mockListEnterpriseOrg.Resp, c.mockListEnterpriseOrg.Err).Once()
-			}
-			mockDB.On("DeleteGitHubEnterpriseOrg").Return(c.mockDeleteEnterpriserOrgResp).Once()
 			mockDB.On("DeleteGitHubSetting").Return(c.mockDeleteGithubSettingResp).Once()
 			_, err := svc.DeleteGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -966,163 +905,6 @@ func TestDeleteDependencySetting(t *testing.T) {
 			svc := CodeService{repository: &mockDB}
 			mockDB.On("DeleteDependencySetting").Return(c.mockError).Once()
 			_, err := svc.DeleteDependencySetting(ctx, c.input)
-			if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: %+v", err)
-			}
-		})
-	}
-}
-
-func TestListGitHubEnterpriseOrg(t *testing.T) {
-	var ctx context.Context
-	now := time.Now()
-	cases := []struct {
-		name         string
-		input        *code.ListGitHubEnterpriseOrgRequest
-		want         *code.ListGitHubEnterpriseOrgResponse
-		mockResponse *[]model.CodeGitHubEnterpriseOrg
-		mockError    error
-		wantErr      bool
-	}{
-		{
-			name:  "OK",
-			input: &code.ListGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-			want: &code.ListGitHubEnterpriseOrgResponse{GithubEnterpriseOrg: []*code.GitHubEnterpriseOrg{
-				{GithubSettingId: 1, Organization: "one", ProjectId: 1, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
-				{GithubSettingId: 2, Organization: "two", ProjectId: 1, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
-			}},
-			mockResponse: &[]model.CodeGitHubEnterpriseOrg{
-				{CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
-				{CodeGitHubSettingID: 2, Organization: "two", ProjectID: 1, CreatedAt: now, UpdatedAt: now},
-			},
-		},
-		{
-			name:      "OK empty",
-			input:     &code.ListGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-			want:      &code.ListGitHubEnterpriseOrgResponse{},
-			mockError: gorm.ErrRecordNotFound,
-		},
-		{
-			name:    "NG invalid param",
-			input:   &code.ListGitHubEnterpriseOrgRequest{GithubSettingId: 1},
-			wantErr: true,
-		},
-		{
-			name:      "Invalid DB error",
-			input:     &code.ListGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			mockDB := mockdb.MockCodeRepository{}
-			svc := CodeService{repository: &mockDB}
-			if c.mockResponse != nil || c.mockError != nil {
-				mockDB.On("ListGitHubEnterpriseOrg").Return(c.mockResponse, c.mockError).Once()
-			}
-			got, err := svc.ListGitHubEnterpriseOrg(ctx, c.input)
-			if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: %+v", err)
-			}
-			if c.wantErr && err == nil {
-				t.Fatalf("Unexpected no error")
-			}
-			if !reflect.DeepEqual(c.want, got) {
-				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
-			}
-		})
-	}
-}
-
-func TestPutGitHubEnterpriseOrg(t *testing.T) {
-	var ctx context.Context
-	now := time.Now()
-	cases := []struct {
-		name         string
-		input        *code.PutGitHubEnterpriseOrgRequest
-		want         *code.PutGitHubEnterpriseOrgResponse
-		mockResponse *model.CodeGitHubEnterpriseOrg
-		mockError    error
-		wantErr      bool
-	}{
-		{
-			name: "OK",
-			input: &code.PutGitHubEnterpriseOrgRequest{ProjectId: 1, GithubEnterpriseOrg: &code.GitHubEnterpriseOrgForUpsert{
-				GithubSettingId: 1, Organization: "one", ProjectId: 1},
-			},
-			want: &code.PutGitHubEnterpriseOrgResponse{GithubEnterpriseOrg: &code.GitHubEnterpriseOrg{
-				GithubSettingId: 1, Organization: "one", ProjectId: 1, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
-			},
-			mockResponse: &model.CodeGitHubEnterpriseOrg{
-				CodeGitHubSettingID: 1, Organization: "one", ProjectID: 1, CreatedAt: now, UpdatedAt: now,
-			},
-		},
-		{
-			name:    "NG invalid param",
-			input:   &code.PutGitHubEnterpriseOrgRequest{ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name: "Invalid DB error",
-			input: &code.PutGitHubEnterpriseOrgRequest{ProjectId: 1, GithubEnterpriseOrg: &code.GitHubEnterpriseOrgForUpsert{
-				GithubSettingId: 1, Organization: "one", ProjectId: 1},
-			},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			mockDB := mockdb.MockCodeRepository{}
-			svc := CodeService{repository: &mockDB}
-			if c.mockResponse != nil || c.mockError != nil {
-				mockDB.On("UpsertGitHubEnterpriseOrg").Return(c.mockResponse, c.mockError).Once()
-			}
-			got, err := svc.PutGitHubEnterpriseOrg(ctx, c.input)
-			if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: %+v", err)
-			}
-			if c.wantErr && err == nil {
-				t.Fatalf("Unexpected no error")
-			}
-			if !reflect.DeepEqual(c.want, got) {
-				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
-			}
-		})
-	}
-}
-
-func TestDeleteGitHubEnterpriseOrg(t *testing.T) {
-	var ctx context.Context
-	cases := []struct {
-		name      string
-		input     *code.DeleteGitHubEnterpriseOrgRequest
-		mockError error
-		wantErr   bool
-	}{
-		{
-			name:  "OK",
-			input: &code.DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1, Organization: "Organization"},
-		},
-		{
-			name:    "NG invalid param",
-			input:   &code.DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-			wantErr: true,
-		},
-		{
-			name:      "Invalid DB error",
-			input:     &code.DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1, Organization: "Organization"},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
-		},
-	}
-	for _, c := range cases {
-		mockDB := mockdb.MockCodeRepository{}
-		svc := CodeService{repository: &mockDB}
-		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("DeleteGitHubEnterpriseOrg").Return(c.mockError).Once()
-			_, err := svc.DeleteGitHubEnterpriseOrg(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
 			}

@@ -222,16 +222,6 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 	if err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
-	organizations, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
-		return nil, err
-	}
-	for _, org := range *organizations {
-		err = c.repository.DeleteGitHubEnterpriseOrg(ctx, org.ProjectID, org.CodeGitHubSettingID, org.Organization)
-		if err != nil {
-			return nil, err
-		}
-	}
 	if err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
@@ -336,8 +326,6 @@ func getType(s string) code.Type {
 		return code.Type_UNKNOWN_TYPE
 	}
 	switch typeKey {
-	case code.Type_ENTERPRISE.String():
-		return code.Type_ENTERPRISE
 	case code.Type_ORGANIZATION.String():
 		return code.Type_ORGANIZATION
 	case code.Type_USER.String():
@@ -364,59 +352,6 @@ func getStatus(s string) code.Status {
 	default:
 		return code.Status_UNKNOWN
 	}
-}
-
-func convertGitHubEnterpriseOrg(data *model.CodeGitHubEnterpriseOrg) *code.GitHubEnterpriseOrg {
-	if data == nil {
-		return &code.GitHubEnterpriseOrg{}
-	}
-	return &code.GitHubEnterpriseOrg{
-		GithubSettingId: data.CodeGitHubSettingID,
-		Organization:    data.Organization,
-		ProjectId:       data.ProjectID,
-		CreatedAt:       data.CreatedAt.Unix(),
-		UpdatedAt:       data.CreatedAt.Unix(),
-	}
-}
-
-func (c *CodeService) ListGitHubEnterpriseOrg(ctx context.Context, req *code.ListGitHubEnterpriseOrgRequest) (*code.ListGitHubEnterpriseOrgResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-	list, err := c.repository.ListGitHubEnterpriseOrg(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &code.ListGitHubEnterpriseOrgResponse{}, nil
-		}
-		return nil, err
-	}
-	data := code.ListGitHubEnterpriseOrgResponse{}
-	for _, d := range *list {
-		data.GithubEnterpriseOrg = append(data.GithubEnterpriseOrg, convertGitHubEnterpriseOrg(&d))
-	}
-	return &data, nil
-}
-
-func (c *CodeService) PutGitHubEnterpriseOrg(ctx context.Context, req *code.PutGitHubEnterpriseOrgRequest) (*code.PutGitHubEnterpriseOrgResponse, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-	registered, err := c.repository.UpsertGitHubEnterpriseOrg(ctx, req.GithubEnterpriseOrg)
-	if err != nil {
-		return nil, err
-	}
-	return &code.PutGitHubEnterpriseOrgResponse{GithubEnterpriseOrg: convertGitHubEnterpriseOrg(registered)}, nil
-}
-
-func (c *CodeService) DeleteGitHubEnterpriseOrg(ctx context.Context, req *code.DeleteGitHubEnterpriseOrgRequest) (*empty.Empty, error) {
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-	err := c.repository.DeleteGitHubEnterpriseOrg(ctx, req.ProjectId, req.GithubSettingId, req.Organization)
-	if err != nil {
-		return nil, err
-	}
-	return &empty.Empty{}, nil
 }
 
 func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeScanGitleaksRequest) (*empty.Empty, error) {
