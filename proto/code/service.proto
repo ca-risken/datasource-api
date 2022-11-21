@@ -38,14 +38,6 @@ service CodeService {
   rpc DeleteDependencySetting(DeleteDependencySettingRequest)
       returns (google.protobuf.Empty);
 
-  // Enterprise
-  rpc ListGitHubEnterpriseOrg(ListGitHubEnterpriseOrgRequest)
-      returns (ListGitHubEnterpriseOrgResponse);
-  rpc PutGitHubEnterpriseOrg(PutGitHubEnterpriseOrgRequest)
-      returns (PutGitHubEnterpriseOrgResponse);
-  rpc DeleteGitHubEnterpriseOrg(DeleteGitHubEnterpriseOrgRequest)
-      returns (google.protobuf.Empty);
-
   // Scan
   rpc InvokeScanGitleaks(InvokeScanGitleaksRequest)
       returns (google.protobuf.Empty); // For ondeamnd
@@ -127,30 +119,6 @@ message PutDependencySettingResponse {
 message DeleteDependencySettingRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
-}
-
-message ListGitHubEnterpriseOrgRequest {
-  uint32 project_id = 1;
-  uint32 github_setting_id = 2;
-}
-
-message ListGitHubEnterpriseOrgResponse {
-  repeated GitHubEnterpriseOrg github_enterprise_org = 1;
-}
-
-message PutGitHubEnterpriseOrgRequest {
-  uint32 project_id = 1;
-  GitHubEnterpriseOrgForUpsert github_enterprise_org = 2;
-}
-
-message PutGitHubEnterpriseOrgResponse {
-  GitHubEnterpriseOrg github_enterprise_org = 1;
-}
-
-message DeleteGitHubEnterpriseOrgRequest {
-  uint32 project_id = 1;
-  uint32 github_setting_id = 2;
-  string organization = 3;
 }
 
 message InvokeScanGitleaksRequest {

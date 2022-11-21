@@ -79,15 +79,3 @@ func (m *MockCodeRepository) DeleteDependencySetting(ctx context.Context, projec
 	args := m.Called()
 	return args.Error(0)
 }
-func (m *MockCodeRepository) ListGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubEnterpriseOrg, error) {
-	args := m.Called()
-	return args.Get(0).(*[]model.CodeGitHubEnterpriseOrg), args.Error(1)
-}
-func (m *MockCodeRepository) UpsertGitHubEnterpriseOrg(ctx context.Context, data *code.GitHubEnterpriseOrgForUpsert) (*model.CodeGitHubEnterpriseOrg, error) {
-	args := m.Called()
-	return args.Get(0).(*model.CodeGitHubEnterpriseOrg), args.Error(1)
-}
-func (m *MockCodeRepository) DeleteGitHubEnterpriseOrg(ctx context.Context, projectID, githubSettingID uint32, organization string) error {
-	args := m.Called()
-	return args.Error(0)
-}

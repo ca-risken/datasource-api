@@ -115,7 +115,7 @@ func TestValidate_PutGitHubSettingRequest(t *testing.T) {
 		{
 			name: "OK",
 			input: &PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &GitHubSettingForUpsert{
-				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			}},
 		},
 		{
@@ -126,7 +126,7 @@ func TestValidate_PutGitHubSettingRequest(t *testing.T) {
 		{
 			name: "NG Invalid project_id",
 			input: &PutGitHubSettingRequest{ProjectId: 999, GithubSetting: &GitHubSettingForUpsert{
-				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			}},
 			wantErr: true,
 		},
@@ -404,114 +404,6 @@ func TestValidate_DeleteDependencySettingRequest(t *testing.T) {
 	}
 }
 
-func TestValidate_ListGitHubEnterpriseOrgRequest(t *testing.T) {
-	cases := []struct {
-		name    string
-		input   *ListGitHubEnterpriseOrgRequest
-		wantErr bool
-	}{
-		{
-			name:  "OK",
-			input: &ListGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-		},
-		{
-			name:    "NG Required(project_id)",
-			input:   &ListGitHubEnterpriseOrgRequest{GithubSettingId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(github_setting_id)",
-			input:   &ListGitHubEnterpriseOrgRequest{ProjectId: 1},
-			wantErr: true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := c.input.Validate()
-			if c.wantErr && err == nil {
-				t.Fatal("Unexpected no error")
-			} else if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
-			}
-		})
-	}
-}
-
-func TestValidate_PutGitHubEnterpriseOrgRequest(t *testing.T) {
-	cases := []struct {
-		name    string
-		input   *PutGitHubEnterpriseOrgRequest
-		wantErr bool
-	}{
-		{
-			name: "OK",
-			input: &PutGitHubEnterpriseOrgRequest{ProjectId: 1, GithubEnterpriseOrg: &GitHubEnterpriseOrgForUpsert{
-				GithubSettingId: 1, ProjectId: 1, Organization: "org",
-			}},
-		},
-		{
-			name:    "NG No github_enterprise_org",
-			input:   &PutGitHubEnterpriseOrgRequest{ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name: "NG Invalid project_id",
-			input: &PutGitHubEnterpriseOrgRequest{ProjectId: 999, GithubEnterpriseOrg: &GitHubEnterpriseOrgForUpsert{
-				GithubSettingId: 1, ProjectId: 1, Organization: "org",
-			}},
-			wantErr: true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := c.input.Validate()
-			if c.wantErr && err == nil {
-				t.Fatal("Unexpected no error")
-			} else if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
-			}
-		})
-	}
-}
-
-func TestValidate_DeleteGitHubEnterpriseOrgRequest(t *testing.T) {
-	cases := []struct {
-		name    string
-		input   *DeleteGitHubEnterpriseOrgRequest
-		wantErr bool
-	}{
-		{
-			name:  "OK",
-			input: &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1, Organization: "org"},
-		},
-		{
-			name:    "NG Required(project_id)",
-			input:   &DeleteGitHubEnterpriseOrgRequest{GithubSettingId: 1, Organization: "org"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(gitleaks_id)",
-			input:   &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, Organization: "org"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(organization)",
-			input:   &DeleteGitHubEnterpriseOrgRequest{ProjectId: 1, GithubSettingId: 1},
-			wantErr: true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := c.input.Validate()
-			if c.wantErr && err == nil {
-				t.Fatal("Unexpected no error")
-			} else if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
-			}
-		})
-	}
-}
-
 func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -587,33 +479,33 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 		{
 			name: "OK",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 		},
 		{
 			name: "OK minimize",
 			input: &GitHubSettingForUpsert{
-				ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 		},
 		{
 			name: "NG Length(name)",
 			input: &GitHubSettingForUpsert{
-				Name: stringLength65, ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: stringLength65, ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Required(project_id)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", Type: Type_ENTERPRISE, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: "name", Type: Type_ORGANIZATION, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(base_url)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, BaseUrl: stringLength129, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: stringLength129, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
@@ -627,28 +519,28 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 		{
 			name: "NG Required(targetResource)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "", GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "", GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(targetResource)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: stringLength129, GithubUser: "user", PersonalAccessToken: "xxx",
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: stringLength129, GithubUser: "user", PersonalAccessToken: "xxx",
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(github_user)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: stringLength65,
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: stringLength65,
 			},
 			wantErr: true,
 		},
 		{
 			name: "NG Length(personal_access_token)",
 			input: &GitHubSettingForUpsert{
-				Name: "name", ProjectId: 1, Type: Type_ENTERPRISE, TargetResource: "target", GithubUser: "user", PersonalAccessToken: stringLength256,
+				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: stringLength256,
 			},
 			wantErr: true,
 		},
@@ -873,49 +765,6 @@ func TestValidate_DependencySettingForUpsert(t *testing.T) {
 			input: &DependencySettingForUpsert{
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
 			},
-			wantErr: true,
-		},
-	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := c.input.Validate()
-			if c.wantErr && err == nil {
-				t.Fatal("Unexpected no error")
-			} else if !c.wantErr && err != nil {
-				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
-			}
-		})
-	}
-}
-
-func TestValidate_GitHubEnterpriseOrgForUpsert(t *testing.T) {
-	cases := []struct {
-		name    string
-		input   *GitHubEnterpriseOrgForUpsert
-		wantErr bool
-	}{
-		{
-			name:  "OK",
-			input: &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "org", ProjectId: 1},
-		},
-		{
-			name:    "NG Required(github_setting_id)",
-			input:   &GitHubEnterpriseOrgForUpsert{Organization: "org", ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(organization)",
-			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Length(login)",
-			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: stringLength129, ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(project_id)",
-			input:   &GitHubEnterpriseOrgForUpsert{GithubSettingId: 1, Organization: "login"},
 			wantErr: true,
 		},
 	}

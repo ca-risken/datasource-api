@@ -66,16 +66,3 @@ type CodeDependencySetting struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
-
-// CodeGitHubEnterpriseOrg entity
-type CodeGitHubEnterpriseOrg struct {
-	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
-	Organization        string `gorm:"primary_key"`
-	ProjectID           uint32
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-}
-
-func (CodeGitHubEnterpriseOrg) TableName() string {
-	return "code_github_enterprise_org"
-}

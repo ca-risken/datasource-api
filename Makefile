@@ -256,27 +256,6 @@ delete-dependency-setting:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteDependencySetting
 
-.PHONY: list-github-enterprise-org
-list-github-enterprise-org:
-	$(GRPCURL) \
-		-plaintext \
-		-d '{"project_id": 1001, "github_setting_id":1001}' \
-		$(DATASOURCE_API_ADDR) datasource.code.CodeService.ListGitHubEnterpriseOrg
-
-.PHONY: put-github-enterprise-org
-put-github-enterprise-org:
-	$(GRPCURL) \
-		-plaintext \
-		-d '{"project_id":1001, "github_enterprise_org": {"github_setting_id":1001, "organization":"organization", "project_id":1001}}' \
-		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutGitHubEnterpriseOrg
-
-.PHONY: delete-github-enterprise-org
-delete-github-enterprise-org:
-	$(GRPCURL) \
-		-plaintext \
-		-d '{"project_id":1001, "github_setting_id":1001, "organization": "organization"}' \
-		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitHubEnterpriseOrg
-
 .PHONY: invoke-scan-gitleaks
 invoke-scan-gitleaks:
 	$(GRPCURL) \

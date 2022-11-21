@@ -73,9 +73,8 @@ message DependencySetting {
 // Type
 enum Type {
   UNKNOWN_TYPE = 0;
-  ENTERPRISE = 1;
-  ORGANIZATION = 2;
-  USER = 3;
+  ORGANIZATION = 1;
+  USER = 2;
 }
 
 // Status
@@ -128,20 +127,4 @@ message DependencySettingForUpsert {
   Status status = 4;
   string status_detail = 5;
   int64 scan_at = 6;
-}
-
-// GitHubEnterpriseOrg
-message GitHubEnterpriseOrg {
-  uint32 github_setting_id = 1;
-  string organization = 2;
-  uint32 project_id = 3;
-  int64 created_at = 4;
-  int64 updated_at = 5;
-}
-
-// GitHubEnterpriseOrgForUpsert
-message GitHubEnterpriseOrgForUpsert {
-  uint32 github_setting_id = 1;
-  string organization = 2;
-  uint32 project_id = 3;
 }

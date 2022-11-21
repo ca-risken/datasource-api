@@ -49,36 +49,6 @@ func (_m *CodeServiceClient) DeleteDependencySetting(ctx context.Context, in *co
 	return r0, r1
 }
 
-// DeleteGitHubEnterpriseOrg provides a mock function with given fields: ctx, in, opts
-func (_m *CodeServiceClient) DeleteGitHubEnterpriseOrg(ctx context.Context, in *code.DeleteGitHubEnterpriseOrgRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *emptypb.Empty
-	if rf, ok := ret.Get(0).(func(context.Context, *code.DeleteGitHubEnterpriseOrgRequest, ...grpc.CallOption) *emptypb.Empty); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*emptypb.Empty)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.DeleteGitHubEnterpriseOrgRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // DeleteGitHubSetting provides a mock function with given fields: ctx, in, opts
 func (_m *CodeServiceClient) DeleteGitHubSetting(ctx context.Context, in *code.DeleteGitHubSettingRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	_va := make([]interface{}, len(opts))
@@ -319,36 +289,6 @@ func (_m *CodeServiceClient) ListDataSource(ctx context.Context, in *code.ListDa
 	return r0, r1
 }
 
-// ListGitHubEnterpriseOrg provides a mock function with given fields: ctx, in, opts
-func (_m *CodeServiceClient) ListGitHubEnterpriseOrg(ctx context.Context, in *code.ListGitHubEnterpriseOrgRequest, opts ...grpc.CallOption) (*code.ListGitHubEnterpriseOrgResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *code.ListGitHubEnterpriseOrgResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *code.ListGitHubEnterpriseOrgRequest, ...grpc.CallOption) *code.ListGitHubEnterpriseOrgResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*code.ListGitHubEnterpriseOrgResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.ListGitHubEnterpriseOrgRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListGitHubSetting provides a mock function with given fields: ctx, in, opts
 func (_m *CodeServiceClient) ListGitHubSetting(ctx context.Context, in *code.ListGitHubSettingRequest, opts ...grpc.CallOption) (*code.ListGitHubSettingResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -401,36 +341,6 @@ func (_m *CodeServiceClient) PutDependencySetting(ctx context.Context, in *code.
 
 	var r1 error
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutDependencySettingRequest, ...grpc.CallOption) error); ok {
-		r1 = rf(ctx, in, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// PutGitHubEnterpriseOrg provides a mock function with given fields: ctx, in, opts
-func (_m *CodeServiceClient) PutGitHubEnterpriseOrg(ctx context.Context, in *code.PutGitHubEnterpriseOrgRequest, opts ...grpc.CallOption) (*code.PutGitHubEnterpriseOrgResponse, error) {
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, in)
-	_ca = append(_ca, _va...)
-	ret := _m.Called(_ca...)
-
-	var r0 *code.PutGitHubEnterpriseOrgResponse
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitHubEnterpriseOrgRequest, ...grpc.CallOption) *code.PutGitHubEnterpriseOrgResponse); ok {
-		r0 = rf(ctx, in, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*code.PutGitHubEnterpriseOrgResponse)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitHubEnterpriseOrgRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
