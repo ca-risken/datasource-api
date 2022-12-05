@@ -6,7 +6,7 @@ import (
 	"crypto/cipher"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
