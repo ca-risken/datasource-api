@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
 )
 
@@ -43,7 +43,7 @@ type SQSConfig struct {
 }
 
 type Client struct {
-	svc    *sqs.SQS
+	svc    *sqs.Client
 	logger logging.Logger
 
 	// aws
@@ -73,19 +73,32 @@ type Client struct {
 	DiagnosisApplicationScanQueueURL string
 }
 
-func NewClient(conf *SQSConfig, l logging.Logger) (*Client, error) {
-	sess, err := session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client, error) {
+	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+		if service != sqs.ServiceID {
+			// returning EndpointNotFoundError will allow the service to fallback to it's default resolution
+			return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+		}
+
+		ep := aws.Endpoint{
+			PartitionID:   "aws",
+			SigningRegion: region,
+		}
+		if conf.SQSEndpoint != "" {
+			ep.URL = conf.SQSEndpoint
+		}
+		if conf.AWSRegion != "" {
+			ep.SigningRegion = conf.AWSRegion
+		}
+		return ep, nil
 	})
+	l.Debugf(ctx, "SQS endpoint: region=%s, url=%s", conf.AWSRegion, conf.SQSEndpoint)
+	cfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithEndpointResolverWithOptions(customResolver))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create sqs session, err=%w", err)
+		return nil, fmt.Errorf("load aws configuration error, err=%+w", err)
 	}
-	sqsClient := sqs.New(sess, &aws.Config{
-		Region:   &conf.AWSRegion,
-		Endpoint: &conf.SQSEndpoint,
-	})
 	return &Client{
-		svc:    sqsClient,
+		svc:    sqs.NewFromConfig(cfg),
 		logger: l,
 
 		AWSGuardDutyQueueURL:             conf.AWSGuardDutyQueueURL,
@@ -110,12 +123,12 @@ func NewClient(conf *SQSConfig, l logging.Logger) (*Client, error) {
 func (c *Client) Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error) {
 	buf, err := json.Marshal(msg)
 	if err != nil {
-		return nil, fmt.Errorf("parse error, err=%w", err)
+		return nil, fmt.Errorf("SQS message parse error, err=%w", err)
 	}
-	resp, err := c.svc.SendMessageWithContext(ctx, &sqs.SendMessageInput{
+	resp, err := c.svc.SendMessage(ctx, &sqs.SendMessageInput{
 		MessageBody:  aws.String(string(buf)),
 		QueueUrl:     &url,
-		DelaySeconds: aws.Int64(1),
+		DelaySeconds: 1,
 	})
 	if err != nil {
 		return nil, err

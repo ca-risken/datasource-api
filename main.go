@@ -20,6 +20,7 @@ const (
 
 type AppConf struct {
 	Port            string   `default:"8081"`
+	Debug           bool     `default:"false"`
 	EnvName         string   `default:"local" split_words:"true"`
 	ProfileExporter string   `split_words:"true" default:"nop"`
 	ProfileTypes    []string `split_words:"true"`
@@ -74,6 +75,10 @@ func main() {
 	if err != nil {
 		logger.Fatal(ctx, err.Error())
 	}
+	if conf.Debug {
+		logger.Level(logging.DebugLevel)
+		logger.Debug(ctx, "Set debug logger")
+	}
 
 	pTypes, err := profiler.ConvertProfileTypeFrom(conf.ProfileTypes)
 	if err != nil {
@@ -117,7 +122,7 @@ func main() {
 	}
 	d, err := db.NewClient(dbConf, logger)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to create database client: %w", err)
+		logger.Fatalf(ctx, "Failed to create database client: %w", err)
 	}
 	queueConf := &queue.SQSConfig{
 		AWSRegion:   conf.AWSRegion,
@@ -140,9 +145,9 @@ func main() {
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 	}
-	q, err := queue.NewClient(queueConf, logger)
+	q, err := queue.NewClient(ctx, queueConf, logger)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to create sqs client: %w", err)
+		logger.Fatalf(ctx, "Failed to create sqs client: %w", err)
 	}
 	s := server.NewServer(
 		conf.Port,
@@ -157,7 +162,7 @@ func main() {
 
 	err = s.Run(ctx)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to run server: %w", err)
+		logger.Fatalf(ctx, "Failed to run server: %w", err)
 	}
 }
 
