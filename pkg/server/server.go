@@ -17,11 +17,13 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
 	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
+	dsServer "github.com/ca-risken/datasource-api/pkg/server/datasource"
 	diagnosisServer "github.com/ca-risken/datasource-api/pkg/server/diagnosis"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	osintServer "github.com/ca-risken/datasource-api/pkg/server/osint"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/ca-risken/datasource-api/proto/code"
+	"github.com/ca-risken/datasource-api/proto/datasource"
 	"github.com/ca-risken/datasource-api/proto/diagnosis"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/datasource-api/proto/osint"
@@ -75,6 +77,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
+	dsSvc := dsServer.NewDataSourceService(s.db, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -87,6 +90,7 @@ func (s *Server) Run(ctx context.Context) error {
 	code.RegisterCodeServiceServer(server, codeSvc)
 	osint.RegisterOsintServiceServer(server, osintSvc)
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
+	datasource.RegisterDataSourceServiceServer(server, dsSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
