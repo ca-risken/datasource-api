@@ -13,6 +13,7 @@ var _ DataSourceRepoInterface = (*Client)(nil) // verify interface compliance
 
 const (
 	cleanTableWithNoProjectTemplate = "delete tbl from %s tbl where not exists(select * from project p where p.project_id = tbl.project_id)"
+	cleanTableWithNoGithubTemplate  = "delete tbl from %s tbl where not exists(select * from code_github_setting github where github.code_github_setting_id = tbl.code_github_setting_id)"
 )
 
 func (c *Client) CleanWithNoProject(ctx context.Context) error {
@@ -68,6 +69,9 @@ func (c *Client) CleanWithNoProject(ctx context.Context) error {
 		return err
 	}
 	if err := c.MasterDB.WithContext(ctx).Exec(fmt.Sprintf(cleanTableWithNoProjectTemplate, "code_dependency_setting")).Error; err != nil {
+		return err
+	}
+	if err := c.MasterDB.WithContext(ctx).Exec(fmt.Sprintf(cleanTableWithNoGithubTemplate, "code_gitleaks_cache")).Error; err != nil {
 		return err
 	}
 

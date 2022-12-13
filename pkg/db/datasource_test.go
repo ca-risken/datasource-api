@@ -10,7 +10,7 @@ import (
 )
 
 func TestCleanWithNoProject(t *testing.T) {
-	client, mock, err := newMockClient()
+	client, mock, err := newDBMock()
 	if err != nil {
 		t.Fatalf("Failed to open mock sql db, error: %+v", err)
 	}
@@ -38,6 +38,7 @@ func TestCleanWithNoProject(t *testing.T) {
 				"delete tbl from code_github_setting tbl where not exists(select * from project p where p.project_id = tbl.project_id)",
 				"delete tbl from code_gitleaks_setting tbl where not exists(select * from project p where p.project_id = tbl.project_id)",
 				"delete tbl from code_dependency_setting tbl where not exists(select * from project p where p.project_id = tbl.project_id)",
+				"delete tbl from code_gitleaks_cache tbl where not exists(select * from code_github_setting github where github.code_github_setting_id = tbl.code_github_setting_id)",
 			},
 			wantErr: false,
 		},
