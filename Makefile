@@ -1,4 +1,4 @@
-TARGETS = aws google diagnosis osint code
+TARGETS = aws google diagnosis osint code datasource
 MOCK_TARGETS = $(TARGETS:=.mock)
 BUILD_OPT=""
 IMAGE_TAG=latest
@@ -42,7 +42,7 @@ doc: fmt
 # build without protoc-gen-validate
 .PHONY: proto-without-validation
 proto-without-validate: fmt
-	for svc in "aws" "google" "code" "diagnosis" "osint"; do \
+	for svc in "aws" "google" "code" "diagnosis" "osint" "datasource"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -51,7 +51,6 @@ proto-without-validate: fmt
 	done
 
 .PHONY: proto
-# proto : proto-without-validate proto-mock 
 proto : proto-without-validate proto-mock
 
 PHONY: build
@@ -92,7 +91,7 @@ test:
 
 .PHONY: lint
 lint: FAKE
-	GO111MODULE=on golangci-lint run --timeout 5m
+	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
 
 .PHONY: proto-mock
 proto-mock: $(MOCK_TARGETS)
@@ -109,6 +108,20 @@ help:
 	@echo "Usage: make <sub-command>"
 	@echo "\n---------------- sub-command list ----------------"
 	@cat Makefile | grep -e "^.PHONY:" | grep -v "all" | cut -f2 -d' '
+
+####################################################
+## DataSource
+####################################################
+.PHONY: list-datasource-service
+list-datasource-service:
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.DataSourceService
+
+.PHONY: clean-datasource
+clean-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '' \
+		$(DATASOURCE_API_ADDR) datasource.DataSourceService.CleanDataSource
 
 ####################################################
 ## AWS

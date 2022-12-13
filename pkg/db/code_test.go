@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"regexp"
 	"testing"
@@ -12,31 +11,7 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
 )
-
-func newDBMock() (*Client, sqlmock.Sqlmock, error) {
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to open mock sql db, error: %+w", err)
-	}
-	if sqlDB == nil {
-		return nil, nil, fmt.Errorf("failed to create mock db, db: %+v, mock: %+v", sqlDB, mock)
-	}
-	gormDB, err := gorm.Open(mysql.New(mysql.Config{
-		Conn:                      sqlDB,
-		SkipInitializeWithVersion: true,
-	}), &gorm.Config{NamingStrategy: schema.NamingStrategy{SingularTable: true}})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to open gorm, error: %+w", err)
-	}
-	return &Client{
-		MasterDB: gormDB,
-		SlaveDB:  gormDB,
-	}, mock, nil
-}
 
 func TestListGitHubSetting(t *testing.T) {
 	now := time.Now()
