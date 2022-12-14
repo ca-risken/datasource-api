@@ -47,6 +47,7 @@ message GCPDataSource {
   string name = 11;                 // google_data_source.name
   string description = 12;          // google_data_source.description
   float max_score = 13;             // google_data_source.max_score
+  string specific_version = 14;     // gcp_data_source.specific_version
 }
 
 // Status
@@ -76,4 +77,5 @@ message GCPDataSourceForUpsert {
   Status status = 4;
   string status_detail = 5;
   int64 scan_at = 6;
+  string specific_version = 7;
 }
