@@ -144,6 +144,7 @@ type GCPDataSource struct {
 	GCPID              uint32 `gorm:"primary_key column:gcp_id"`
 	GoogleDataSourceID uint32 `gorm:"primary_key"`
 	ProjectID          uint32
+	SpecificVersion    string
 	Status             string
 	StatusDetail       string
 	ScanAt             time.Time
@@ -207,13 +208,15 @@ INSERT INTO gcp_data_source (
   gcp_id,
   google_data_source_id,
   project_id,
+  specific_version,
   status,
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
   project_id=VALUES(project_id),
+  specific_version=VALUES(specific_version),
   status=VALUES(status),
   status_detail=VALUES(status_detail),
   scan_at=VALUES(scan_at)
@@ -235,6 +238,7 @@ func (c *Client) UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.
 		gcpDataSource.GcpId,
 		gcpDataSource.GoogleDataSourceId,
 		gcpDataSource.ProjectId,
+		gcpDataSource.SpecificVersion,
 		gcpDataSource.Status.String(),
 		convertZeroValueToNull(gcpDataSource.StatusDetail),
 		time.Unix(gcpDataSource.ScanAt, 0),

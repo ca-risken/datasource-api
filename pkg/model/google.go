@@ -29,6 +29,7 @@ type GCPDataSource struct {
 	GCPID              uint32 `gorm:"primary_key column:gcp_id"`
 	GoogleDataSourceID uint32 `gorm:"primary_key"`
 	ProjectID          uint32
+	SpecificVersion    string
 	Status             string
 	StatusDetail       string
 	ScanAt             time.Time

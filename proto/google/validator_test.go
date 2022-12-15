@@ -465,7 +465,7 @@ func TestValidate_GCPDataSourceForUpsert(t *testing.T) {
 		{
 			name: "OK",
 			input: &GCPDataSourceForUpsert{
-				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", SpecificVersion: "latest", ScanAt: now.Unix(),
 			},
 		},
 		{
@@ -506,6 +506,13 @@ func TestValidate_GCPDataSourceForUpsert(t *testing.T) {
 			name: "NG Max(scan_at)",
 			input: &GCPDataSourceForUpsert{
 				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime100000101T000000,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Length(specific_version)",
+			input: &GCPDataSourceForUpsert{
+				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: stringLength256, SpecificVersion: stringLength65, ScanAt: now.Unix(),
 			},
 			wantErr: true,
 		},

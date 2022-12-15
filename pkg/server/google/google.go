@@ -153,6 +153,7 @@ func convertGCPDataSource(data *db.GCPDataSource) *google.GCPDataSource {
 	gcp := google.GCPDataSource{
 		GcpId:              data.GCPID,
 		GoogleDataSourceId: data.GoogleDataSourceID,
+		SpecificVersion:    data.SpecificVersion,
 		ProjectId:          data.ProjectID,
 		Status:             getStatus(data.Status),
 		StatusDetail:       data.StatusDetail,
@@ -265,7 +266,11 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	case cloudAssetDataSourceID:
 		resp, err = g.sqs.Send(ctx, g.sqs.GoogleAssetQueueURL, msg)
 	case cloudSploitDataSourceID:
-		resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitQueueURL, msg)
+		if data.SpecificVersion == "" {
+			resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitQueueURL, msg)
+		} else {
+			resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitOldQueueURL, msg)
+		}
 	case sccDataSourceID:
 		resp, err = g.sqs.Send(ctx, g.sqs.GoogleSCCQueueURL, msg)
 	case portscanDataSourceID:
@@ -283,6 +288,7 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 		Status:             google.Status_IN_PROGRESS,
 		StatusDetail:       fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
 		ScanAt:             data.ScanAt.Unix(),
+		SpecificVersion:    data.SpecificVersion,
 	}); err != nil {
 		return nil, err
 	}

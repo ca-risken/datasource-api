@@ -23,10 +23,11 @@ type SQSConfig struct {
 	AWSPortscanQueueURL       string
 
 	// google
-	GoogleAssetQueueURL       string
-	GoogleCloudSploitQueueURL string
-	GoogleSCCQueueURL         string
-	GooglePortscanQueueURL    string
+	GoogleAssetQueueURL          string
+	GoogleCloudSploitQueueURL    string
+	GoogleCloudSploitOldQueueURL string
+	GoogleSCCQueueURL            string
+	GooglePortscanQueueURL       string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -54,10 +55,11 @@ type Client struct {
 	AWSPortscanQueueURL       string
 
 	// google
-	GoogleAssetQueueURL       string
-	GoogleCloudSploitQueueURL string
-	GoogleSCCQueueURL         string
-	GooglePortscanQueueURL    string
+	GoogleAssetQueueURL          string
+	GoogleCloudSploitQueueURL    string
+	GoogleCloudSploitOldQueueURL string
+	GoogleSCCQueueURL            string
+	GooglePortscanQueueURL       string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -108,6 +110,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
+		GoogleCloudSploitOldQueueURL:     conf.GoogleCloudSploitOldQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
 		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
 		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,

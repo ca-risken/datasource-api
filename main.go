@@ -40,6 +40,7 @@ type AppConf struct {
 	AWSPortscanQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
 	GoogleAssetQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
 	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
+	GoogleCloudSploitOldQueueURL     string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit-old"`
 	GoogleSCCQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
 	GooglePortscanQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
 	CodeGitleaksQueueURL             string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
@@ -135,6 +136,7 @@ func main() {
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
+		GoogleCloudSploitOldQueueURL:     conf.GoogleCloudSploitOldQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
 		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
 		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
