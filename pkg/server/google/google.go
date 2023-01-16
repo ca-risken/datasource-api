@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/message"
@@ -319,8 +320,10 @@ func (g *GoogleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 			GoogleDataSourceId: gcp.GoogleDataSourceID,
 			ScanOnly:           true,
 		}); err != nil {
-			g.logger.Errorf(ctx, "InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
-			return nil, err
+			// In GCP, an error may occur during InvokeScan due to user misconfiguration(e.g. invalid verification_code).
+			// But to avoid having a single error stop the entire process, a notification log is output and other processes continue.
+			g.logger.Notifyf(ctx, logging.ErrorLevel, "InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
+			continue
 		}
 	}
 	return &google.Empty{}, nil
