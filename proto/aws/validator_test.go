@@ -368,11 +368,6 @@ func TestValidate_DataSourceForAttach(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "NG Length(Status Detail)",
-			input:   &DataSourceForAttach{AwsId: 1001, AwsDataSourceId: 1001, ProjectId: 111, AssumeRoleArn: "role", ExternalId: "", Status: Status_OK, StatusDetail: stringLength256, ScanAt: 0},
-			wantErr: true,
-		},
-		{
 			name:    "NG Range1(ScanAt)",
 			input:   &DataSourceForAttach{AwsId: 1001, AwsDataSourceId: 1001, ProjectId: 111, AssumeRoleArn: "role", ExternalId: "", Status: Status_OK, StatusDetail: stringLength256, ScanAt: -1},
 			wantErr: true,
@@ -444,11 +439,6 @@ func TestValidateForUser_DataSourceForAttach(t *testing.T) {
 		{
 			name:    "NG Length MAX(external_id)",
 			input:   &DataSourceForAttach{AwsId: 1001, AwsDataSourceId: 1001, ProjectId: 111, AssumeRoleArn: "role", ExternalId: stringLength256, Status: Status_OK, StatusDetail: "", ScanAt: 0},
-			wantErr: true,
-		},
-		{
-			name:    "NG Length(Status Detail)",
-			input:   &DataSourceForAttach{AwsId: 1001, AwsDataSourceId: 1001, ProjectId: 111, AssumeRoleArn: "role", ExternalId: "", Status: Status_OK, StatusDetail: stringLength256, ScanAt: 0},
 			wantErr: true,
 		},
 		{

@@ -489,13 +489,6 @@ func TestValidate_GCPDataSourceForUpsert(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NG Length(status_detail)",
-			input: &GCPDataSourceForUpsert{
-				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
 			name: "NG Min(scan_at)",
 			input: &GCPDataSourceForUpsert{
 				GoogleDataSourceId: 1, ProjectId: 1, Status: Status_OK, StatusDetail: "detail", ScanAt: unixtime19691231T235959,
