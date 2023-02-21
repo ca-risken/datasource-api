@@ -117,7 +117,6 @@ func (g *GCPDataSourceForUpsert) Validate() error {
 	return validation.ValidateStruct(g,
 		validation.Field(&g.GoogleDataSourceId, validation.Required),
 		validation.Field(&g.ProjectId, validation.Required),
-		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 		validation.Field(&g.SpecificVersion, validation.Length(0, 64)),
 	)
