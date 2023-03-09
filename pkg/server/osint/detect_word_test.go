@@ -8,17 +8,15 @@ import (
 	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
-	dbmock "github.com/ca-risken/datasource-api/pkg/db/mock"
+	"github.com/ca-risken/datasource-api/pkg/db/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/osint"
 	"gorm.io/gorm"
 )
 
 func TestListOsintDetectWord(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.ListOsintDetectWordRequest
@@ -47,8 +45,12 @@ func TestListOsintDetectWord(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListOsintDetectWord").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListOsintDetectWord", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListOsintDetectWord(ctx, c.input)
 			if err != nil {
@@ -62,10 +64,7 @@ func TestListOsintDetectWord(t *testing.T) {
 }
 
 func TestGetOsintDetectWord(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.GetOsintDetectWordRequest
@@ -90,8 +89,12 @@ func TestGetOsintDetectWord(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("GetOsintDetectWord").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("GetOsintDetectWord", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.GetOsintDetectWord(ctx, c.input)
 			if err != nil {
@@ -105,10 +108,7 @@ func TestGetOsintDetectWord(t *testing.T) {
 }
 
 func TestPutOsintDetectWord(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name        string
 		input       *osint.PutOsintDetectWordRequest
@@ -144,8 +144,12 @@ func TestPutOsintDetectWord(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockUpdResp != nil || c.mockUpdErr != nil {
-				mockDB.On("UpsertOsintDetectWord").Return(c.mockUpdResp, c.mockUpdErr).Once()
+				mockDB.On("UpsertOsintDetectWord", test.RepeatMockAnything(2)...).Return(c.mockUpdResp, c.mockUpdErr).Once()
 			}
 			got, err := svc.PutOsintDetectWord(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -159,30 +163,36 @@ func TestPutOsintDetectWord(t *testing.T) {
 }
 
 func TestDeleteOsintDetectWord(t *testing.T) {
-	var ctx context.Context
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name     string
 		input    *osint.DeleteOsintDetectWordRequest
 		wantErr  bool
+		mockCall bool
 		mockResp error
 	}{
 		{
-			name:    "OK",
-			input:   &osint.DeleteOsintDetectWordRequest{ProjectId: 1001, OsintDetectWordId: 1001},
-			wantErr: false,
+			name:     "OK",
+			input:    &osint.DeleteOsintDetectWordRequest{ProjectId: 1001, OsintDetectWordId: 1001},
+			wantErr:  false,
+			mockCall: true,
 		},
 		{
 			name:     "Invalid DB error",
 			input:    &osint.DeleteOsintDetectWordRequest{ProjectId: 1001, OsintDetectWordId: 1001},
 			wantErr:  true,
+			mockCall: true,
 			mockResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("DeleteOsintDetectWord").Return(c.mockResp).Once()
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
+			if c.mockCall {
+				mockDB.On("DeleteOsintDetectWord", test.RepeatMockAnything(3)...).Return(c.mockResp).Once()
+			}
 			_, err := svc.DeleteOsintDetectWord(ctx, c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("unexpected error: %+v", err)

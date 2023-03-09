@@ -8,17 +8,15 @@ import (
 	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
-	dbmock "github.com/ca-risken/datasource-api/pkg/db/mock"
+	"github.com/ca-risken/datasource-api/pkg/db/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/osint"
 	"gorm.io/gorm"
 )
 
 func TestListOsint(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.ListOsintRequest
@@ -47,8 +45,12 @@ func TestListOsint(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListOsint").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListOsint", test.RepeatMockAnything(2)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListOsint(ctx, c.input)
 			if err != nil {
@@ -62,10 +64,7 @@ func TestListOsint(t *testing.T) {
 }
 
 func TestGetOsint(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.GetOsintRequest
@@ -91,8 +90,12 @@ func TestGetOsint(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("GetOsint").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("GetOsint", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.GetOsint(ctx, c.input)
 			if err != nil {
@@ -106,10 +109,7 @@ func TestGetOsint(t *testing.T) {
 }
 
 func TestPutOsint(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name        string
 		input       *osint.PutOsintRequest
@@ -137,7 +137,7 @@ func TestPutOsint(t *testing.T) {
 		},
 		{
 			name:        "NG DB error(UpsertOsint)",
-			input:       &osint.PutOsintRequest{Osint: &osint.OsintForUpsert{ResourceType: "test_type", ResourceName: "test_name", ProjectId: 1001, OsintId: 1001}},
+			input:       &osint.PutOsintRequest{ProjectId: 1001, Osint: &osint.OsintForUpsert{ResourceType: "test_type", ResourceName: "test_name", ProjectId: 1001}},
 			wantErr:     true,
 			mockUpdResp: nil,
 			mockUpdErr:  errors.New("something wrong"),
@@ -145,8 +145,12 @@ func TestPutOsint(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockUpdResp != nil || c.mockUpdErr != nil {
-				mockDB.On("UpsertOsint").Return(c.mockUpdResp, c.mockUpdErr).Once()
+				mockDB.On("UpsertOsint", test.RepeatMockAnything(2)...).Return(c.mockUpdResp, c.mockUpdErr).Once()
 			}
 			got, err := svc.PutOsint(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -160,13 +164,11 @@ func TestPutOsint(t *testing.T) {
 }
 
 func TestDeleteOsint(t *testing.T) {
-	var ctx context.Context
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name                    string
 		input                   *osint.DeleteOsintRequest
 		wantErr                 bool
+		mockCall                bool
 		mockResp                error
 		mockListOSINTDataSource *[]model.RelOsintDataSource
 		mockListOsintDetectWord *[]model.OsintDetectWord
@@ -175,22 +177,30 @@ func TestDeleteOsint(t *testing.T) {
 			name:     "OK",
 			input:    &osint.DeleteOsintRequest{ProjectId: 1001, OsintId: 1001},
 			wantErr:  false,
+			mockCall: true,
 			mockResp: nil,
 		},
 		{
 			name:     "NG DB error",
 			input:    &osint.DeleteOsintRequest{ProjectId: 1001, OsintId: 1001},
 			wantErr:  true,
+			mockCall: true,
 			mockResp: errors.New("something wrong"),
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("ListRelOsintDataSource").Return(&[]model.RelOsintDataSource{{RelOsintDataSourceID: 1, ProjectID: 1}}, nil)
-			mockDB.On("ListOsintDetectWord").Return(&[]model.OsintDetectWord{{OsintDetectWordID: 1, ProjectID: 1}}, nil)
-			mockDB.On("DeleteRelOsintDataSource").Return(nil)
-			mockDB.On("DeleteOsintDetectWord").Return(nil)
-			mockDB.On("DeleteOsint").Return(c.mockResp).Once()
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
+			if c.mockCall {
+				mockDB.On("ListRelOsintDataSource", test.RepeatMockAnything(4)...).Return(&[]model.RelOsintDataSource{{RelOsintDataSourceID: 1, ProjectID: 1}}, nil)
+				mockDB.On("ListOsintDetectWord", test.RepeatMockAnything(3)...).Return(&[]model.OsintDetectWord{{OsintDetectWordID: 1, ProjectID: 1}}, nil)
+				mockDB.On("DeleteRelOsintDataSource", test.RepeatMockAnything(3)...).Return(nil)
+				mockDB.On("DeleteOsintDetectWord", test.RepeatMockAnything(3)...).Return(nil)
+				mockDB.On("DeleteOsint", test.RepeatMockAnything(3)...).Return(c.mockResp).Once()
+			}
 			_, err := svc.DeleteOsint(ctx, c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("unexpected error: %+v", err)
