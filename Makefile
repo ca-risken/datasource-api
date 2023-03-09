@@ -93,10 +93,17 @@ test:
 lint: FAKE
 	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
 
+.PHONY: generate-mock
+generate-mock: proto-mock repository-mock
+
 .PHONY: proto-mock
 proto-mock: $(MOCK_TARGETS)
 %.mock: FAKE
 	sh hack/generate-mock.sh proto/$(*)
+
+.PHONY: repository-mock
+repository-mock: FAKE
+	sh hack/generate-mock.sh pkg/db
 
 FAKE:
 
