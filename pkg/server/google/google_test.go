@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/ca-risken/datasource-api/pkg/db"
-	googlemock "github.com/ca-risken/datasource-api/pkg/db/mock"
+	"github.com/ca-risken/datasource-api/pkg/db/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
@@ -19,10 +20,7 @@ const (
 )
 
 func TestListGoogleDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.ListGoogleDataSourceRequest
@@ -63,8 +61,12 @@ func TestListGoogleDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListGoogleDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListGoogleDataSource", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListGoogleDataSource(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -81,10 +83,7 @@ func TestListGoogleDataSource(t *testing.T) {
 }
 
 func TestListGCP(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.ListGCPRequest
@@ -125,8 +124,12 @@ func TestListGCP(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListGCP").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListGCP", test.RepeatMockAnything(4)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListGCP(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -143,10 +146,7 @@ func TestListGCP(t *testing.T) {
 }
 
 func TestGetGCP(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.GetGCPRequest
@@ -181,8 +181,12 @@ func TestGetGCP(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("GetGCP").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("GetGCP", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.GetGCP(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -199,10 +203,7 @@ func TestGetGCP(t *testing.T) {
 }
 
 func TestPutGCP(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.PutGCPRequest
@@ -239,8 +240,12 @@ func TestPutGCP(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("UpsertGCP").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("UpsertGCP", test.RepeatMockAnything(2)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.PutGCP(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -257,36 +262,43 @@ func TestPutGCP(t *testing.T) {
 }
 
 func TestDeleteGCP(t *testing.T) {
-	var ctx context.Context
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name      string
 		input     *google.DeleteGCPRequest
-		mockError error
 		wantErr   bool
+		mockCall  bool
+		mockError error
 	}{
 		{
-			name:  "OK",
-			input: &google.DeleteGCPRequest{ProjectId: 1, GcpId: 1},
+			name:     "OK",
+			input:    &google.DeleteGCPRequest{ProjectId: 1, GcpId: 1},
+			mockCall: true,
 		},
 		{
-			name:    "NG invalid param",
-			input:   &google.DeleteGCPRequest{ProjectId: 1},
-			wantErr: true,
+			name:     "NG invalid param",
+			input:    &google.DeleteGCPRequest{ProjectId: 1},
+			wantErr:  true,
+			mockCall: false,
 		},
 		{
 			name:      "Invalid DB error",
 			input:     &google.DeleteGCPRequest{ProjectId: 1, GcpId: 1},
 			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
+			mockCall:  true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("ListGCPDataSource").Return(&[]db.GCPDataSource{{GoogleDataSourceID: 1}}, nil)
-			mockDB.On("DeleteGCPDataSource").Return(nil)
-			mockDB.On("DeleteGCP").Return(c.mockError).Once()
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
+			if c.mockCall {
+				mockDB.On("ListGCPDataSource", test.RepeatMockAnything(3)...).Return(&[]db.GCPDataSource{{GoogleDataSourceID: 1}}, nil)
+				mockDB.On("DeleteGCPDataSource", test.RepeatMockAnything(4)...).Return(nil)
+				mockDB.On("DeleteGCP", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+			}
 			_, err := svc.DeleteGCP(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
@@ -296,10 +308,7 @@ func TestDeleteGCP(t *testing.T) {
 }
 
 func TestListGCPDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.ListGCPDataSourceRequest
@@ -340,8 +349,12 @@ func TestListGCPDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListGCPDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListGCPDataSource", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListGCPDataSource(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -358,10 +371,7 @@ func TestListGCPDataSource(t *testing.T) {
 }
 
 func TestGetGCPDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *google.GetGCPDataSourceRequest
@@ -400,8 +410,12 @@ func TestGetGCPDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("GetGCPDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("GetGCPDataSource", test.RepeatMockAnything(4)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.GetGCPDataSource(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -418,15 +432,7 @@ func TestGetGCPDataSource(t *testing.T) {
 }
 
 func TestAttachGCPDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := googlemock.MockGoogleRepository{}
-	mockRM := mockResourceManager{}
-	svc := GoogleService{
-		repository:      &mockDB,
-		resourceManager: &mockRM,
-	}
-	mockDB.On("GetGCP").Return(&model.GCP{}, nil)
 	cases := []struct {
 		name         string
 		input        *google.AttachGCPDataSourceRequest
@@ -434,6 +440,8 @@ func TestAttachGCPDataSource(t *testing.T) {
 		mockResponce *db.GCPDataSource
 		mockError    error
 		wantErr      bool
+
+		callGetGCP bool
 	}{
 		{
 			name: "OK",
@@ -446,25 +454,37 @@ func TestAttachGCPDataSource(t *testing.T) {
 			mockResponce: &db.GCPDataSource{
 				GCPID: 1, GoogleDataSourceID: 1, ProjectID: 1, Status: google.Status_OK.String(), ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
+			callGetGCP: true,
 		},
 		{
-			name:    "NG invalid param",
-			input:   &google.AttachGCPDataSourceRequest{ProjectId: 1},
-			wantErr: true,
+			name:       "NG invalid param",
+			input:      &google.AttachGCPDataSourceRequest{ProjectId: 1},
+			wantErr:    true,
+			callGetGCP: false,
 		},
 		{
 			name: "Invalid DB error",
 			input: &google.AttachGCPDataSourceRequest{ProjectId: 1, GcpDataSource: &google.GCPDataSourceForUpsert{
 				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: google.Status_OK, StatusDetail: "", ScanAt: now.Unix()},
 			},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
+			mockError:  gorm.ErrInvalidDB,
+			wantErr:    true,
+			callGetGCP: true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			mockRM := mockResourceManager{}
+			svc := GoogleService{repository: mockDB, resourceManager: &mockRM}
+
+			if c.callGetGCP {
+				mockDB.On("GetGCP", test.RepeatMockAnything(3)...).Return(&model.GCP{}, nil)
+			}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("UpsertGCPDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("UpsertGCPDataSource", test.RepeatMockAnything(2)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.AttachGCPDataSource(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -481,34 +501,41 @@ func TestAttachGCPDataSource(t *testing.T) {
 }
 
 func TestDetachGCPDataSource(t *testing.T) {
-	var ctx context.Context
-	mockDB := googlemock.MockGoogleRepository{}
-	svc := GoogleService{repository: &mockDB}
 	cases := []struct {
 		name      string
 		input     *google.DetachGCPDataSourceRequest
+		mockCall  bool
 		mockError error
 		wantErr   bool
 	}{
 		{
-			name:  "OK",
-			input: &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
+			name:     "OK",
+			input:    &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
+			mockCall: true,
 		},
 		{
-			name:    "NG invalid param",
-			input:   &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
-			wantErr: true,
+			name:     "NG invalid param",
+			input:    &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1},
+			mockCall: false,
+			wantErr:  true,
 		},
 		{
 			name:      "Invalid DB error",
 			input:     &google.DetachGCPDataSourceRequest{ProjectId: 1, GcpId: 1, GoogleDataSourceId: 1},
+			mockCall:  true,
 			mockError: gorm.ErrInvalidDB,
 			wantErr:   true,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("DeleteGCPDataSource").Return(c.mockError).Once()
+			var ctx context.Context
+			mockDB := mocks.NewGoogleRepoInterface(t)
+			svc := GoogleService{repository: mockDB}
+
+			if c.mockCall {
+				mockDB.On("DeleteGCPDataSource", test.RepeatMockAnything(4)...).Return(c.mockError).Once()
+			}
 			_, err := svc.DetachGCPDataSource(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
