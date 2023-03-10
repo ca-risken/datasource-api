@@ -8,17 +8,15 @@ import (
 	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
-	dbmock "github.com/ca-risken/datasource-api/pkg/db/mock"
+	"github.com/ca-risken/datasource-api/pkg/db/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/osint"
 	"gorm.io/gorm"
 )
 
 func TestListRelOsintDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.ListRelOsintDataSourceRequest
@@ -47,8 +45,12 @@ func TestListRelOsintDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListRelOsintDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListRelOsintDataSource", test.RepeatMockAnything(4)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListRelOsintDataSource(ctx, c.input)
 			if err != nil {
@@ -62,10 +64,7 @@ func TestListRelOsintDataSource(t *testing.T) {
 }
 
 func TestGetRelOsintDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name         string
 		input        *osint.GetRelOsintDataSourceRequest
@@ -90,8 +89,12 @@ func TestGetRelOsintDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("GetRelOsintDataSource").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("GetRelOsintDataSource", test.RepeatMockAnything(3)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.GetRelOsintDataSource(ctx, c.input)
 			if err != nil {
@@ -105,10 +108,7 @@ func TestGetRelOsintDataSource(t *testing.T) {
 }
 
 func TestPutRelOsintDataSource(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name        string
 		input       *osint.PutRelOsintDataSourceRequest
@@ -144,8 +144,12 @@ func TestPutRelOsintDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
 			if c.mockUpdResp != nil || c.mockUpdErr != nil {
-				mockDB.On("UpsertRelOsintDataSource").Return(c.mockUpdResp, c.mockUpdErr).Once()
+				mockDB.On("UpsertRelOsintDataSource", test.RepeatMockAnything(2)...).Return(c.mockUpdResp, c.mockUpdErr).Once()
 			}
 			got, err := svc.PutRelOsintDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -159,32 +163,38 @@ func TestPutRelOsintDataSource(t *testing.T) {
 }
 
 func TestDeleteRelOsintDataSource(t *testing.T) {
-	var ctx context.Context
-	mockDB := dbmock.MockOsintRepository{}
-	svc := OsintService{repository: &mockDB, logger: logging.NewLogger()}
 	cases := []struct {
 		name     string
 		input    *osint.DeleteRelOsintDataSourceRequest
 		wantErr  bool
+		mockCall bool
 		mockResp error
 	}{
 		{
-			name:    "OK",
-			input:   &osint.DeleteRelOsintDataSourceRequest{ProjectId: 1001, RelOsintDataSourceId: 1001},
-			wantErr: false,
+			name:     "OK",
+			input:    &osint.DeleteRelOsintDataSourceRequest{ProjectId: 1001, RelOsintDataSourceId: 1001},
+			wantErr:  false,
+			mockCall: true,
 		},
 		{
 			name:     "Invalid DB error",
 			input:    &osint.DeleteRelOsintDataSourceRequest{ProjectId: 1001, RelOsintDataSourceId: 1001},
 			wantErr:  true,
+			mockCall: true,
 			mockResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("ListOsintDetectWord").Return(&[]model.OsintDetectWord{{OsintDetectWordID: 1, ProjectID: 1}}, nil)
-			mockDB.On("DeleteOsintDetectWord").Return(nil)
-			mockDB.On("DeleteRelOsintDataSource").Return(c.mockResp).Once()
+			var ctx context.Context
+			mockDB := mocks.NewOSINTRepoInterface(t)
+			svc := OsintService{repository: mockDB, logger: logging.NewLogger()}
+
+			if c.mockCall {
+				mockDB.On("ListOsintDetectWord", test.RepeatMockAnything(3)...).Return(&[]model.OsintDetectWord{{OsintDetectWordID: 1, ProjectID: 1}}, nil)
+				mockDB.On("DeleteOsintDetectWord", test.RepeatMockAnything(3)...).Return(nil)
+				mockDB.On("DeleteRelOsintDataSource", test.RepeatMockAnything(3)...).Return(c.mockResp).Once()
+			}
 			_, err := svc.DeleteRelOsintDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("unexpected error: %+v", err)

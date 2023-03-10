@@ -7,17 +7,15 @@ import (
 	"time"
 
 	"github.com/ca-risken/datasource-api/pkg/db"
-	awsmock "github.com/ca-risken/datasource-api/pkg/db/mock"
+	"github.com/ca-risken/datasource-api/pkg/db/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"gorm.io/gorm"
 )
 
 func TestListAWS(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name         string
 		input        *aws.ListAWSRequest
@@ -46,8 +44,12 @@ func TestListAWS(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
 			if c.mockResponce != nil || c.mockError != nil {
-				mockDB.On("ListAWS").Return(c.mockResponce, c.mockError).Once()
+				mockDB.On("ListAWS", test.RepeatMockAnything(4)...).Return(c.mockResponce, c.mockError).Once()
 			}
 			got, err := svc.ListAWS(ctx, c.input)
 			if err != nil {
@@ -61,10 +63,7 @@ func TestListAWS(t *testing.T) {
 }
 
 func TestPutAWS(t *testing.T) {
-	var ctx context.Context
 	now := time.Now()
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name        string
 		input       *aws.PutAWSRequest
@@ -96,13 +95,13 @@ func TestPutAWS(t *testing.T) {
 		},
 		{
 			name:       "Invalid DB error(GetAWSByAccountID)",
-			input:      &aws.PutAWSRequest{Aws: &aws.AWSForUpsert{Name: "new name", ProjectId: 1, AwsAccountId: "123456789012"}},
+			input:      &aws.PutAWSRequest{ProjectId: 1, Aws: &aws.AWSForUpsert{Name: "new name", ProjectId: 1, AwsAccountId: "123456789012"}},
 			mockGetErr: gorm.ErrInvalidDB,
 			wantErr:    true,
 		},
 		{
 			name:        "Invalid DB error(UpsertAWS)",
-			input:       &aws.PutAWSRequest{Aws: &aws.AWSForUpsert{Name: "new name", ProjectId: 1, AwsAccountId: "123456789012"}},
+			input:       &aws.PutAWSRequest{ProjectId: 1, Aws: &aws.AWSForUpsert{Name: "new name", ProjectId: 1, AwsAccountId: "123456789012"}},
 			mockGetResp: &model.AWS{AWSID: 1, Name: "old name", ProjectID: 1, AWSAccountID: "123456789012", CreatedAt: now, UpdatedAt: now},
 			mockUpdErr:  gorm.ErrInvalidDB,
 			wantErr:     true,
@@ -110,11 +109,15 @@ func TestPutAWS(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
 			if c.mockGetResp != nil || c.mockGetErr != nil {
-				mockDB.On("GetAWSByAccountID").Return(c.mockGetResp, c.mockGetErr).Once()
+				mockDB.On("GetAWSByAccountID", test.RepeatMockAnything(3)...).Return(c.mockGetResp, c.mockGetErr).Once()
 			}
 			if c.mockUpdResp != nil || c.mockUpdErr != nil {
-				mockDB.On("UpsertAWS").Return(c.mockUpdResp, c.mockUpdErr).Once()
+				mockDB.On("UpsertAWS", test.RepeatMockAnything(2)...).Return(c.mockUpdResp, c.mockUpdErr).Once()
 			}
 			got, err := svc.PutAWS(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -128,37 +131,44 @@ func TestPutAWS(t *testing.T) {
 }
 
 func TestDeleteAWS(t *testing.T) {
-	var ctx context.Context
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name     string
 		input    *aws.DeleteAWSRequest
 		wantErr  bool
+		callMock bool
 		mockResp error
 	}{
 		{
-			name:    "OK",
-			input:   &aws.DeleteAWSRequest{ProjectId: 1, AwsId: 1},
-			wantErr: false,
+			name:     "OK",
+			input:    &aws.DeleteAWSRequest{ProjectId: 1, AwsId: 1},
+			wantErr:  false,
+			callMock: true,
 		},
 		{
-			name:    "Invalid parameter(aws_id)",
-			input:   &aws.DeleteAWSRequest{ProjectId: 1},
-			wantErr: true,
+			name:     "Invalid parameter(aws_id)",
+			input:    &aws.DeleteAWSRequest{ProjectId: 1},
+			wantErr:  true,
+			callMock: false,
 		},
 		{
 			name:     "Invalid DB error",
 			input:    &aws.DeleteAWSRequest{ProjectId: 1, AwsId: 1},
 			wantErr:  true,
+			callMock: true,
 			mockResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("ListAWSRelDataSource").Return(&[]model.AWSRelDataSource{{AWSDataSourceID: 1}}, nil)
-			mockDB.On("DeleteAWSRelDataSource").Return(nil)
-			mockDB.On("DeleteAWS").Return(c.mockResp).Once()
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
+			if c.callMock {
+				mockDB.On("ListAWSRelDataSource", test.RepeatMockAnything(3)...).Return(&[]model.AWSRelDataSource{{AWSDataSourceID: 1}}, nil)
+				mockDB.On("DeleteAWSRelDataSource", test.RepeatMockAnything(4)...).Return(nil)
+				mockDB.On("DeleteAWS", test.RepeatMockAnything(3)...).Return(c.mockResp).Once()
+			}
 			_, err := svc.DeleteAWS(ctx, c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("unexpected error: %+v", err)
@@ -168,9 +178,6 @@ func TestDeleteAWS(t *testing.T) {
 }
 
 func TestListDataSource(t *testing.T) {
-	var ctx context.Context
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name     string
 		input    *aws.ListDataSourceRequest
@@ -211,8 +218,12 @@ func TestListDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
 			if c.mockResp != nil || c.mockErr != nil {
-				mockDB.On("ListAWSDataSource").Return(c.mockResp, c.mockErr).Once()
+				mockDB.On("ListAWSDataSource", test.RepeatMockAnything(4)...).Return(c.mockResp, c.mockErr).Once()
 			}
 			got, err := svc.ListDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -227,9 +238,6 @@ func TestListDataSource(t *testing.T) {
 
 func TestAttachDataSource(t *testing.T) {
 	now := time.Now()
-	var ctx context.Context
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name     string
 		input    *aws.AttachDataSourceRequest
@@ -269,8 +277,12 @@ func TestAttachDataSource(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
 			if c.mockResp != nil || c.mockErr != nil {
-				mockDB.On("UpsertAWSRelDataSource").Return(c.mockResp, c.mockErr).Once()
+				mockDB.On("UpsertAWSRelDataSource", test.RepeatMockAnything(2)...).Return(c.mockResp, c.mockErr).Once()
 			}
 			got, err := svc.AttachDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -284,35 +296,42 @@ func TestAttachDataSource(t *testing.T) {
 }
 
 func TestDetachDataSource(t *testing.T) {
-	var ctx context.Context
-	mockDB := awsmock.MockAWSRepository{}
-	svc := AWSService{repository: &mockDB}
 	cases := []struct {
 		name     string
 		input    *aws.DetachDataSourceRequest
 		wantErr  bool
 		mockResp error
+		mockCall bool
 	}{
 		{
-			name:    "OK",
-			input:   &aws.DetachDataSourceRequest{ProjectId: 1, AwsId: 1, AwsDataSourceId: 1},
-			wantErr: false,
+			name:     "OK",
+			input:    &aws.DetachDataSourceRequest{ProjectId: 1, AwsId: 1, AwsDataSourceId: 1},
+			wantErr:  false,
+			mockCall: true,
 		},
 		{
-			name:    "NG Invalid parameter(aws_data_source_id)",
-			input:   &aws.DetachDataSourceRequest{ProjectId: 1, AwsId: 1},
-			wantErr: true,
+			name:     "NG Invalid parameter(aws_data_source_id)",
+			input:    &aws.DetachDataSourceRequest{ProjectId: 1, AwsId: 1},
+			wantErr:  true,
+			mockCall: false,
 		},
 		{
 			name:     "Invalid DB error",
 			input:    &aws.DetachDataSourceRequest{ProjectId: 1, AwsId: 1, AwsDataSourceId: 1},
 			wantErr:  true,
+			mockCall: true,
 			mockResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			mockDB.On("DeleteAWSRelDataSource").Return(c.mockResp).Once()
+			var ctx context.Context
+			mockDB := mocks.NewAWSRepoInterface(t)
+			svc := AWSService{repository: mockDB}
+
+			if c.mockCall {
+				mockDB.On("DeleteAWSRelDataSource", test.RepeatMockAnything(4)...).Return(c.mockResp).Once()
+			}
 			_, err := svc.DetachDataSource(ctx, c.input)
 			if err != nil && !c.wantErr {
 				t.Fatalf("unexpected error: %+v", err)
