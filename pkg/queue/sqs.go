@@ -20,6 +20,7 @@ type SQSConfig struct {
 	AWSAccessAnalyzerQueueURL string
 	AWSAdminCheckerQueueURL   string
 	AWSCloudSploitQueueURL    string
+	AWSCloudSploitOldQueueURL string
 	AWSPortscanQueueURL       string
 
 	// google
@@ -52,6 +53,7 @@ type Client struct {
 	AWSAccessAnalyzerQueueURL string
 	AWSAdminCheckerQueueURL   string
 	AWSCloudSploitQueueURL    string
+	AWSCloudSploitOldQueueURL string
 	AWSPortscanQueueURL       string
 
 	// google
@@ -107,6 +109,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		AWSAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
+		AWSCloudSploitOldQueueURL:        conf.AWSCloudSploitOldQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,

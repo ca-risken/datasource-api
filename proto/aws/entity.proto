@@ -38,6 +38,7 @@ message AWSRelDataSource {
   int64 scan_at = 8;
   int64 created_at = 9;
   int64 updated_at = 10;
+  string specific_version = 11;
 }
 
 // AWSForUpsert
@@ -54,13 +55,14 @@ message DataSource {
   string data_source = 2;        // aws_data_source.data_source
   float max_score = 3;           // aws_data_source.max_score
 
-  uint32 aws_id = 4;          // aws_rel_data_source.aws_id
-  uint32 project_id = 5;      // aws_rel_data_source.project_id
-  string assume_role_arn = 7; // aws_rel_data_source.assume_role_arn
-  string external_id = 8;     // aws_rel_data_source.external_id
-  Status status = 9;          // aws_rel_data_source.status
-  string status_detail = 10;  // aws_rel_data_source.status_detail
-  int64 scan_at = 11;         // aws_rel_data_source.scan_at
+  uint32 aws_id = 4;            // aws_rel_data_source.aws_id
+  uint32 project_id = 5;        // aws_rel_data_source.project_id
+  string assume_role_arn = 7;   // aws_rel_data_source.assume_role_arn
+  string external_id = 8;       // aws_rel_data_source.external_id
+  Status status = 9;            // aws_rel_data_source.status
+  string status_detail = 10;    // aws_rel_data_source.status_detail
+  int64 scan_at = 11;           // aws_rel_data_source.scan_at
+  string specific_version = 12; // aws_rel_data_source.specific_version
 }
 
 // DataSourceForAttach
@@ -73,4 +75,5 @@ message DataSourceForAttach {
   Status status = 6;
   string status_detail = 7;
   int64 scan_at = 8;
+  string specific_version = 9;
 }
