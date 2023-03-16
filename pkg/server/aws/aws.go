@@ -190,6 +190,7 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 		AssumeRoleArn:   ds.AssumeRoleArn,
 		ExternalID:      ds.ExternalID,
 		ScanOnly:        req.ScanOnly,
+		SpecificVersion: ds.SpecificVersion,
 	}
 	var resp *sqs.SendMessageOutput
 	if msg.DataSource == message.AWSAccessAnalyzerDataSource {
