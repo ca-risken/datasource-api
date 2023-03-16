@@ -123,5 +123,6 @@ func (d *DataSourceForAttach) ValidateForUser() error {
 		validation.Field(&d.AssumeRoleArn, validation.Required, validation.Length(0, 255)),
 		validation.Field(&d.ExternalId, validation.Required, validation.Length(8, 255)),
 		validation.Field(&d.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+		validation.Field(&d.SpecificVersion, validation.Length(0, 64)),
 	)
 }
