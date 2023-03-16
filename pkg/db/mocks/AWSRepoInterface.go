@@ -9,8 +9,6 @@ import (
 
 	db "github.com/ca-risken/datasource-api/pkg/db"
 
-	message "github.com/ca-risken/datasource-api/pkg/message"
-
 	mock "github.com/stretchr/testify/mock"
 
 	model "github.com/ca-risken/datasource-api/pkg/model"
@@ -73,15 +71,15 @@ func (_m *AWSRepoInterface) GetAWSByAccountID(ctx context.Context, projectID uin
 }
 
 // GetAWSDataSourceForMessage provides a mock function with given fields: ctx, awsID, awsDataSourceID, projectID
-func (_m *AWSRepoInterface) GetAWSDataSourceForMessage(ctx context.Context, awsID uint32, awsDataSourceID uint32, projectID uint32) (*message.AWSQueueMessage, error) {
+func (_m *AWSRepoInterface) GetAWSDataSourceForMessage(ctx context.Context, awsID uint32, awsDataSourceID uint32, projectID uint32) (*db.DataSource, error) {
 	ret := _m.Called(ctx, awsID, awsDataSourceID, projectID)
 
-	var r0 *message.AWSQueueMessage
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, uint32) *message.AWSQueueMessage); ok {
+	var r0 *db.DataSource
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, uint32) *db.DataSource); ok {
 		r0 = rf(ctx, awsID, awsDataSourceID, projectID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*message.AWSQueueMessage)
+			r0 = ret.Get(0).(*db.DataSource)
 		}
 	}
 

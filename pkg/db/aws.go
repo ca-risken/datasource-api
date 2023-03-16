@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/vikyd/zero"
@@ -21,7 +20,7 @@ type AWSRepoInterface interface {
 	UpsertAWSRelDataSource(ctx context.Context, data *aws.DataSourceForAttach) (*model.AWSRelDataSource, error)
 	GetAWSRelDataSourceByID(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*model.AWSRelDataSource, error)
 	DeleteAWSRelDataSource(ctx context.Context, projectID, awsID, awsDataSourceID uint32) error
-	GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*message.AWSQueueMessage, error)
+	GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*DataSource, error)
 }
 
 var _ AWSRepoInterface = (*Client)(nil) // verify interface compliance
@@ -100,8 +99,10 @@ type DataSource struct {
 	MaxScore        float32
 	AWSID           uint32 `gorm:"column:aws_id"`
 	ProjectID       uint32
+	AWSAccountID    string
 	AssumeRoleArn   string
 	ExternalID      string
+	SpecificVersion string
 	Status          string
 	StatusDetail    string
 	ScanAt          time.Time
@@ -118,13 +119,14 @@ select
   , ards.project_id
   , ards.assume_role_arn
   , ards.external_id
+  , ards.specific_version
   , ards.status
   , ards.status_detail
   , ards.scan_at
 from
   aws_data_source ads
   left outer join (
-		select * from aws_rel_data_source where 1=1 `
+    select * from aws_rel_data_source where 1=1 `
 	if !zero.IsZeroVal(projectID) {
 		query += " and project_id = ? "
 		params = append(params, projectID)
@@ -134,7 +136,7 @@ from
 		params = append(params, awsID)
 	}
 	query += `
-	) ards using(aws_data_source_id)`
+  ) ards using(aws_data_source_id)`
 	if !zero.IsZeroVal(ds) {
 		query += `
 where
@@ -143,8 +145,8 @@ where
 	}
 	query += `
 order by
-	ards.project_id
-	, ards.aws_id
+  ards.project_id
+  , ards.aws_id
   , ads.aws_data_source_id
 `
 	data := []DataSource{}
@@ -163,6 +165,7 @@ func (c *Client) ListDataSourceByAWSDataSourceID(ctx context.Context, dataSource
 	, ards.project_id
 	, ards.assume_role_arn
 	, ards.external_id
+	, ards.specific_version
 	, ards.status
 	, ards.status_detail
 	, ards.scan_at 
@@ -191,13 +194,14 @@ func (c *Client) ListAWSRelDataSource(ctx context.Context, projectID, awsID uint
 
 const insertUpsertAWSRelDataSource = `
 INSERT INTO aws_rel_data_source
-  (aws_id, aws_data_source_id, project_id, assume_role_arn, external_id, status, status_detail, scan_at)
+  (aws_id, aws_data_source_id, project_id, assume_role_arn, external_id, specific_version, status, status_detail, scan_at)
 VALUES
-  (?, ?, ?, ?, ?, ?, ?, ?)
+  (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
   project_id=VALUES(project_id),
   assume_role_arn=VALUES(assume_role_arn),
   external_id=VALUES(external_id),
+  specific_version=VALUES(specific_version),
   status=VALUES(status),
   status_detail=VALUES(status_detail),
   scan_at=VALUES(scan_at)
@@ -206,7 +210,7 @@ ON DUPLICATE KEY UPDATE
 func (c *Client) UpsertAWSRelDataSource(ctx context.Context, data *aws.DataSourceForAttach) (*model.AWSRelDataSource, error) {
 	if err := c.MasterDB.WithContext(ctx).Exec(insertUpsertAWSRelDataSource,
 		data.AwsId, data.AwsDataSourceId, data.ProjectId,
-		data.AssumeRoleArn, data.ExternalId,
+		data.AssumeRoleArn, data.ExternalId, data.SpecificVersion,
 		data.Status.String(), data.StatusDetail, time.Unix(data.ScanAt, 0),
 	).Error; err != nil {
 		return nil, err
@@ -235,13 +239,14 @@ func (c *Client) DeleteAWSRelDataSource(ctx context.Context, projectID, awsID, a
 
 const selectAWSDataSourceForMessage = `
 select 
-	a.aws_id                  as aws_id
+    a.aws_id                as aws_id
   , ards.aws_data_source_id as aws_data_source_id
   , ads.data_source         as data_source
   , ards.project_id         as project_id
-  , a.aws_account_id        as account_id
+  , a.aws_account_id        as aws_account_id
   , ards.assume_role_arn    as assume_role_arn
   , ards.external_id        as external_id
+  , ards.specific_version   as specific_version
 from
   aws_rel_data_source ards
   inner join aws a using(aws_id)
@@ -249,11 +254,11 @@ from
 where
   ards.aws_id = ?
   and ards.aws_data_source_id = ?
-	and ards.project_id = ? 
+  and ards.project_id = ? 
 `
 
-func (c *Client) GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*message.AWSQueueMessage, error) {
-	data := message.AWSQueueMessage{}
+func (c *Client) GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*DataSource, error) {
+	data := DataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(selectAWSDataSourceForMessage, awsID, awsDataSourceID, projectID).First(&data).Error; err != nil {
 		return nil, err
 	}

@@ -127,6 +127,7 @@ func (a *AWSService) ListDataSource(ctx context.Context, req *aws.ListDataSource
 			ProjectId:       d.ProjectID,
 			AssumeRoleArn:   d.AssumeRoleArn,
 			ExternalId:      d.ExternalID,
+			SpecificVersion: d.SpecificVersion,
 			Status:          getStatus(d.Status),
 			StatusDetail:    d.StatusDetail,
 			ScanAt:          scanAt,
@@ -153,6 +154,7 @@ func (a *AWSService) AttachDataSource(ctx context.Context, req *aws.AttachDataSo
 		ProjectId:       registerd.ProjectID,
 		AssumeRoleArn:   registerd.AssumeRoleArn,
 		ExternalId:      registerd.ExternalID,
+		SpecificVersion: registerd.SpecificVersion,
 		Status:          getStatus(registerd.Status),
 		StatusDetail:    registerd.StatusDetail,
 		ScanAt:          scanAt,
@@ -175,18 +177,31 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	msg, err := a.repository.GetAWSDataSourceForMessage(ctx, req.AwsId, req.AwsDataSourceId, req.ProjectId)
+	ds, err := a.repository.GetAWSDataSourceForMessage(ctx, req.AwsId, req.AwsDataSourceId, req.ProjectId)
 	if err != nil {
 		return nil, err
 	}
-	msg.ScanOnly = req.ScanOnly
+	msg := &message.AWSQueueMessage{
+		AWSID:           ds.AWSID,
+		AWSDataSourceID: ds.AWSDataSourceID,
+		DataSource:      ds.DataSource,
+		AccountID:       ds.AWSAccountID,
+		ProjectID:       ds.ProjectID,
+		AssumeRoleArn:   ds.AssumeRoleArn,
+		ExternalID:      ds.ExternalID,
+		ScanOnly:        req.ScanOnly,
+	}
 	var resp *sqs.SendMessageOutput
 	if msg.DataSource == message.AWSAccessAnalyzerDataSource {
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSAccessAnalyzerQueueURL, msg)
 	} else if msg.DataSource == message.AWSAdminCheckerDataSource {
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSAdminCheckerQueueURL, msg)
 	} else if msg.DataSource == message.AWSCloudSploitDataSource {
-		resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
+		if ds.SpecificVersion == "" {
+			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
+		} else {
+			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitOldQueueURL, msg)
+		}
 	} else if msg.DataSource == message.AWSGuardDutyDataSource {
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSGuardDutyQueueURL, msg)
 	} else if msg.DataSource == message.AWSPortscanDataSource {
@@ -207,6 +222,7 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 		ProjectId:       data.ProjectID,
 		AssumeRoleArn:   data.AssumeRoleArn,
 		ExternalId:      data.ExternalID,
+		SpecificVersion: data.SpecificVersion,
 		Status:          aws.Status_IN_PROGRESS,
 		StatusDetail:    fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
 		ScanAt:          data.ScanAt.Unix(),
@@ -241,9 +257,6 @@ func (a *AWSService) InvokeScanAll(ctx context.Context, req *aws.InvokeScanAllRe
 		return nil, err
 	}
 	for _, dataSource := range *list {
-		if skipScanDataSource(dataSource.DataSource) {
-			continue
-		}
 		if resp, err := a.projectClient.IsActive(ctx, &project.IsActiveRequest{ProjectId: dataSource.ProjectID}); err != nil {
 			a.logger.Errorf(ctx, "Failed to project.IsActive API, err=%+v", err)
 			return nil, err
@@ -264,17 +277,4 @@ func (a *AWSService) InvokeScanAll(ctx context.Context, req *aws.InvokeScanAllRe
 	}
 	a.logger.Info(ctx, "End InvokeScanAll")
 	return &empty.Empty{}, nil
-}
-
-var skipScanDataSourceList = []string{
-	message.AWSActivityDatasource,
-}
-
-func skipScanDataSource(ds string) bool {
-	for _, skipDS := range skipScanDataSourceList {
-		if ds == skipDS {
-			return true
-		}
-	}
-	return false
 }

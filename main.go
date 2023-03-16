@@ -37,6 +37,7 @@ type AppConf struct {
 	AWSAccessAnalyzerQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-accessanalyzer"`
 	AWSAdminCheckerQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-adminchecker"`
 	AWSCloudSploitQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit"`
+	AWSCloudSploitOldQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit-old"`
 	AWSPortscanQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
 	GoogleAssetQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
 	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
@@ -133,6 +134,7 @@ func main() {
 		AWSAccessAnalyzerQueueURL:        conf.AWSAccessAnalyzerQueueURL,
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
+		AWSCloudSploitOldQueueURL:        conf.AWSCloudSploitOldQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,

@@ -17,8 +17,6 @@ const (
 	AWSCloudSploitDataSource = "aws:cloudsploit"
 	// AWSPortscanDataSource is the specific data_source label for portscan
 	AWSPortscanDataSource = "aws:portscan"
-	// AWSActivityDatasource is the specific data_source label for activity
-	AWSActivityDatasource = "aws:activity"
 )
 
 // AWSQueueMessage is the message for SQS queue
