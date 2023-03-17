@@ -29,6 +29,7 @@ type AWSQueueMessage struct {
 	AssumeRoleArn   string `json:"assume_role_arn"`
 	ExternalID      string `json:"external_id"`
 	ScanOnly        bool   `json:"scan_only,string"`
+	SpecificVersion string `json:"specific_version"`
 }
 
 // Validate is the validation to GuardDutyMessage
