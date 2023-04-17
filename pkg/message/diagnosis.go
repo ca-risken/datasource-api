@@ -1,6 +1,10 @@
 package message
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	validation "github.com/go-ozzo/ozzo-validation"
+)
 
 const (
 	DataSourceNameWPScan          = "diagnosis:wpscan"
@@ -38,10 +42,39 @@ type ApplicationScanQueueMessage struct {
 	ScanOnly            bool   `json:"scan_only,string"`
 }
 
+func (m *WpscanQueueMessage) Validate() error {
+	return validation.ValidateStruct(m,
+		validation.Field(&m.WpscanSettingID, validation.Required),
+		validation.Field(&m.ProjectID, validation.Required),
+		validation.Field(&m.TargetURL, validation.Required),
+	)
+}
+
+func (m *PortscanQueueMessage) Validate() error {
+	return validation.ValidateStruct(m,
+		validation.Field(&m.PortscanSettingID, validation.Required),
+		validation.Field(&m.PortscanTargetID, validation.Required),
+		validation.Field(&m.ProjectID, validation.Required),
+		validation.Field(&m.Target, validation.Required),
+	)
+}
+
+func (m *ApplicationScanQueueMessage) Validate() error {
+	return validation.ValidateStruct(m,
+		validation.Field(&m.ApplicationScanID, validation.Required),
+		validation.Field(&m.ProjectID, validation.Required),
+		validation.Field(&m.Name, validation.Required),
+		validation.Field(&m.ApplicationScanType, validation.Required),
+	)
+}
+
 // ParseWpscanMessage parse wpscan message
 func ParseWpscanMessage(msg string) (*WpscanQueueMessage, error) {
 	message := &WpscanQueueMessage{}
 	if err := json.Unmarshal([]byte(msg), message); err != nil {
+		return nil, err
+	}
+	if err := message.Validate(); err != nil {
 		return nil, err
 	}
 	return message, nil
@@ -53,6 +86,9 @@ func ParsePortscanMessage(msg string) (*PortscanQueueMessage, error) {
 	if err := json.Unmarshal([]byte(msg), message); err != nil {
 		return nil, err
 	}
+	if err := message.Validate(); err != nil {
+		return nil, err
+	}
 	return message, nil
 }
 
@@ -60,6 +96,9 @@ func ParsePortscanMessage(msg string) (*PortscanQueueMessage, error) {
 func ParseApplicationScanMessage(msg string) (*ApplicationScanQueueMessage, error) {
 	message := &ApplicationScanQueueMessage{}
 	if err := json.Unmarshal([]byte(msg), message); err != nil {
+		return nil, err
+	}
+	if err := message.Validate(); err != nil {
 		return nil, err
 	}
 	return message, nil
