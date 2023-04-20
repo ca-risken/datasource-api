@@ -94,15 +94,13 @@ INSERT INTO gcp (
   gcp_id,
   name,
   project_id,
-  gcp_organization_id,
   gcp_project_id,
   verification_code
 )
-VALUES (?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
   name=VALUES(name),
   project_id=VALUES(project_id),
-  gcp_organization_id=VALUES(gcp_organization_id),
   gcp_project_id=VALUES(gcp_project_id),
   verification_code=VALUES(verification_code)
 `
@@ -112,7 +110,6 @@ func (c *Client) UpsertGCP(ctx context.Context, gcp *google.GCPForUpsert) (*mode
 		gcp.GcpId,
 		convertZeroValueToNull(gcp.Name),
 		gcp.ProjectId,
-		convertZeroValueToNull(gcp.GcpOrganizationId),
 		gcp.GcpProjectId,
 		gcp.VerificationCode,
 	).Error; err != nil {
@@ -153,14 +150,13 @@ type GCPDataSource struct {
 	Name               string  // google_data_source.name
 	Description        string  // google_data_source.description
 	MaxScore           float32 // google_data_source.max_score
-	GCPOrganizationID  string  // gcp.gcp_organization_id
 	GCPProjectID       string  // gcp.gcp_project_id
 }
 
 func (c *Client) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]GCPDataSource, error) {
 	query := `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)
@@ -186,7 +182,7 @@ where
 
 const selectGetGCPDataSource string = `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)
@@ -260,7 +256,7 @@ func (c *Client) DeleteGCPDataSource(ctx context.Context, projectID, gcpID, goog
 func (c *Client) ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]GCPDataSource, error) {
 	query := `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_organization_id, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)

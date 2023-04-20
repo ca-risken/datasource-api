@@ -55,14 +55,13 @@ func convertGCP(data *model.GCP) *google.GCP {
 		return &google.GCP{}
 	}
 	gcp := google.GCP{
-		GcpId:             data.GCPID,
-		Name:              data.Name,
-		ProjectId:         data.ProjectID,
-		GcpOrganizationId: data.GCPOrganizationID,
-		GcpProjectId:      data.GCPProjectID,
-		VerificationCode:  data.VerificationCode,
-		CreatedAt:         data.CreatedAt.Unix(),
-		UpdatedAt:         data.UpdatedAt.Unix(),
+		GcpId:            data.GCPID,
+		Name:             data.Name,
+		ProjectId:        data.ProjectID,
+		GcpProjectId:     data.GCPProjectID,
+		VerificationCode: data.VerificationCode,
+		CreatedAt:        data.CreatedAt.Unix(),
+		UpdatedAt:        data.UpdatedAt.Unix(),
 	}
 	return &gcp
 }
@@ -160,11 +159,10 @@ func convertGCPDataSource(data *db.GCPDataSource) *google.GCPDataSource {
 		StatusDetail:       data.StatusDetail,
 		CreatedAt:          data.CreatedAt.Unix(),
 		UpdatedAt:          data.UpdatedAt.Unix(),
-		Name:               data.Name,              // google_data_source.name
-		MaxScore:           data.MaxScore,          // google_data_source.max_score
-		Description:        data.Description,       // google_data_source.description
-		GcpOrganizationId:  data.GCPOrganizationID, // gcp.gcp_organization_id
-		GcpProjectId:       data.GCPProjectID,      // gcp.gcp_project_id
+		Name:               data.Name,         // google_data_source.name
+		MaxScore:           data.MaxScore,     // google_data_source.max_score
+		Description:        data.Description,  // google_data_source.description
+		GcpProjectId:       data.GCPProjectID, // gcp.gcp_project_id
 	}
 	if !zero.IsZeroVal(data.ScanAt) {
 		gcp.ScanAt = data.ScanAt.Unix()
