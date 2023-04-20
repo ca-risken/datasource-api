@@ -25,7 +25,6 @@ message GCP {
   uint32 gcp_id = 1;
   string name = 2;
   uint32 project_id = 3;
-  string gcp_organization_id = 4;
   string gcp_project_id = 5;
   string verification_code = 6;
   int64 created_at = 7;
@@ -42,7 +41,6 @@ message GCPDataSource {
   int64 scan_at = 6;                // gcp_data_source.scan_at
   int64 created_at = 7;             // gcp_data_source.created_at
   int64 updated_at = 8;             // gcp_data_source.updated_at
-  string gcp_organization_id = 9;   // gcp.gcp_organization_id
   string gcp_project_id = 10;       // gcp.gcp_project_id
   string name = 11;                 // google_data_source.name
   string description = 12;          // google_data_source.description
@@ -64,7 +62,6 @@ message GCPForUpsert {
   uint32 gcp_id = 1; // Unique key for entity.
   string name = 2;
   uint32 project_id = 3;
-  string gcp_organization_id = 4;
   string gcp_project_id = 5;
   string verification_code = 6;
 }
