@@ -6,7 +6,7 @@ MANIFEST_TAG=latest
 IMAGE_NAME=datasource-api
 IMAGE_REGISTRY=local
 GRPCURL=kubectl run grpcurl --image=fullstorydev/grpcurl -n core --restart=Never --rm -it --
-DATASOURCE_API_ADDR=datasource-api.core.svc.cluster.local:8081
+DATASOURCE_API_ADDR=datasource-api.datasource.svc.cluster.local:8081
 
 .PHONY: all
 all: run
