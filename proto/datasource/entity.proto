@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package datasource;
+option go_package = "github.com/ca-risken/datasource-api/proto/datasource";
+
+// Resource
+message Resource {
+  uint64 resource_id = 1;
+  string resource_name = 2;
+  string short_name = 3;
+  string cloud_type = 4;
+  string cloud_id = 5;
+  string service = 6;
+  string region = 7;
+  string meta_data = 8;
+}
+
+// ResourceRelationship
+message ResourceRelationship {
+  Resource resource = 1;
+  repeated Resource side_resource = 2;
+  repeated string front_resource_name = 3;
+  repeated string back_resource_name = 4;
+}

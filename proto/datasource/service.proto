@@ -4,7 +4,23 @@ package datasource;
 option go_package = "github.com/ca-risken/datasource-api/proto/datasource";
 
 import "google/protobuf/empty.proto";
+import "datasource/entity.proto";
+import "validate/validate.proto";
 
 service DataSourceService {
   rpc CleanDataSource(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc AnalyzeAttackFlow(AnalyzeAttackFlowRequest)
+      returns (AnalyzeAttackFlowResponse);
+}
+
+message AnalyzeAttackFlowRequest {
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  string resource_name = 2
+      [ (validate.rules).string = {min_len : 1, max_len : 255} ];
+  string cloud_type = 3 [ (validate.rules).string = {in : [ "aws" ]} ];
+  string cloud_id = 4 [ (validate.rules).string = {min_len : 1, max_len : 32} ];
+}
+
+message AnalyzeAttackFlowResponse {
+  ResourceRelationship resource_relationship = 1;
 }
