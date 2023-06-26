@@ -143,6 +143,13 @@ clean-datasource:
 		-d '' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.CleanDataSource
 
+.PHONY: analyze-attack-flow
+analyze-attack-flow:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "resource_name":"arn:aws:cloudfront::123456789012:distribution/Exxxxxxxxxx", "cloud_type":"aws", "cloud_id":"123456789012"}' \
+		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
+
 ####################################################
 ## AWS
 ####################################################

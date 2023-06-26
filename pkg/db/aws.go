@@ -21,6 +21,7 @@ type AWSRepoInterface interface {
 	GetAWSRelDataSourceByID(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*model.AWSRelDataSource, error)
 	DeleteAWSRelDataSource(ctx context.Context, projectID, awsID, awsDataSourceID uint32) error
 	GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*DataSource, error)
+	GetAWSRelDataSourceByAccountID(ctx context.Context, projectID uint32, awsAccountID string) (*model.AWSRelDataSource, error)
 }
 
 var _ AWSRepoInterface = (*Client)(nil) // verify interface compliance
@@ -260,6 +261,22 @@ where
 func (c *Client) GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*DataSource, error) {
 	data := DataSource{}
 	if err := c.SlaveDB.WithContext(ctx).Raw(selectAWSDataSourceForMessage, awsID, awsDataSourceID, projectID).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const selectGetAWSRelDataSourceByAccountID = `
+select * 
+from aws_rel_data_source ards inner join aws a using(aws_id) 
+where ards.project_id = ? and a.aws_account_id = ? and ards.assume_role_arn like ?
+`
+
+func (c *Client) GetAWSRelDataSourceByAccountID(ctx context.Context, projectID uint32, awsAccountID string) (*model.AWSRelDataSource, error) {
+	data := model.AWSRelDataSource{}
+	if err := c.MasterDB.WithContext(ctx).
+		Raw(selectGetAWSRelDataSourceByAccountID, projectID, awsAccountID, "%"+escapeLikeParam(awsAccountID)+"%").
+		First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

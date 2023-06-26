@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"gorm.io/gorm"
 
@@ -79,4 +80,15 @@ func convertZeroValueToNull(input interface{}) interface{} {
 		return gorm.Expr("NULL")
 	}
 	return input
+}
+
+const (
+	escapeString = "*"
+)
+
+func escapeLikeParam(s string) string {
+	s = strings.ReplaceAll(s, "*", escapeString+"*")
+	s = strings.ReplaceAll(s, "_", escapeString+"_")
+	s = strings.ReplaceAll(s, "%", escapeString+"%")
+	return s
 }

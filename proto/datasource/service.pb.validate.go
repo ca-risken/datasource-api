@@ -207,33 +207,72 @@ func (m *AnalyzeAttackFlowResponse) validate(all bool) error {
 
 	var errors []error
 
-	if all {
-		switch v := interface{}(m.GetResourceRelationship()).(type) {
-		case interface{ ValidateAll() error }:
-			if err := v.ValidateAll(); err != nil {
-				errors = append(errors, AnalyzeAttackFlowResponseValidationError{
-					field:  "ResourceRelationship",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
+	for idx, item := range m.GetNodes() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, AnalyzeAttackFlowResponseValidationError{
+						field:  fmt.Sprintf("Nodes[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, AnalyzeAttackFlowResponseValidationError{
+						field:  fmt.Sprintf("Nodes[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
 			}
-		case interface{ Validate() error }:
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
 			if err := v.Validate(); err != nil {
-				errors = append(errors, AnalyzeAttackFlowResponseValidationError{
-					field:  "ResourceRelationship",
+				return AnalyzeAttackFlowResponseValidationError{
+					field:  fmt.Sprintf("Nodes[%v]", idx),
 					reason: "embedded message failed validation",
 					cause:  err,
-				})
+				}
 			}
 		}
-	} else if v, ok := interface{}(m.GetResourceRelationship()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return AnalyzeAttackFlowResponseValidationError{
-				field:  "ResourceRelationship",
-				reason: "embedded message failed validation",
-				cause:  err,
+
+	}
+
+	for idx, item := range m.GetEdges() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, AnalyzeAttackFlowResponseValidationError{
+						field:  fmt.Sprintf("Edges[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, AnalyzeAttackFlowResponseValidationError{
+						field:  fmt.Sprintf("Edges[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return AnalyzeAttackFlowResponseValidationError{
+					field:  fmt.Sprintf("Edges[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
 			}
 		}
+
 	}
 
 	if len(errors) > 0 {

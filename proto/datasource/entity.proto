@@ -12,13 +12,14 @@ message Resource {
   string cloud_id = 5;
   string service = 6;
   string region = 7;
-  string meta_data = 8;
+  string layer = 8;
+  string meta_data = 9;
 }
 
 // ResourceRelationship
 message ResourceRelationship {
-  Resource resource = 1;
-  repeated Resource side_resource = 2;
-  repeated string front_resource_name = 3;
-  repeated string back_resource_name = 4;
+  string relation_id = 1;
+  string relation_label = 2;
+  string source_resource_name = 3;
+  string target_resource_name = 4;
 }

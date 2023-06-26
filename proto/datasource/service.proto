@@ -22,5 +22,6 @@ message AnalyzeAttackFlowRequest {
 }
 
 message AnalyzeAttackFlowResponse {
-  ResourceRelationship resource_relationship = 1;
+  repeated Resource nodes = 1;
+  repeated ResourceRelationship edges = 2;
 }

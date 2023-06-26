@@ -71,6 +71,8 @@ func (m *Resource) validate(all bool) error {
 
 	// no validation rules for Region
 
+	// no validation rules for Layer
+
 	// no validation rules for MetaData
 
 	if len(errors) > 0 {
@@ -172,68 +174,13 @@ func (m *ResourceRelationship) validate(all bool) error {
 
 	var errors []error
 
-	if all {
-		switch v := interface{}(m.GetResource()).(type) {
-		case interface{ ValidateAll() error }:
-			if err := v.ValidateAll(); err != nil {
-				errors = append(errors, ResourceRelationshipValidationError{
-					field:  "Resource",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		case interface{ Validate() error }:
-			if err := v.Validate(); err != nil {
-				errors = append(errors, ResourceRelationshipValidationError{
-					field:  "Resource",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		}
-	} else if v, ok := interface{}(m.GetResource()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return ResourceRelationshipValidationError{
-				field:  "Resource",
-				reason: "embedded message failed validation",
-				cause:  err,
-			}
-		}
-	}
+	// no validation rules for RelationId
 
-	for idx, item := range m.GetSideResource() {
-		_, _ = idx, item
+	// no validation rules for RelationLabel
 
-		if all {
-			switch v := interface{}(item).(type) {
-			case interface{ ValidateAll() error }:
-				if err := v.ValidateAll(); err != nil {
-					errors = append(errors, ResourceRelationshipValidationError{
-						field:  fmt.Sprintf("SideResource[%v]", idx),
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			case interface{ Validate() error }:
-				if err := v.Validate(); err != nil {
-					errors = append(errors, ResourceRelationshipValidationError{
-						field:  fmt.Sprintf("SideResource[%v]", idx),
-						reason: "embedded message failed validation",
-						cause:  err,
-					})
-				}
-			}
-		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
-			if err := v.Validate(); err != nil {
-				return ResourceRelationshipValidationError{
-					field:  fmt.Sprintf("SideResource[%v]", idx),
-					reason: "embedded message failed validation",
-					cause:  err,
-				}
-			}
-		}
+	// no validation rules for SourceResourceName
 
-	}
+	// no validation rules for TargetResourceName
 
 	if len(errors) > 0 {
 		return ResourceRelationshipMultiError(errors)
