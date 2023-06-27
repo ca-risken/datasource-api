@@ -16,7 +16,7 @@ const (
 	LAYER_DATASTORE = "DATASTORE"
 
 	// common resource
-	RESOURCE_INTERNET = "Inernet"
+	RESOURCE_INTERNET = "Internet"
 )
 
 type AttackFlowAnalyzer interface {

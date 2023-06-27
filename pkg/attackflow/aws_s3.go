@@ -45,7 +45,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		return nil, nil, err
 	}
 	regionCode := fmt.Sprint(location.LocationConstraint)
-	a.logger.Infof(ctx, "s3: location=%v", regionCode)
+	a.logger.Debugf(ctx, "s3: location=%v", regionCode)
 	if regionCode != "" {
 		r.Region = regionCode
 		if err := a.updateS3ClientWithRegion(ctx, regionCode); err != nil {

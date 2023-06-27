@@ -31,7 +31,7 @@ const (
 )
 
 var (
-	domainPatternCloudFront = regexp.MustCompile(`\.cloudfront.net$`)
+	domainPatternCloudFront = regexp.MustCompile(`\.cloudfront\.net$`)
 	domainPatternS3         = regexp.MustCompile(`\.s3\..*\.amazonaws\.com$`) // https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/VirtualHosting.html
 
 	supportedAWSServices = map[string]bool{
