@@ -49,7 +49,7 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	var err error
 	switch req.CloudType {
 	case CLOUD_TYPE_AWS:
-		analyzer, err = attackflow.NewAWSAttackFlowAnalyzer(ctx, req, d.dbClient, logging.NewLogger())
+		analyzer, err = attackflow.NewAWSAttackFlowAnalyzer(ctx, req, d.dbClient, d.logger)
 		if err != nil {
 			return nil, status.Errorf(codes.FailedPrecondition, "failed to create aws analyzer: %s", err.Error())
 		}

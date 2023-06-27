@@ -169,10 +169,6 @@ func findAWSServiceFromDomain(domain string) string {
 	}
 }
 
-func getNodeName(service, shortName string) string {
-	return fmt.Sprintf("%s:%s", service, shortName)
-}
-
 func (a *AWSAttackFlowAnalyzer) addInternetNode(targetResourceName, edgeLabel string) {
 	if !a.internetConnected {
 		a.nodes = append(a.nodes, &datasource.Resource{
@@ -187,7 +183,7 @@ func (a *AWSAttackFlowAnalyzer) addInternetNode(targetResourceName, edgeLabel st
 
 func (a *AWSAttackFlowAnalyzer) addEdge(source, target, edgeLabel string) {
 	a.edges = append(a.edges, &datasource.ResourceRelationship{
-		RelationId:         fmt.Sprintf("ed-<%s>-<%s>", source, target),
+		RelationId:         fmt.Sprintf("ed-[%s]-[%s]", source, target),
 		SourceResourceName: source,
 		TargetResourceName: target,
 		RelationLabel:      edgeLabel,

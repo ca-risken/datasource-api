@@ -100,7 +100,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 
 	// add node
 	if meta.IsPublic {
-		a.addInternetNode(getNodeName(SERVICE_S3, r.ShortName), "")
+		a.addInternetNode(r.ResourceName, "")
 	}
 	a.nodes = append(a.nodes, r)
 	return r, meta, nil

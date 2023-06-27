@@ -90,7 +90,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeCloudFronResource(ctx context.Context, ar
 
 	// add node
 	if meta.Enabled {
-		a.addInternetNode(getNodeName(SERVICE_CLOUDFRONT, r.ResourceName), meta.DomainName)
+		a.addInternetNode(r.ResourceName, meta.DomainName)
 	}
 	a.nodes = append(a.nodes, r)
 	return r, meta, nil
@@ -110,8 +110,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeCloudFrontNext(ctx context.Context, cf *d
 		switch awsService {
 		case SERVICE_S3:
 			s3ARN := getS3ARNFromDomain(origin)
-			sr := getAWSInfoFromARN(s3ARN)
-			a.addEdge(getNodeName(SERVICE_CLOUDFRONT, cf.ResourceName), getNodeName(SERVICE_S3, sr.ShortName), origin)
+			a.addEdge(cf.ResourceName, s3ARN, origin)
 			if _, err := a.analyzeS3(ctx, s3ARN); err != nil {
 				return err
 			}
