@@ -88,20 +88,20 @@ func NewAWSAttackFlowAnalyzer(
 
 func getAWSInfoFromARN(arn string) *datasource.Resource {
 	// arn:aws:iam::123456789012:user/MyUser -> Service: iam, Region: global, ShortName: MyUser
-	splitedArn := strings.Split(arn, ":")
-	if len(splitedArn) < 5 {
+	splitArn := strings.Split(arn, ":")
+	if len(splitArn) < 5 {
 		return nil
 	}
-	splitedName := strings.Split(splitedArn[5], "/")
-	region := splitedArn[3]
+	splitName := strings.Split(splitArn[5], "/")
+	region := splitArn[3]
 	if region == "" {
 		region = REGION_GLOBAL
 	}
 	return &datasource.Resource{
 		ResourceName: arn,
-		ShortName:    splitedName[len(splitedName)-1],
-		CloudType:    splitedArn[1],
-		Service:      splitedArn[2],
+		ShortName:    splitName[len(splitName)-1],
+		CloudType:    splitArn[1],
+		Service:      splitArn[2],
 		Region:       region,
 	}
 }

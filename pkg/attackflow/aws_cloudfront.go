@@ -15,7 +15,7 @@ type CloudFrontMetadata struct {
 	Enabled           bool     `json:"enabled"`
 	DomainName        string   `json:"domain_name"`
 	DefaultRootObject string   `json:"default_root_object"`
-	Ailiases          []string `json:"ailiases"`
+	Aliases           []string `json:"aliases"`
 	Origins           []string `json:"origins"`
 	GeoRestriction    []string `json:"geo_restriction"`
 	Logging           string   `json:"logging"`
@@ -24,7 +24,7 @@ type CloudFrontMetadata struct {
 
 func (a *AWSAttackFlowAnalyzer) analyzeCloudFront(ctx context.Context, arn string) (*datasource.AnalyzeAttackFlowResponse, error) {
 	// analyze cloudfront resource
-	cf, meta, err := a.analyzeCloudFronResource(ctx, arn)
+	cf, meta, err := a.analyzeCloudFrontResource(ctx, arn)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeCloudFront(ctx context.Context, arn strin
 	}, nil
 }
 
-func (a *AWSAttackFlowAnalyzer) analyzeCloudFronResource(ctx context.Context, arn string) (*datasource.Resource, *CloudFrontMetadata, error) {
+func (a *AWSAttackFlowAnalyzer) analyzeCloudFrontResource(ctx context.Context, arn string) (*datasource.Resource, *CloudFrontMetadata, error) {
 	r := getAWSInfoFromARN(arn)
 
 	// https://docs.aws.amazon.com/cloudfront/latest/APIReference/API_GetDistribution.html#API_GetDistribution_ResponseElements
@@ -74,7 +74,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeCloudFronResource(ctx context.Context, ar
 		Status:            *resp.Distribution.Status,
 		Enabled:           enabled,
 		DomainName:        *resp.Distribution.DomainName,
-		Ailiases:          aliases,
+		Aliases:           aliases,
 		Origins:           origins,
 		DefaultRootObject: defaultRootObject,
 		GeoRestriction:    geoRestriction,
