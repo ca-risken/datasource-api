@@ -20,19 +20,17 @@ type S3Metadata struct {
 
 func (a *AWSAttackFlowAnalyzer) analyzeS3(ctx context.Context, arn string) (*datasource.AnalyzeAttackFlowResponse, error) {
 	// analyze s3 resource
-	r, meta, err := a.analyzeS3Resource(ctx, arn)
-	if err != nil {
+	if err := a.analyzeS3Resource(ctx, arn); err != nil {
 		return nil, err
 	}
 
-	a.logger.Infof(ctx, "s3: resource=%v, meta=%v", r, meta)
 	return &datasource.AnalyzeAttackFlowResponse{
 		Nodes: a.nodes,
 		Edges: a.edges,
 	}, nil
 }
 
-func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn string) (*datasource.Resource, *S3Metadata, error) {
+func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn string) error {
 	r := getAWSInfoFromARN(arn)
 	bucketName := aws.String(r.ShortName)
 
@@ -41,14 +39,14 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	regionCode := fmt.Sprint(location.LocationConstraint)
 	a.logger.Debugf(ctx, "s3: location=%v", regionCode)
 	if regionCode != "" {
 		r.Region = regionCode
 		if err := a.updateS3ClientWithRegion(ctx, regionCode); err != nil {
-			return nil, nil, err
+			return err
 		}
 	}
 
@@ -57,7 +55,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketPolicyStatus.html
@@ -65,7 +63,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketVersioning.html
@@ -73,7 +71,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 
 	sseEncrypt := ""
@@ -89,7 +87,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 	}
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
 	r.Layer = LAYER_DATASTORE
 	r.MetaData = string(metaJSON)
@@ -99,7 +97,7 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		a.addInternetNode(r.ResourceName, "")
 	}
 	a.nodes = append(a.nodes, r)
-	return r, meta, nil
+	return nil
 }
 
 func (a *AWSAttackFlowAnalyzer) updateS3ClientWithRegion(ctx context.Context, region string) error {
