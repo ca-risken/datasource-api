@@ -148,6 +148,11 @@ func (a *AWSAttackFlowAnalyzer) Analyze(ctx context.Context, req *datasource.Ana
 		if err != nil {
 			return nil, err
 		}
+	case SERVICE_S3:
+		resp, err = a.analyzeS3(ctx, req.ResourceName)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}

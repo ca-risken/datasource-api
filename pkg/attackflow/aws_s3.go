@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -123,9 +122,7 @@ func getS3ARNFromDomain(domain string) string {
 	if !domainPatternS3.MatchString(domain) {
 		return ""
 	}
-	splited := strings.Split(domain, ".")
-	if len(splited) == 0 {
-		return ""
-	}
-	return fmt.Sprintf("arn:aws:s3:::%s", splited[0])
+	// bucket-name.com.s3.{region}.amazonaws.com -> bucket-name.com
+	bucketName := domainPatternS3.ReplaceAll([]byte(domain), []byte{})
+	return fmt.Sprintf("arn:aws:s3:::%s", bucketName)
 }
