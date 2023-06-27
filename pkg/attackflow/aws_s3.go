@@ -13,7 +13,7 @@ import (
 )
 
 type S3Metadata struct {
-	Encryption bool
+	Encryption string
 	IsPublic   bool
 	Versioning bool
 }
@@ -76,17 +76,14 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 		return nil, nil, err
 	}
 
-	encrypted := false
+	sseEncrypt := ""
 	for _, rule := range encryption.ServerSideEncryptionConfiguration.Rules {
-		if rule.BucketKeyEnabled ||
-			rule.ApplyServerSideEncryptionByDefault != nil &&
-				rule.ApplyServerSideEncryptionByDefault.KMSMasterKeyID != nil {
-			encrypted = true
-		}
+		sseEncrypt = fmt.Sprint(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
+		break
 	}
 
 	meta := &S3Metadata{
-		Encryption: encrypted,
+		Encryption: sseEncrypt,
 		IsPublic:   policyStatus.PolicyStatus != nil && policyStatus.PolicyStatus.IsPublic,
 		Versioning: versioning.Status == types.BucketVersioningStatusEnabled,
 	}
