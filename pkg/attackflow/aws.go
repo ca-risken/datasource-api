@@ -9,8 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -46,44 +44,40 @@ var (
 	}
 )
 
-type AWSAttackFlowAnalyzer struct {
-	cloudID           string
-	region            string
-	initialService    string
-	nodes             []*datasource.Resource
-	edges             []*datasource.ResourceRelationship
-	internetConnected bool
-	logger            logging.Logger
+type AWS struct {
+	cloudID        string
+	region         string
+	initialService string
+	logger         logging.Logger
 
 	// aws client
 	role      *model.AWSRelDataSource
 	awsConfig *aws.Config
-	cf        *cloudfront.Client
-	s3        *s3.Client
 }
 
-func NewAWSAttackFlowAnalyzer(
+func NewAWS(
 	ctx context.Context,
 	req *datasource.AnalyzeAttackFlowRequest,
 	awsrepo db.AWSRepoInterface,
 	logger logging.Logger,
-) (AttackFlowAnalyzer, error) {
+) (CSP, error) {
+
 	r := getAWSInfoFromARN(req.ResourceName)
 	role, err := awsrepo.GetAWSRelDataSourceByAccountID(ctx, req.ProjectId, req.CloudId)
 	if err != nil {
 		return nil, err
 	}
-	analyzer := &AWSAttackFlowAnalyzer{
+	csp := &AWS{
 		cloudID:        req.CloudId,
 		region:         r.Region,
 		initialService: r.Service,
 		role:           role,
 		logger:         logger,
 	}
-	if err := analyzer.NewAWSClient(ctx); err != nil {
+	if err := csp.retrieveAWSCredential(ctx); err != nil {
 		return nil, err
 	}
-	return analyzer, nil
+	return csp, nil
 }
 
 func getAWSInfoFromARN(arn string) *datasource.Resource {
@@ -106,7 +100,7 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 	}
 }
 
-func (a *AWSAttackFlowAnalyzer) NewAWSClient(ctx context.Context) error {
+func (a *AWS) retrieveAWSCredential(ctx context.Context) error {
 	region := a.region
 	if region == REGION_GLOBAL {
 		region = REGION_US_EAST_1
@@ -132,31 +126,31 @@ func (a *AWSAttackFlowAnalyzer) NewAWSClient(ctx context.Context) error {
 		return err
 	}
 	a.awsConfig = &cfg
-	a.cf = cloudfront.NewFromConfig(cfg)
-	a.s3 = s3.NewFromConfig(cfg)
 	return nil
 }
 
-func (a *AWSAttackFlowAnalyzer) Analyze(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (*datasource.AnalyzeAttackFlowResponse, error) {
-	var resp *datasource.AnalyzeAttackFlowResponse
+func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (
+	CloudServiceAnalyzer, error,
+) {
 	var err error
+	var serviceAnalyzer CloudServiceAnalyzer
 
 	// check supported initial service
 	switch a.initialService {
 	case SERVICE_CLOUDFRONT:
-		resp, err = a.analyzeCloudFront(ctx, req.ResourceName)
+		serviceAnalyzer, err = newCloudFrontAnalyzer(req.ResourceName, a.awsConfig, a.logger)
 		if err != nil {
 			return nil, err
 		}
 	case SERVICE_S3:
-		resp, err = a.analyzeS3(ctx, req.ResourceName)
+		serviceAnalyzer, err = newS3Analyzer(req.ResourceName, a.awsConfig, a.logger)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}
-	return resp, nil
+	return serviceAnalyzer, nil
 }
 
 func isSupportedAWSService(serviceName string) bool {
@@ -172,25 +166,4 @@ func findAWSServiceFromDomain(domain string) string {
 	default:
 		return ""
 	}
-}
-
-func (a *AWSAttackFlowAnalyzer) addInternetNode(targetResourceName, edgeLabel string) {
-	if !a.internetConnected {
-		a.nodes = append(a.nodes, &datasource.Resource{
-			ResourceName: RESOURCE_INTERNET,
-			ShortName:    RESOURCE_INTERNET,
-			Layer:        LAYER_INTERNET,
-		})
-	}
-	a.addEdge(RESOURCE_INTERNET, targetResourceName, edgeLabel)
-	a.internetConnected = true
-}
-
-func (a *AWSAttackFlowAnalyzer) addEdge(source, target, edgeLabel string) {
-	a.edges = append(a.edges, &datasource.ResourceRelationship{
-		RelationId:         fmt.Sprintf("ed-[%s]-[%s]", source, target),
-		SourceResourceName: source,
-		TargetResourceName: target,
-		RelationLabel:      edgeLabel,
-	})
 }
