@@ -12,10 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const (
-	CLOUD_TYPE_AWS = "aws"
-)
-
 type dsDBClient interface {
 	db.DataSourceRepoInterface
 	db.AWSRepoInterface
@@ -40,26 +36,60 @@ func (d *DataSourceService) CleanDataSource(ctx context.Context, _ *empty.Empty)
 	return &empty.Empty{}, nil
 }
 
-func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (*datasource.AnalyzeAttackFlowResponse, error) {
+func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (
+	*datasource.AnalyzeAttackFlowResponse, error,
+) {
 	if err := req.Validate(); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	var analyzer attackflow.AttackFlowAnalyzer
+	var csp attackflow.CSP
 	var err error
 	switch req.CloudType {
-	case CLOUD_TYPE_AWS:
-		analyzer, err = attackflow.NewAWSAttackFlowAnalyzer(ctx, req, d.dbClient, d.logger)
+	case attackflow.CLOUD_TYPE_AWS:
+		csp, err = attackflow.NewAWS(ctx, req, d.dbClient, d.logger)
 		if err != nil {
-			return nil, status.Errorf(codes.FailedPrecondition, "failed to create aws analyzer: %s", err.Error())
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to create aws: %s", err.Error())
 		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid cloud type: %s", req.CloudType)
 	}
-
-	resp, err := analyzer.Analyze(ctx, req)
+	serviceAnalyzer, err := csp.GetInitialServiceAnalyzer(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to analyze attack flow: %s", err.Error())
+		return nil, status.Errorf(codes.Internal, "failed to get initial analyzer: %s", err.Error())
 	}
+
+	resp := &datasource.AnalyzeAttackFlowResponse{}
+	nextAnalyzerList := []attackflow.CloudServiceAnalyzer{}
+	analyzeCounter := 0
+	for {
+		resp, err = serviceAnalyzer.Analyze(ctx, resp)
+		if err != nil {
+			return nil, err
+		}
+		var next []attackflow.CloudServiceAnalyzer
+		resp, next, err = serviceAnalyzer.Next(ctx, resp)
+		if err != nil {
+			return nil, err
+		}
+		if len(next) > 0 {
+			// push next analyzer
+			nextAnalyzerList = append(nextAnalyzerList, next...)
+		}
+		if len(nextAnalyzerList) == 0 {
+			break
+		}
+
+		analyzeCounter++
+		if attackflow.MAX_ANALYZE_NUM < analyzeCounter {
+			d.logger.Warnf(ctx, "analyze num exceeded: %d", analyzeCounter)
+			break
+		}
+
+		// pop next analyzer
+		serviceAnalyzer = nextAnalyzerList[0]
+		nextAnalyzerList = nextAnalyzerList[1:]
+	}
+
 	return resp, nil
 }

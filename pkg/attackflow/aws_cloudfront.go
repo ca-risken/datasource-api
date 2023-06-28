@@ -6,8 +6,27 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
+
+type cloudFrontAnalyzer struct {
+	resource  *datasource.Resource
+	metadata  *CloudFrontMetadata
+	awsConfig *aws.Config
+	client    *cloudfront.Client
+	logger    logging.Logger
+}
+
+func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+	return &cloudFrontAnalyzer{
+		resource:  getAWSInfoFromARN(arn),
+		metadata:  &CloudFrontMetadata{},
+		awsConfig: cfg,
+		client:    cloudfront.NewFromConfig(*cfg),
+		logger:    logger,
+	}, nil
+}
 
 type CloudFrontMetadata struct {
 	DistributionID    string   `json:"distribution_id"`
@@ -22,58 +41,40 @@ type CloudFrontMetadata struct {
 	WebACLId          string   `json:"web_acl_id"`
 }
 
-func (a *AWSAttackFlowAnalyzer) analyzeCloudFront(ctx context.Context, arn string) (*datasource.AnalyzeAttackFlowResponse, error) {
-	// analyze cloudfront resource
-	cf, meta, err := a.analyzeCloudFrontResource(ctx, arn)
-	if err != nil {
-		return nil, err
-	}
-
-	// next
-	if err := a.analyzeCloudFrontNext(ctx, cf, meta); err != nil {
-		return nil, err
-	}
-
-	return &datasource.AnalyzeAttackFlowResponse{
-		Nodes: a.nodes,
-		Edges: a.edges,
-	}, nil
-}
-
-func (a *AWSAttackFlowAnalyzer) analyzeCloudFrontResource(ctx context.Context, arn string) (*datasource.Resource, *CloudFrontMetadata, error) {
-	r := getAWSInfoFromARN(arn)
-
+func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
+	*datasource.AnalyzeAttackFlowResponse, error,
+) {
 	// https://docs.aws.amazon.com/cloudfront/latest/APIReference/API_GetDistribution.html#API_GetDistribution_ResponseElements
-	resp, err := a.cf.GetDistribution(ctx, &cloudfront.GetDistributionInput{
-		Id: aws.String(r.ShortName),
+	d, err := c.client.GetDistribution(ctx, &cloudfront.GetDistributionInput{
+		Id: aws.String(c.resource.ShortName),
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var enabled bool
 	var aliases, origins, geoRestriction []string
 	var logging, defaultRootObject, waf string
-	if resp.Distribution.DistributionConfig != nil {
-		enabled = *resp.Distribution.DistributionConfig.Enabled
-		if resp.Distribution.DistributionConfig.Aliases != nil {
-			aliases = resp.Distribution.DistributionConfig.Aliases.Items
+	if d.Distribution.DistributionConfig != nil {
+		enabled = *d.Distribution.DistributionConfig.Enabled
+		if d.Distribution.DistributionConfig.Aliases != nil {
+			aliases = d.Distribution.DistributionConfig.Aliases.Items
 		}
-		if resp.Distribution.DistributionConfig.Origins != nil {
-			for _, origin := range resp.Distribution.DistributionConfig.Origins.Items {
+		if d.Distribution.DistributionConfig.Origins != nil {
+			for _, origin := range d.Distribution.DistributionConfig.Origins.Items {
 				origins = append(origins, *origin.DomainName)
 			}
 		}
-		defaultRootObject = *resp.Distribution.DistributionConfig.DefaultRootObject
-		geoRestriction = resp.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
-		logging = *resp.Distribution.DistributionConfig.Logging.Bucket + "/" + *resp.Distribution.DistributionConfig.Logging.Prefix
-		waf = *resp.Distribution.DistributionConfig.WebACLId
+		defaultRootObject = *d.Distribution.DistributionConfig.DefaultRootObject
+		geoRestriction = d.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
+		logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+		waf = *d.Distribution.DistributionConfig.WebACLId
 	}
 	meta := &CloudFrontMetadata{
-		DistributionID:    *resp.Distribution.Id,
-		Status:            *resp.Distribution.Status,
+		DistributionID:    *d.Distribution.Id,
+		Status:            *d.Distribution.Status,
 		Enabled:           enabled,
-		DomainName:        *resp.Distribution.DomainName,
+		DomainName:        *d.Distribution.DomainName,
 		Aliases:           aliases,
 		Origins:           origins,
 		DefaultRootObject: defaultRootObject,
@@ -83,38 +84,48 @@ func (a *AWSAttackFlowAnalyzer) analyzeCloudFrontResource(ctx context.Context, a
 	}
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	r.Layer = LAYER_CDN
-	r.MetaData = string(metaJSON)
+	c.resource.Layer = LAYER_CDN
+	c.resource.MetaData = string(metaJSON)
+	c.metadata = meta
 
 	// add node
 	if meta.Enabled {
-		a.addInternetNode(r.ResourceName, meta.DomainName)
+		internet := getInternetNode()
+		if !existsInternetNode(resp.Nodes) {
+			resp.Nodes = append(resp.Nodes, internet)
+		}
+		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, c.resource.ResourceName, meta.DomainName))
 	}
-	a.nodes = append(a.nodes, r)
-	return r, meta, nil
+	resp.Nodes = append(resp.Nodes, c.resource)
+	return resp, nil
 }
 
-func (a *AWSAttackFlowAnalyzer) analyzeCloudFrontNext(ctx context.Context, cf *datasource.Resource, meta *CloudFrontMetadata) error {
-	if len(meta.Origins) == 0 {
-		return nil
+func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
+	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+) {
+	analyzers := []CloudServiceAnalyzer{}
+	if c.metadata == nil || len(c.metadata.Origins) == 0 {
+		return resp, analyzers, nil
 	}
-	for _, origin := range meta.Origins {
+	for _, origin := range c.metadata.Origins {
 		awsService := findAWSServiceFromDomain(origin)
 		if !isSupportedAWSService(awsService) {
-			a.logger.Warnf(ctx, "Not supported origin: %s", origin)
+			c.logger.Warnf(ctx, "Not supported origin: %s", origin)
 			continue
 		}
 
 		switch awsService {
 		case SERVICE_S3:
 			s3ARN := getS3ARNFromDomain(origin)
-			a.addEdge(cf.ResourceName, s3ARN, origin)
-			if _, err := a.analyzeS3(ctx, s3ARN); err != nil {
-				return err
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, origin))
+			s3Analyzer, err := newS3Analyzer(s3ARN, c.awsConfig, c.logger)
+			if err != nil {
+				return nil, nil, err
 			}
+			analyzers = append(analyzers, s3Analyzer)
 		}
 	}
-	return nil
+	return resp, analyzers, nil
 }

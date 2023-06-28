@@ -9,8 +9,27 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
+
+type s3Analyzer struct {
+	resource  *datasource.Resource
+	metadata  *S3Metadata
+	awsConfig *aws.Config
+	client    *s3.Client
+	logger    logging.Logger
+}
+
+func newS3Analyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+	return &s3Analyzer{
+		resource:  getAWSInfoFromARN(arn),
+		metadata:  &S3Metadata{},
+		awsConfig: cfg,
+		client:    s3.NewFromConfig(*cfg),
+		logger:    logger,
+	}, nil
+}
 
 type S3Metadata struct {
 	Encryption string
@@ -18,60 +37,49 @@ type S3Metadata struct {
 	Versioning bool
 }
 
-func (a *AWSAttackFlowAnalyzer) analyzeS3(ctx context.Context, arn string) (*datasource.AnalyzeAttackFlowResponse, error) {
-	// analyze s3 resource
-	if err := a.analyzeS3Resource(ctx, arn); err != nil {
-		return nil, err
-	}
-
-	return &datasource.AnalyzeAttackFlowResponse{
-		Nodes: a.nodes,
-		Edges: a.edges,
-	}, nil
-}
-
-func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn string) error {
-	r := getAWSInfoFromARN(arn)
-	bucketName := aws.String(r.ShortName)
+func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
+	*datasource.AnalyzeAttackFlowResponse, error,
+) {
+	bucketName := aws.String(s.resource.ShortName)
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLocation.html
-	location, err := a.s3.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
+	location, err := s.client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	regionCode := fmt.Sprint(location.LocationConstraint)
-	a.logger.Debugf(ctx, "s3: location=%v", regionCode)
+	s.logger.Debugf(ctx, "s3: location=%v", regionCode)
 	if regionCode != "" {
-		r.Region = regionCode
-		if err := a.updateS3ClientWithRegion(ctx, regionCode); err != nil {
-			return err
+		s.resource.Region = regionCode
+		if err := s.updateS3ClientWithRegion(ctx, regionCode); err != nil {
+			return nil, err
 		}
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketEncryption.html
-	encryption, err := a.s3.GetBucketEncryption(ctx, &s3.GetBucketEncryptionInput{
+	encryption, err := s.client.GetBucketEncryption(ctx, &s3.GetBucketEncryptionInput{
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketPolicyStatus.html
-	policyStatus, err := a.s3.GetBucketPolicyStatus(ctx, &s3.GetBucketPolicyStatusInput{
+	policyStatus, err := s.client.GetBucketPolicyStatus(ctx, &s3.GetBucketPolicyStatusInput{
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketVersioning.html
-	versioning, err := a.s3.GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{
+	versioning, err := s.client.GetBucketVersioning(ctx, &s3.GetBucketVersioningInput{
 		Bucket: bucketName,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sseEncrypt := ""
@@ -87,20 +95,31 @@ func (a *AWSAttackFlowAnalyzer) analyzeS3Resource(ctx context.Context, arn strin
 	}
 	metaJSON, err := json.Marshal(meta)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	r.Layer = LAYER_DATASTORE
-	r.MetaData = string(metaJSON)
+	s.resource.Layer = LAYER_DATASTORE
+	s.resource.MetaData = string(metaJSON)
+	s.metadata = meta
 
 	// add node
 	if meta.IsPublic {
-		a.addInternetNode(r.ResourceName, "")
+		internet := getInternetNode()
+		if !existsInternetNode(resp.Nodes) {
+			resp.Nodes = append(resp.Nodes, internet)
+		}
+		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, s.resource.ResourceName, ""))
 	}
-	a.nodes = append(a.nodes, r)
-	return nil
+	resp.Nodes = append(resp.Nodes, s.resource)
+	return resp, nil
 }
 
-func (a *AWSAttackFlowAnalyzer) updateS3ClientWithRegion(ctx context.Context, region string) error {
+func (s *s3Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
+	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+) {
+	return resp, []CloudServiceAnalyzer{}, nil
+}
+
+func (s *s3Analyzer) updateS3ClientWithRegion(ctx context.Context, region string) error {
 	cfg, err := config.LoadDefaultConfig(ctx,
 		config.WithRegion(region),
 		config.WithRetryMaxAttempts(RETRY_MAX_ATTEMPT),
@@ -108,8 +127,8 @@ func (a *AWSAttackFlowAnalyzer) updateS3ClientWithRegion(ctx context.Context, re
 	if err != nil {
 		return err
 	}
-	cfg.Credentials = a.awsConfig.Credentials
-	a.s3 = s3.NewFromConfig(cfg) // update s3 client
+	cfg.Credentials = s.awsConfig.Credentials
+	s.client = s3.NewFromConfig(cfg) // update s3 client
 	return nil
 }
 
