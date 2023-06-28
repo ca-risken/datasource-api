@@ -42,7 +42,7 @@ doc: fmt
 # build without protoc-gen-validate
 .PHONY: proto-without-validation
 proto-without-validate: fmt
-	for svc in "aws" "google" "code" "diagnosis" "osint" "datasource"; do \
+	for svc in "aws" "google" "code" "diagnosis" "osint"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -50,8 +50,21 @@ proto-without-validate: fmt
 			proto/$$svc/*.proto; \
 	done
 
+# build with protoc-gen-validate
+.PHONY: proto-validate
+proto-validate: fmt
+	for svc in "datasource"; do \
+		protoc \
+			--proto_path=proto \
+			--error_format=gcc \
+			-I $(GOPATH)/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v0.6.7 \
+			--go_out=plugins=grpc,paths=source_relative:proto \
+			--validate_out="lang=go,paths=source_relative:proto" \
+			proto/$$svc/*.proto; \
+	done
+
 .PHONY: proto
-proto : proto-without-validate proto-mock
+proto : proto-validate proto-without-validate proto-mock
 
 PHONY: build
 build: test
@@ -129,6 +142,13 @@ clean-datasource:
 		-plaintext \
 		-d '' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.CleanDataSource
+
+.PHONY: analyze-attack-flow
+analyze-attack-flow:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "resource_name":"arn:aws:cloudfront::123456789012:distribution/Exxxxxxxxxx", "cloud_type":"aws", "cloud_id":"123456789012"}' \
+		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
 
 ####################################################
 ## AWS
