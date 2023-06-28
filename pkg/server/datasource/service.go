@@ -65,7 +65,7 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	for {
 		resp, err = serviceAnalyzer.Analyze(ctx, resp)
 		if err != nil {
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "failed to analyze attack flow: %s", err.Error())
 		}
 		var next []attackflow.CloudServiceAnalyzer
 		resp, next, err = serviceAnalyzer.Next(ctx, resp)
