@@ -46,6 +46,7 @@ func getInternetNode() *datasource.Resource {
 		ResourceName: RESOURCE_INTERNET,
 		ShortName:    RESOURCE_INTERNET,
 		Layer:        LAYER_INTERNET,
+		Service:      "internet",
 	}
 }
 

@@ -119,7 +119,7 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 		switch awsService {
 		case SERVICE_S3:
 			s3ARN := getS3ARNFromDomain(origin)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, origin))
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, "origin"))
 			s3Analyzer, err := newS3Analyzer(s3ARN, c.awsConfig, c.logger)
 			if err != nil {
 				return nil, nil, err
