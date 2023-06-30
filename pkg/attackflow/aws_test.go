@@ -22,6 +22,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudType:    "aws",
 				Service:      "iam",
 				Region:       "global",
+				Layer:        LAYER_LATERAL_MOVEMENT,
 			},
 		},
 		{
@@ -33,6 +34,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudType:    "aws",
 				Service:      "ec2",
 				Region:       "us-east-1",
+				Layer:        "",
 			},
 		},
 		{
@@ -44,6 +46,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudType:    "aws",
 				Service:      "s3",
 				Region:       "global",
+				Layer:        LAYER_DATASTORE,
 			},
 		},
 		{

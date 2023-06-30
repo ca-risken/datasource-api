@@ -16,7 +16,7 @@ func TestGetS3ARNFromDomain(t *testing.T) {
 			want:  "arn:aws:s3:::bucket-name",
 		},
 		{
-			name:  "s3(inclued dot)",
+			name:  "s3(include dot)",
 			input: "bucket-name.co.jp.s3.ap-northeast-1.amazonaws.com",
 			want:  "arn:aws:s3:::bucket-name.co.jp",
 		},

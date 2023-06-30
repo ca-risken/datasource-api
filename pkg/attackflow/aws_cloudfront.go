@@ -91,7 +91,6 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 	if err != nil {
 		return nil, err
 	}
-	c.resource.Layer = LAYER_CDN
 	c.resource.MetaData = string(metaJSON)
 	c.metadata = meta
 
