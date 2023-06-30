@@ -18,7 +18,6 @@ import (
 
 const (
 	// region
-	REGION_GLOBAL    = "global"
 	REGION_US_EAST_1 = "us-east-1"
 
 	// service

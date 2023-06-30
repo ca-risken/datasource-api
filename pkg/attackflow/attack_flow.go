@@ -8,6 +8,9 @@ import (
 )
 
 const (
+	// region
+	REGION_GLOBAL = "global"
+
 	// cloud type
 	CLOUD_TYPE_AWS = "aws"
 
@@ -46,6 +49,7 @@ func getInternetNode() *datasource.Resource {
 		ResourceName: RESOURCE_INTERNET,
 		ShortName:    RESOURCE_INTERNET,
 		Layer:        LAYER_INTERNET,
+		Region:       REGION_GLOBAL,
 		Service:      "internet",
 	}
 }
