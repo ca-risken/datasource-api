@@ -30,6 +30,7 @@ func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (
 
 type CloudFrontMetadata struct {
 	DistributionID    string   `json:"distribution_id"`
+	Description       string   `json:"description"`
 	Status            string   `json:"status"` // Deployed or InProgress
 	Enabled           bool     `json:"enabled"`
 	DomainName        string   `json:"domain_name"`
@@ -54,8 +55,9 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 
 	var enabled bool
 	var aliases, origins, geoRestriction []string
-	var logging, defaultRootObject, waf string
+	var description, logging, defaultRootObject, waf string
 	if d.Distribution.DistributionConfig != nil {
+		description = *d.Distribution.DistributionConfig.Comment
 		enabled = *d.Distribution.DistributionConfig.Enabled
 		if d.Distribution.DistributionConfig.Aliases != nil {
 			aliases = d.Distribution.DistributionConfig.Aliases.Items
@@ -74,6 +76,7 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 	}
 	meta := &CloudFrontMetadata{
 		DistributionID:    *d.Distribution.Id,
+		Description:       description,
 		Status:            *d.Distribution.Status,
 		Enabled:           enabled,
 		DomainName:        *d.Distribution.DomainName,
