@@ -67,7 +67,9 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		}
 		defaultRootObject = *d.Distribution.DistributionConfig.DefaultRootObject
 		geoRestriction = d.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
-		logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+		if d.Distribution.DistributionConfig.Logging != nil && *d.Distribution.DistributionConfig.Logging.Bucket != "" {
+			logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+		}
 		waf = *d.Distribution.DistributionConfig.WebACLId
 	}
 	meta := &CloudFrontMetadata{
