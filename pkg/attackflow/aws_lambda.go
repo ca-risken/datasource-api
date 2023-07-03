@@ -35,9 +35,8 @@ type lambdaMetadata struct {
 func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
-	var awsConfig *aws.Config
 	if cfg.Region != resource.Region {
-		awsConfig, err = retrieveAWSCredentialWithRegion(ctx, *cfg, resource.Region)
+		cfg, err = retrieveAWSCredentialWithRegion(ctx, *cfg, resource.Region)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +45,7 @@ func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger 
 		resource:  resource,
 		metadata:  &lambdaMetadata{},
 		awsConfig: cfg,
-		client:    lambda.NewFromConfig(*awsConfig),
+		client:    lambda.NewFromConfig(*cfg),
 		logger:    logger,
 	}, nil
 }
