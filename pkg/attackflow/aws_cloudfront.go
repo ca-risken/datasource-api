@@ -30,6 +30,7 @@ func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (
 
 type CloudFrontMetadata struct {
 	DistributionID    string   `json:"distribution_id"`
+	Description       string   `json:"description"`
 	Status            string   `json:"status"` // Deployed or InProgress
 	Enabled           bool     `json:"enabled"`
 	DomainName        string   `json:"domain_name"`
@@ -54,8 +55,9 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 
 	var enabled bool
 	var aliases, origins, geoRestriction []string
-	var logging, defaultRootObject, waf string
+	var description, logging, defaultRootObject, waf string
 	if d.Distribution.DistributionConfig != nil {
+		description = *d.Distribution.DistributionConfig.Comment
 		enabled = *d.Distribution.DistributionConfig.Enabled
 		if d.Distribution.DistributionConfig.Aliases != nil {
 			aliases = d.Distribution.DistributionConfig.Aliases.Items
@@ -67,11 +69,14 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		}
 		defaultRootObject = *d.Distribution.DistributionConfig.DefaultRootObject
 		geoRestriction = d.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
-		logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+		if d.Distribution.DistributionConfig.Logging != nil && *d.Distribution.DistributionConfig.Logging.Bucket != "" {
+			logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+		}
 		waf = *d.Distribution.DistributionConfig.WebACLId
 	}
 	meta := &CloudFrontMetadata{
 		DistributionID:    *d.Distribution.Id,
+		Description:       description,
 		Status:            *d.Distribution.Status,
 		Enabled:           enabled,
 		DomainName:        *d.Distribution.DomainName,
@@ -86,7 +91,6 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 	if err != nil {
 		return nil, err
 	}
-	c.resource.Layer = LAYER_CDN
 	c.resource.MetaData = string(metaJSON)
 	c.metadata = meta
 

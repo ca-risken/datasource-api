@@ -8,13 +8,18 @@ import (
 )
 
 const (
+	// region
+	REGION_GLOBAL = "global"
+
 	// cloud type
 	CLOUD_TYPE_AWS = "aws"
 
 	// service layer
-	LAYER_INTERNET  = "INTERNET"
-	LAYER_CDN       = "CDN"
-	LAYER_DATASTORE = "DATASTORE"
+	LAYER_INTERNET         = "INTERNET"
+	LAYER_CDN              = "CDN"
+	LAYER_DATASTORE        = "DATASTORE"
+	LAYER_COMPUTE          = "COMPUTE"
+	LAYER_LATERAL_MOVEMENT = "LATERAL_MOVEMENT"
 
 	// common resource
 	RESOURCE_INTERNET = "Internet"
@@ -46,6 +51,7 @@ func getInternetNode() *datasource.Resource {
 		ResourceName: RESOURCE_INTERNET,
 		ShortName:    RESOURCE_INTERNET,
 		Layer:        LAYER_INTERNET,
+		Region:       REGION_GLOBAL,
 		Service:      "internet",
 	}
 }

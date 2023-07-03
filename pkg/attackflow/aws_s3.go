@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/ca-risken/common/pkg/logging"
@@ -32,9 +31,15 @@ func newS3Analyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudSer
 }
 
 type S3Metadata struct {
-	Encryption string
-	IsPublic   bool
-	Versioning bool
+	Encryption string `json:"encryption"`
+	IsPublic   bool   `json:"is_public"`
+	Versioning bool   `json:"versioning"`
+
+	// S3 Notification
+	LambdaConfiguration      []string `json:"lambda_configuration"`
+	SQSConfiguration         []string `json:"sqs_configuration"`
+	SNSConfiguration         []string `json:"sns_configuration"`
+	EventBridgeConfiguration string   `json:"event_bridge_configuration"`
 }
 
 func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
@@ -53,9 +58,11 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 	s.logger.Debugf(ctx, "s3: location=%v", regionCode)
 	if regionCode != "" {
 		s.resource.Region = regionCode
-		if err := s.updateS3ClientWithRegion(ctx, regionCode); err != nil {
+		s.awsConfig, err = retrieveAWSCredentialWithRegion(ctx, *s.awsConfig, regionCode)
+		if err != nil {
 			return nil, err
 		}
+		s.client = s3.NewFromConfig(*s.awsConfig)
 	}
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketEncryption.html
@@ -82,27 +89,42 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 		return nil, err
 	}
 
-	sseEncrypt := ""
-	for _, rule := range encryption.ServerSideEncryptionConfiguration.Rules {
-		sseEncrypt = fmt.Sprint(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
-		break
-	}
-
-	meta := &S3Metadata{
-		Encryption: sseEncrypt,
-		IsPublic:   policyStatus.PolicyStatus != nil && policyStatus.PolicyStatus.IsPublic,
-		Versioning: versioning.Status == types.BucketVersioningStatusEnabled,
-	}
-	metaJSON, err := json.Marshal(meta)
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketNotificationConfiguration.html
+	notification, err := s.client.GetBucketNotificationConfiguration(ctx, &s3.GetBucketNotificationConfigurationInput{
+		Bucket: bucketName,
+	})
 	if err != nil {
 		return nil, err
 	}
-	s.resource.Layer = LAYER_DATASTORE
+
+	// metadata
+	for _, rule := range encryption.ServerSideEncryptionConfiguration.Rules {
+		s.metadata.Encryption = fmt.Sprint(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
+		break
+	}
+	s.metadata.IsPublic = policyStatus.PolicyStatus != nil && policyStatus.PolicyStatus.IsPublic
+	s.metadata.Versioning = versioning.Status == types.BucketVersioningStatusEnabled
+	for _, config := range notification.LambdaFunctionConfigurations {
+		s.metadata.LambdaConfiguration = append(s.metadata.LambdaConfiguration, aws.ToString(config.LambdaFunctionArn))
+	}
+	for _, config := range notification.QueueConfigurations {
+		s.metadata.SQSConfiguration = append(s.metadata.SQSConfiguration, aws.ToString(config.QueueArn))
+	}
+	for _, config := range notification.TopicConfigurations {
+		s.metadata.SNSConfiguration = append(s.metadata.SNSConfiguration, aws.ToString(config.TopicArn))
+	}
+	if notification.EventBridgeConfiguration != nil {
+		s.metadata.EventBridgeConfiguration = fmt.Sprint(notification.EventBridgeConfiguration)
+	}
+
+	metaJSON, err := json.Marshal(s.metadata)
+	if err != nil {
+		return nil, err
+	}
 	s.resource.MetaData = string(metaJSON)
-	s.metadata = meta
 
 	// add node
-	if meta.IsPublic {
+	if s.metadata.IsPublic {
 		internet := getInternetNode()
 		if !existsInternetNode(resp.Nodes) {
 			resp.Nodes = append(resp.Nodes, internet)
@@ -116,20 +138,29 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 func (s *s3Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
 ) {
-	return resp, []CloudServiceAnalyzer{}, nil
-}
-
-func (s *s3Analyzer) updateS3ClientWithRegion(ctx context.Context, region string) error {
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(region),
-		config.WithRetryMaxAttempts(RETRY_MAX_ATTEMPT),
-	)
-	if err != nil {
-		return err
+	analyzer := []CloudServiceAnalyzer{}
+	// TODO: support for EventBridge, SNS, SQS
+	for _, arn := range s.metadata.SNSConfiguration {
+		r := getAWSInfoFromARN(arn)
+		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		resp.Nodes = append(resp.Nodes, r)
 	}
-	cfg.Credentials = s.awsConfig.Credentials
-	s.client = s3.NewFromConfig(cfg) // update s3 client
-	return nil
+	for _, arn := range s.metadata.SQSConfiguration {
+		r := getAWSInfoFromARN(arn)
+		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		resp.Nodes = append(resp.Nodes, r)
+	}
+	for _, arn := range s.metadata.LambdaConfiguration {
+		r := getAWSInfoFromARN(arn)
+		lambdaAnalyzer, err := newLambdaAnalyzer(ctx, r.ResourceName, s.awsConfig, s.logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		analyzer = append(analyzer, lambdaAnalyzer)
+	}
+
+	return resp, analyzer, nil
 }
 
 func getS3ARNFromDomain(domain string) string {
