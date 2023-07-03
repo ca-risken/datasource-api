@@ -91,14 +91,22 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 	if len(splitArn) < 5 {
 		return nil
 	}
-	splitName := strings.Split(splitArn[5], "/")
+
+	// shortName
+	shortName := strings.Join(splitArn[5:], "/")
+	if strings.Contains(shortName, "/") {
+		splitName := strings.Split(shortName, "/")
+		shortName = splitName[len(splitName)-1]
+	}
+
+	// region
 	region := splitArn[3]
 	if region == "" {
 		region = REGION_GLOBAL
 	}
 	return &datasource.Resource{
 		ResourceName: arn,
-		ShortName:    splitName[len(splitName)-1],
+		ShortName:    shortName,
 		CloudType:    splitArn[1],
 		Service:      splitArn[2],
 		Region:       region,
