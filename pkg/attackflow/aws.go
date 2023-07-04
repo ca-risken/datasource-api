@@ -28,6 +28,7 @@ const (
 	SERVICE_SNS          = "sns"
 	SERVICE_EVENT_BRIDGE = "events"
 	SERVICE_IAM          = "iam"
+	SERVICE_API_GATEWAY  = "apigateway"
 
 	RETRY_MAX_ATTEMPT = 10
 )
@@ -38,13 +39,13 @@ var (
 	domainPatternLambdaURL  = regexp.MustCompile(`\.lambda-url\..*\.on\.aws$`) // https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html
 
 	supportedAWSServices = map[string]bool{
-		SERVICE_CLOUDFRONT: true,
-		SERVICE_S3:         true,
-		SERVICE_LAMBDA:     true,
+		SERVICE_CLOUDFRONT:  true,
+		SERVICE_S3:          true,
+		SERVICE_LAMBDA:      true,
+		SERVICE_API_GATEWAY: true,
 		// TODO support below services
 		// "alb":        true,
 		// "ec2":        true,
-		// "api-gateway":   true,
 		// "app-runner":    true,
 	}
 )
@@ -169,6 +170,8 @@ func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		serviceAnalyzer, err = newS3Analyzer(req.ResourceName, a.awsConfig, a.logger)
 	case SERVICE_LAMBDA:
 		serviceAnalyzer, err = newLambdaAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
+	case SERVICE_API_GATEWAY:
+		serviceAnalyzer, err = newAPIGatewayAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}
@@ -199,6 +202,8 @@ func getLayerFromAWSService(service string) string {
 	switch service {
 	case SERVICE_CLOUDFRONT:
 		return LAYER_CDN
+	case SERVICE_API_GATEWAY:
+		return LAYER_GATEWAY
 	case SERVICE_LAMBDA:
 		return LAYER_COMPUTE
 	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE:

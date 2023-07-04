@@ -17,9 +17,11 @@ const (
 	// service layer
 	LAYER_INTERNET         = "INTERNET"
 	LAYER_CDN              = "CDN"
+	LAYER_GATEWAY          = "GATEWAY"
 	LAYER_DATASTORE        = "DATASTORE"
 	LAYER_COMPUTE          = "COMPUTE"
 	LAYER_LATERAL_MOVEMENT = "LATERAL_MOVEMENT"
+	LAYER_EXTERNAL_SERVICE = "EXTERNAL_SERVICE"
 
 	// common resource
 	RESOURCE_INTERNET = "Internet"
