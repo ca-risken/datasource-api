@@ -2,6 +2,7 @@ package attackflow
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/ca-risken/datasource-api/proto/datasource"
@@ -64,5 +65,35 @@ func getEdge(source, target, edgeLabel string) *datasource.ResourceRelationship 
 		SourceResourceName: source,
 		TargetResourceName: target,
 		RelationLabel:      edgeLabel,
+	}
+}
+
+func parseMetadata(metadata interface{}) (string, error) {
+	metaJSON, err := json.Marshal(metadata)
+	if err != nil {
+		return "", err
+	}
+	return string(metaJSON), nil
+}
+
+func setNode(isPublic bool, internetEdgeLabel string, resource *datasource.Resource, resp *datasource.AnalyzeAttackFlowResponse) *datasource.AnalyzeAttackFlowResponse {
+	if isPublic {
+		internet := getInternetNode()
+		if !existsInternetNode(resp.Nodes) {
+			resp.Nodes = append(resp.Nodes, internet)
+		}
+		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, resource.ResourceName, internetEdgeLabel))
+	}
+	resp.Nodes = append(resp.Nodes, resource)
+	return resp
+}
+
+func getExternalServiceNode(target string) *datasource.Resource {
+	return &datasource.Resource{
+		ResourceName: target,
+		ShortName:    "external-service",
+		Layer:        LAYER_EXTERNAL_SERVICE,
+		Region:       REGION_GLOBAL,
+		Service:      "external-service",
 	}
 }

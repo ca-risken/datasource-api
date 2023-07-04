@@ -2,7 +2,6 @@ package attackflow
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -50,14 +49,11 @@ func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	i.metadata.AllowedService = allowedServices
 	i.metadata.AccessedService = accessedServices
 
-	metaJSON, err := json.Marshal(i.metadata)
+	i.resource.MetaData, err = parseMetadata(i.metadata)
 	if err != nil {
 		return nil, err
 	}
-	i.resource.MetaData = string(metaJSON)
-
-	// add node
-	resp.Nodes = append(resp.Nodes, i.resource)
+	resp = setNode(false, "", i.resource, resp)
 	return resp, nil
 }
 

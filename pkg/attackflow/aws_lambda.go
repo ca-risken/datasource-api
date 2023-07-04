@@ -2,7 +2,6 @@ package attackflow
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -107,21 +106,11 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 				aws.ToString(destConf.OnFailure.Destination))
 		}
 	}
-	metaJSON, err := json.Marshal(l.metadata)
+	l.resource.MetaData, err = parseMetadata(l.metadata)
 	if err != nil {
 		return nil, err
 	}
-	l.resource.MetaData = string(metaJSON)
-
-	// add node
-	if l.metadata.IsPublic {
-		internet := getInternetNode()
-		if !existsInternetNode(resp.Nodes) {
-			resp.Nodes = append(resp.Nodes, internet)
-		}
-		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, l.resource.ResourceName, "function URL"))
-	}
-	resp.Nodes = append(resp.Nodes, l.resource)
+	resp = setNode(l.metadata.IsPublic, "function URL", l.resource, resp)
 	return resp, nil
 }
 

@@ -2,7 +2,6 @@ package attackflow
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
@@ -74,7 +73,7 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		}
 		waf = *d.Distribution.DistributionConfig.WebACLId
 	}
-	meta := &CloudFrontMetadata{
+	c.metadata = &CloudFrontMetadata{
 		DistributionID:    *d.Distribution.Id,
 		Description:       description,
 		Status:            *d.Distribution.Status,
@@ -87,22 +86,11 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		Logging:           logging,
 		WebACLId:          waf,
 	}
-	metaJSON, err := json.Marshal(meta)
+	c.resource.MetaData, err = parseMetadata(c.metadata)
 	if err != nil {
 		return nil, err
 	}
-	c.resource.MetaData = string(metaJSON)
-	c.metadata = meta
-
-	// add node
-	if meta.Enabled {
-		internet := getInternetNode()
-		if !existsInternetNode(resp.Nodes) {
-			resp.Nodes = append(resp.Nodes, internet)
-		}
-		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, c.resource.ResourceName, meta.DomainName))
-	}
-	resp.Nodes = append(resp.Nodes, c.resource)
+	resp = setNode(c.metadata.Enabled, c.metadata.DomainName, c.resource, resp)
 	return resp, nil
 }
 

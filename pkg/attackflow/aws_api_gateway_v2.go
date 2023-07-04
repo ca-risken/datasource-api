@@ -84,6 +84,6 @@ func (a *apiGatewayAnalyzer) analyzeV2(ctx context.Context, resp *datasource.Ana
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(a.metadata.IsPublic, a.resource, resp)
+	resp = setNode(a.metadata.IsPublic, "api", a.resource, resp)
 	return resp, nil
 }
