@@ -29,6 +29,7 @@ const (
 	SERVICE_EVENT_BRIDGE = "events"
 	SERVICE_IAM          = "iam"
 	SERVICE_API_GATEWAY  = "apigateway"
+	SERVICE_EC2          = "ec2"
 
 	RETRY_MAX_ATTEMPT = 10
 )
@@ -43,9 +44,9 @@ var (
 		SERVICE_S3:          true,
 		SERVICE_LAMBDA:      true,
 		SERVICE_API_GATEWAY: true,
+		SERVICE_EC2:         true,
 		// TODO support below services
 		// "alb":        true,
-		// "ec2":        true,
 		// "app-runner":    true,
 	}
 )
@@ -109,6 +110,7 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 		ResourceName: arn,
 		ShortName:    shortName,
 		CloudType:    splitArn[1],
+		CloudId:      splitArn[4],
 		Service:      splitArn[2],
 		Region:       region,
 		Layer:        getLayerFromAWSService(splitArn[2]),
@@ -172,6 +174,8 @@ func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		serviceAnalyzer, err = newLambdaAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	case SERVICE_API_GATEWAY:
 		serviceAnalyzer, err = newAPIGatewayAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
+	case SERVICE_EC2:
+		serviceAnalyzer, err = newEC2Analyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}
