@@ -50,6 +50,18 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 			},
 		},
 		{
+			name:  "OK(lambda)",
+			input: "arn:aws:lambda:ap-northeast-1:123456789012:function:attack-flow-test",
+			want: &datasource.Resource{
+				ResourceName: "arn:aws:lambda:ap-northeast-1:123456789012:function:attack-flow-test",
+				ShortName:    "attack-flow-test",
+				CloudType:    "aws",
+				Service:      "lambda",
+				Region:       "ap-northeast-1",
+				Layer:        LAYER_COMPUTE,
+			},
+		},
+		{
 			name:  "Blank",
 			input: "",
 			want:  nil,

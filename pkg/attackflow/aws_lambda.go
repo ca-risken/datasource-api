@@ -2,7 +2,6 @@ package attackflow
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -35,9 +34,8 @@ type lambdaMetadata struct {
 func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
-	var awsConfig *aws.Config
 	if cfg.Region != resource.Region {
-		awsConfig, err = retrieveAWSCredentialWithRegion(ctx, *cfg, resource.Region)
+		cfg, err = retrieveAWSCredentialWithRegion(ctx, *cfg, resource.Region)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +44,7 @@ func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger 
 		resource:  resource,
 		metadata:  &lambdaMetadata{},
 		awsConfig: cfg,
-		client:    lambda.NewFromConfig(*awsConfig),
+		client:    lambda.NewFromConfig(*cfg),
 		logger:    logger,
 	}, nil
 }
@@ -108,21 +106,11 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 				aws.ToString(destConf.OnFailure.Destination))
 		}
 	}
-	metaJSON, err := json.Marshal(l.metadata)
+	l.resource.MetaData, err = parseMetadata(l.metadata)
 	if err != nil {
 		return nil, err
 	}
-	l.resource.MetaData = string(metaJSON)
-
-	// add node
-	if l.metadata.IsPublic {
-		internet := getInternetNode()
-		if !existsInternetNode(resp.Nodes) {
-			resp.Nodes = append(resp.Nodes, internet)
-		}
-		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, l.resource.ResourceName, "function URL"))
-	}
-	resp.Nodes = append(resp.Nodes, l.resource)
+	resp = setNode(l.metadata.IsPublic, "function URL", l.resource, resp)
 	return resp, nil
 }
 

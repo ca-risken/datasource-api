@@ -2,7 +2,6 @@ package attackflow
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -117,21 +116,11 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 		s.metadata.EventBridgeConfiguration = fmt.Sprint(notification.EventBridgeConfiguration)
 	}
 
-	metaJSON, err := json.Marshal(s.metadata)
+	s.resource.MetaData, err = parseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
 	}
-	s.resource.MetaData = string(metaJSON)
-
-	// add node
-	if s.metadata.IsPublic {
-		internet := getInternetNode()
-		if !existsInternetNode(resp.Nodes) {
-			resp.Nodes = append(resp.Nodes, internet)
-		}
-		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, s.resource.ResourceName, ""))
-	}
-	resp.Nodes = append(resp.Nodes, s.resource)
+	resp = setNode(s.metadata.IsPublic, "", s.resource, resp)
 	return resp, nil
 }
 
