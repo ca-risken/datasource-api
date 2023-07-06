@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -21,6 +22,7 @@ type iamAnalyzer struct {
 	logger    logging.Logger
 }
 type iamMetadata struct {
+	IamRoleArn      string    `json:"iam_role_arn"`
 	AllowedService  []*string `json:"allowed_service"`
 	AccessedService []*string `json:"accessed_service"`
 }
@@ -38,7 +40,24 @@ func newIAMAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudSe
 func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
-	jobID, err := i.generateServiceLastAccessedDetails(ctx, i.resource.ResourceName)
+	i.metadata.IamRoleArn = i.resource.ResourceName
+	// instance-profile
+	if strings.HasPrefix(i.resource.ResourceName, fmt.Sprintf("arn:aws:iam::%s:instance-profile/", i.resource.CloudId)) {
+		role, err := i.client.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+			InstanceProfileName: &i.resource.ShortName,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if len(role.InstanceProfile.Roles) == 0 {
+			return nil, errors.New("no IAM role found from instance profile")
+		}
+		// https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#ec2-instance-profile
+		// > An instance profile can contain only one IAM role.
+		i.metadata.IamRoleArn = aws.ToString(role.InstanceProfile.Roles[0].Arn) // update
+	}
+
+	jobID, err := i.generateServiceLastAccessedDetails(ctx, i.metadata.IamRoleArn)
 	if err != nil {
 		return nil, err
 	}
