@@ -73,9 +73,12 @@ func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	e.metadata.PublicIpAddress = aws.ToString(instance.PublicIpAddress)
 	e.metadata.InstanceType = fmt.Sprint(instance.InstanceType)
 	e.metadata.Platform = fmt.Sprint(instance.Platform)
-	e.metadata.IsPublic, err = e.hasPublicSecurityGroups(ctx, instance)
+	hasPublicSG, err := e.hasPublicSecurityGroups(ctx, instance)
 	if err != nil {
 		return nil, err
+	}
+	if hasPublicSG && e.metadata.PublicIpAddress != "" && e.metadata.State == "running" {
+		e.metadata.IsPublic = true
 	}
 
 	// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_GetEbsEncryptionByDefault.html
