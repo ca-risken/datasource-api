@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -30,6 +31,7 @@ const (
 	SERVICE_IAM          = "iam"
 	SERVICE_API_GATEWAY  = "apigateway"
 	SERVICE_EC2          = "ec2"
+	SERVICE_ELB          = "elasticloadbalancing"
 
 	RETRY_MAX_ATTEMPT = 10
 )
@@ -45,8 +47,8 @@ var (
 		SERVICE_LAMBDA:      true,
 		SERVICE_API_GATEWAY: true,
 		SERVICE_EC2:         true,
+		SERVICE_ELB:         true,
 		// TODO support below services
-		// "alb":        true,
 		// "app-runner":    true,
 	}
 )
@@ -176,6 +178,8 @@ func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		serviceAnalyzer, err = newAPIGatewayAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	case SERVICE_EC2:
 		serviceAnalyzer, err = newEC2Analyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
+	case SERVICE_ELB:
+		serviceAnalyzer, err = newELBAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}
@@ -217,4 +221,29 @@ func getLayerFromAWSService(service string) string {
 	default:
 		return ""
 	}
+}
+
+func isPublicSecurityGroup(ctx context.Context, ec2Client *ec2.Client, groupID string) (bool, error) {
+	// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html
+	groups, err := ec2Client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
+		GroupIds: []string{groupID},
+	})
+	if err != nil {
+		return false, err
+	}
+	for _, sgs := range groups.SecurityGroups {
+		for _, ipPermissions := range sgs.IpPermissions {
+			for _, ipRange := range ipPermissions.IpRanges {
+				if aws.ToString(ipRange.CidrIp) == "0.0.0.0/0" {
+					return true, nil
+				}
+			}
+			for _, ipv6Range := range ipPermissions.Ipv6Ranges {
+				if aws.ToString(ipv6Range.CidrIpv6) == "::/0" {
+					return true, nil
+				}
+			}
+		}
+	}
+	return false, nil
 }

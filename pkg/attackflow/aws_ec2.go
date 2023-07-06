@@ -98,26 +98,12 @@ func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 
 func (e *ec2Analyzer) hasPublicSecurityGroups(ctx context.Context, instance types.Instance) (bool, error) {
 	for _, sg := range instance.SecurityGroups {
-		// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeSecurityGroups.html
-		groups, err := e.client.DescribeSecurityGroups(ctx, &ec2.DescribeSecurityGroupsInput{
-			GroupIds: []string{aws.ToString(sg.GroupId)},
-		})
+		isPublic, err := isPublicSecurityGroup(ctx, e.client, aws.ToString(sg.GroupId))
 		if err != nil {
 			return false, err
 		}
-		for _, sgs := range groups.SecurityGroups {
-			for _, ipPermissions := range sgs.IpPermissions {
-				for _, ipRange := range ipPermissions.IpRanges {
-					if aws.ToString(ipRange.CidrIp) == "0.0.0.0/0" {
-						return true, nil
-					}
-				}
-				for _, ipv6Range := range ipPermissions.Ipv6Ranges {
-					if aws.ToString(ipv6Range.CidrIpv6) == "::/0" {
-						return true, nil
-					}
-				}
-			}
+		if isPublic {
+			return true, nil
 		}
 	}
 	return false, nil

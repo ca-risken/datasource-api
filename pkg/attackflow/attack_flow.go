@@ -23,6 +23,7 @@ const (
 	LAYER_COMPUTE          = "COMPUTE"
 	LAYER_LATERAL_MOVEMENT = "LATERAL_MOVEMENT"
 	LAYER_EXTERNAL_SERVICE = "EXTERNAL_SERVICE"
+	LAYER_INTERNAL_SERVICE = "INTERNAL_SERVICE"
 
 	// common resource
 	RESOURCE_INTERNET = "Internet"
@@ -91,9 +92,19 @@ func setNode(isPublic bool, internetEdgeLabel string, resource *datasource.Resou
 func getExternalServiceNode(target string) *datasource.Resource {
 	return &datasource.Resource{
 		ResourceName: target,
-		ShortName:    "external-service",
+		ShortName:    target,
 		Layer:        LAYER_EXTERNAL_SERVICE,
 		Region:       REGION_GLOBAL,
 		Service:      "external-service",
+	}
+}
+
+func getInternalServiceNode(target, region string) *datasource.Resource {
+	return &datasource.Resource{
+		ResourceName: target,
+		ShortName:    target,
+		Layer:        LAYER_INTERNAL_SERVICE,
+		Region:       region,
+		Service:      "internal-service",
 	}
 }
