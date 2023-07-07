@@ -36,7 +36,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudId:      "123456789012",
 				Service:      "ec2",
 				Region:       "us-east-1",
-				Layer:        "",
+				Layer:        LAYER_COMPUTE,
 			},
 		},
 		{

@@ -18,6 +18,7 @@ const (
 	// service layer
 	LAYER_INTERNET         = "INTERNET"
 	LAYER_CDN              = "CDN"
+	LAYER_LB               = "LB"
 	LAYER_GATEWAY          = "GATEWAY"
 	LAYER_DATASTORE        = "DATASTORE"
 	LAYER_COMPUTE          = "COMPUTE"

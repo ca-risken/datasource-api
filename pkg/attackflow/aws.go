@@ -210,9 +210,11 @@ func getLayerFromAWSService(service string) string {
 	switch service {
 	case SERVICE_CLOUDFRONT:
 		return LAYER_CDN
+	case SERVICE_ELB:
+		return LAYER_LB
 	case SERVICE_API_GATEWAY:
 		return LAYER_GATEWAY
-	case SERVICE_LAMBDA:
+	case SERVICE_LAMBDA, SERVICE_EC2:
 		return LAYER_COMPUTE
 	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE:
 		return LAYER_DATASTORE
