@@ -119,15 +119,15 @@ func (a *appRunnerAnalyzer) getCpuMemLabel(ctx context.Context, cpu, mem string)
 		a.logger.Warnf(ctx, "Failed to parse cpu: %s, err: %v", cpuLabel, err)
 	} else {
 		f := float64(cpuInt) / float64(1000)
-		cpuLabel = fmt.Sprintf("%.2f", math.Floor(f*100)/100) // To two decimal places
+		cpuLabel = fmt.Sprintf("%.2f", math.Floor(f*100)/100) + "vCPU" // To two decimal places
 	}
 	memInt, err := strconv.Atoi(mem)
 	if err != nil {
 		a.logger.Warnf(ctx, "Failed to parse mem: %s, err: %v", memLabel, err)
 	} else {
 		f := float64(memInt) / float64(1000)
-		memLabel = fmt.Sprintf("%.2f", math.Floor(f*100)/100) // To two decimal places
+		memLabel = fmt.Sprintf("%.2f", math.Floor(f*100)/100) + "GB" // To two decimal places
 	}
-	return fmt.Sprintf("%s vCPU, %s GB", cpuLabel, memLabel)
+	return fmt.Sprintf("CPU: %s, MEM: %s", cpuLabel, memLabel)
 
 }

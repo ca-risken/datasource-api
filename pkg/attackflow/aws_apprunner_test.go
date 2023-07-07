@@ -20,17 +20,17 @@ func TestGetCpuMemLabel(t *testing.T) {
 		{
 			name:  "OK 1",
 			input: args{cpu: "250", mem: "500"},
-			want:  "0.25 vCPU, 0.50 GB",
+			want:  "CPU: 0.25vCPU, MEM: 0.50GB",
 		},
 		{
 			name:  "OK 2",
 			input: args{cpu: "250000", mem: "500000"},
-			want:  "250.00 vCPU, 500.00 GB",
+			want:  "CPU: 250.00vCPU, MEM: 500.00GB",
 		},
 		{
 			name:  "Unknown CPU & MEM",
 			input: args{cpu: "hoge", mem: "fuga"},
-			want:  "hoge vCPU, fuga GB",
+			want:  "CPU: hoge, MEM: fuga",
 		},
 	}
 	for _, c := range cases {
