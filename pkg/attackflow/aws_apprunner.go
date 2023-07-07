@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/apprunner"
@@ -100,6 +101,7 @@ func (a *appRunnerAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAt
 	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
 ) {
 	analyzers := []CloudServiceAnalyzer{}
+	// IAM Role
 	if a.metadata.IamRole != "" {
 		resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, a.metadata.IamRole, "iam role"))
 		iamAnalyzer, err := newIAMAnalyzer(a.metadata.IamRole, a.awsConfig, a.logger)
@@ -107,6 +109,31 @@ func (a *appRunnerAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAt
 			return nil, nil, err
 		}
 		analyzers = append(analyzers, iamAnalyzer)
+	}
+	// Source Code
+	if a.metadata.CodeRepository != "" {
+		node := getSourceCodeNode(a.metadata.CodeRepository)
+		resp.Nodes = append(resp.Nodes, node)
+		resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "source code"))
+	}
+
+	// Image Repository
+	if a.metadata.ImageRepository != "" {
+		if strings.HasPrefix(a.metadata.ImageRepository, "public.ecr.aws/") {
+			node, err := getPublicEcrNode(a.metadata.ImageRepository)
+			if err != nil {
+				return nil, nil, err
+			}
+			resp.Nodes = append(resp.Nodes, node)
+			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "image"))
+		} else {
+			node, err := getPrivateEcrNode(a.metadata.ImageRepository)
+			if err != nil {
+				return nil, nil, err
+			}
+			resp.Nodes = append(resp.Nodes, node)
+			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "image"))
+		}
 	}
 	return resp, analyzers, nil
 }
@@ -129,5 +156,40 @@ func (a *appRunnerAnalyzer) getCpuMemLabel(ctx context.Context, cpu, mem string)
 		memLabel = fmt.Sprintf("%.2f", math.Floor(f*100)/100) + "GB" // To two decimal places
 	}
 	return fmt.Sprintf("CPU: %s, MEM: %s", cpuLabel, memLabel)
+}
 
+func getSourceCodeNode(repo string) *datasource.Resource {
+	service := "code-repository"
+	if strings.HasPrefix(repo, "https://github.com/") {
+		service = "github"
+		repo = strings.TrimPrefix(repo, "https://github.com/")
+	}
+	return getCodeRepositoryNode(repo, service)
+}
+
+func getPublicEcrNode(repo string) (*datasource.Resource, error) {
+	// format: public.ecr.aws/{account}/{repository}:{tag}
+	split := strings.Split(repo, "/")
+	if len(split) < 3 {
+		return nil, fmt.Errorf("invalid ECR public repository: %s", repo)
+	}
+	repoName := strings.Split(split[len(split)-1], ":")[0] // remove tag
+	// ECR public ARN format: https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonelasticcontainerregistrypublic.html
+	arn := fmt.Sprintf("arn:aws:ecr-public::%s:repository/%s", split[1], repoName)
+	return getAWSInfoFromARN(arn), nil
+}
+
+func getPrivateEcrNode(repo string) (*datasource.Resource, error) {
+	// format: {account-id}.dkr.ecr.{region}.amazonaws.com/{repository}:{tag}
+	split := strings.Split(repo, ".")
+	if len(split) < 6 {
+		return nil, fmt.Errorf("invalid ECR repository prefix: %s", repo)
+	}
+	splitRepo := strings.Split(repo, "/")
+	if len(splitRepo) < 2 {
+		return nil, fmt.Errorf("invalid ECR repository suffix: %s", repo)
+	}
+	repoName := strings.Split(splitRepo[len(splitRepo)-1], ":")[0] // remove tag
+	arn := fmt.Sprintf("arn:aws:ecr:%s:%s:repository/%s", split[3], split[0], repoName)
+	return getAWSInfoFromARN(arn), nil
 }

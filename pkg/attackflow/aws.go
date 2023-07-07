@@ -33,6 +33,8 @@ const (
 	SERVICE_EC2          = "ec2"
 	SERVICE_ELB          = "elasticloadbalancing"
 	SERVICE_APP_RUNNER   = "apprunner"
+	SERVICE_ECR_PUBLIC   = "ecr-public"
+	SERVICE_ECR          = "ecr"
 
 	RETRY_MAX_ATTEMPT = 10
 )
@@ -217,7 +219,7 @@ func getLayerFromAWSService(service string) string {
 		return LAYER_GATEWAY
 	case SERVICE_LAMBDA, SERVICE_EC2, SERVICE_APP_RUNNER:
 		return LAYER_COMPUTE
-	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE:
+	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE, SERVICE_ECR, SERVICE_ECR_PUBLIC:
 		return LAYER_DATASTORE
 	case SERVICE_IAM:
 		return LAYER_LATERAL_MOVEMENT
