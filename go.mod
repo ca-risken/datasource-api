@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.12.1
 	github.com/aws/aws-sdk-go-v2/service/apigateway v1.16.13
 	github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.13.13
+	github.com/aws/aws-sdk-go-v2/service/apprunner v1.17.11
 	github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.8
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.102.0
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing v1.15.12

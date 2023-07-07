@@ -32,6 +32,7 @@ const (
 	SERVICE_API_GATEWAY  = "apigateway"
 	SERVICE_EC2          = "ec2"
 	SERVICE_ELB          = "elasticloadbalancing"
+	SERVICE_APP_RUNNER   = "apprunner"
 
 	RETRY_MAX_ATTEMPT = 10
 )
@@ -48,8 +49,6 @@ var (
 		SERVICE_API_GATEWAY: true,
 		SERVICE_EC2:         true,
 		SERVICE_ELB:         true,
-		// TODO support below services
-		// "app-runner":    true,
 	}
 )
 
@@ -180,6 +179,8 @@ func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		serviceAnalyzer, err = newEC2Analyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	case SERVICE_ELB:
 		serviceAnalyzer, err = newELBAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
+	case SERVICE_APP_RUNNER:
+		serviceAnalyzer, err = newAppRunnerAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}
@@ -214,7 +215,7 @@ func getLayerFromAWSService(service string) string {
 		return LAYER_LB
 	case SERVICE_API_GATEWAY:
 		return LAYER_GATEWAY
-	case SERVICE_LAMBDA, SERVICE_EC2:
+	case SERVICE_LAMBDA, SERVICE_EC2, SERVICE_APP_RUNNER:
 		return LAYER_COMPUTE
 	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE:
 		return LAYER_DATASTORE
