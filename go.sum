@@ -103,6 +103,8 @@ github.com/aws/aws-sdk-go-v2/service/apigateway v1.16.13 h1:tuMAfftQBj8AP8ycSTi1
 github.com/aws/aws-sdk-go-v2/service/apigateway v1.16.13/go.mod h1:Wd8HRZuDCsBBi9b1Y//Q0DwPz5kVTU4gS/xMhsf88FM=
 github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.13.13 h1:nqmRAC1JMYDA1t4PG4Oui2Fi85i1cH42KNdYf1IoOSo=
 github.com/aws/aws-sdk-go-v2/service/apigatewayv2 v1.13.13/go.mod h1:KpZcxD1Q22RvibRa+AJyjLnHmMg2uCJhsFXuYytPPU0=
+github.com/aws/aws-sdk-go-v2/service/apprunner v1.17.11 h1:Yz2FUZ60TJQ5nOekCf7pLRJBDFo1crnRLzjdjE2tKaA=
+github.com/aws/aws-sdk-go-v2/service/apprunner v1.17.11/go.mod h1:UEo7wzK2yoRG7yGkLrcLVKT5GR0q6OkbQIug2yhWL/Q=
 github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.8 h1:loRDtQ0vT0+JCB0hQBCfv95tttEzJ1rqSaTDy5cpy0A=
 github.com/aws/aws-sdk-go-v2/service/cloudfront v1.26.8/go.mod h1:YTd4wGn2beCF9wkSTpEcupk79zDFYJk2Ca76B8YyvJg=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.102.0 h1:P4dyjm49F2kKws0FpouBC6fjVImACXKt752+CWa01lM=
