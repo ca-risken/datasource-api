@@ -25,6 +25,7 @@ const (
 	LAYER_LATERAL_MOVEMENT = "LATERAL_MOVEMENT"
 	LAYER_EXTERNAL_SERVICE = "EXTERNAL_SERVICE"
 	LAYER_INTERNAL_SERVICE = "INTERNAL_SERVICE"
+	LAYER_CODE_REPOSITORY  = "CODE_REPOSITORY"
 
 	// common resource
 	RESOURCE_INTERNET = "Internet"
@@ -107,5 +108,15 @@ func getInternalServiceNode(target, region string) *datasource.Resource {
 		Layer:        LAYER_INTERNAL_SERVICE,
 		Region:       region,
 		Service:      "internal-service",
+	}
+}
+
+func getCodeRepositoryNode(repository, service string) *datasource.Resource {
+	return &datasource.Resource{
+		ResourceName: repository,
+		ShortName:    repository,
+		Layer:        LAYER_CODE_REPOSITORY,
+		Region:       REGION_GLOBAL,
+		Service:      service,
 	}
 }
