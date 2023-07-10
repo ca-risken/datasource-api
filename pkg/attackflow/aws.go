@@ -43,6 +43,9 @@ var (
 	domainPatternCloudFront = regexp.MustCompile(`\.cloudfront\.net$`)
 	domainPatternS3         = regexp.MustCompile(`\.s3\..*\.amazonaws\.com$`)  // https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/VirtualHosting.html
 	domainPatternLambdaURL  = regexp.MustCompile(`\.lambda-url\..*\.on\.aws$`) // https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html
+	domainPatternELB        = regexp.MustCompile(`(\.elb\.amazonaws\.com$|\.elb\..*\.amazonaws\.com$)`)
+	domainPatternAPIGateway = regexp.MustCompile(`\.execute-api\..*\.amazonaws\.com$`)
+	domainPatternEC2        = regexp.MustCompile(`^ec2-.*\.compute\.amazonaws\.com$`)
 
 	supportedAWSServices = map[string]bool{
 		SERVICE_CLOUDFRONT:  true,
@@ -204,6 +207,12 @@ func findAWSServiceFromDomain(domain string) string {
 		return SERVICE_S3
 	case domainPatternLambdaURL.MatchString(domain):
 		return SERVICE_LAMBDA
+	case domainPatternELB.MatchString(domain):
+		return SERVICE_ELB
+	case domainPatternEC2.MatchString(domain):
+		return SERVICE_EC2
+	case domainPatternAPIGateway.MatchString(domain):
+		return SERVICE_API_GATEWAY
 	default:
 		return ""
 	}

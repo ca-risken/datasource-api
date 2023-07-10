@@ -3,6 +3,7 @@ package attackflow
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -124,4 +125,37 @@ func (e *ec2Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFl
 		analyzers = append(analyzers, iamAnalyzer)
 	}
 	return resp, analyzers, nil
+}
+
+func getEC2ARNFromPublicDomain(ctx context.Context, domain, accountID string, cfg *aws.Config) (string, error) {
+	if !domainPatternEC2.MatchString(domain) {
+		return "", fmt.Errorf("invalid domain: %s", domain)
+	}
+	// EC2 public domain format: ec2-1-2-3-4.ap-northeast-1.compute.amazonaws.com
+	var err error
+	region := strings.Split(domain, ".")[1]
+	if cfg.Region != region {
+		cfg, err = retrieveAWSCredentialWithRegion(ctx, *cfg, region)
+		if err != nil {
+			return "", err
+		}
+	}
+	client := ec2.NewFromConfig(*cfg)
+	// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances.html
+	instances, err := client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+		Filters: []types.Filter{
+			{
+				Name:   aws.String("dns-name"),
+				Values: []string{domain},
+			},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(instances.Reservations) == 0 || len(instances.Reservations[0].Instances) == 0 {
+		return "", fmt.Errorf("instance not found in %s, domain: %s", accountID, domain)
+	}
+	i := instances.Reservations[0].Instances[0] // only 1 instance (because filter by dns-name)
+	return fmt.Sprintf("arn:aws:ec2:%s:%s:instance/%s", cfg.Region, accountID, aws.ToString(i.InstanceId)), nil
 }
