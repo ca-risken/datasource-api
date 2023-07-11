@@ -2,6 +2,7 @@ package attackflow
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
@@ -61,4 +62,22 @@ func (e *elbAnalyzer) analyzeV1(ctx context.Context, resp *datasource.AnalyzeAtt
 	}
 	resp = setNode(e.metadata.IsPublic, "", e.resource, resp)
 	return resp, nil
+}
+
+func searchElbDomainV1(ctx context.Context, domain, accountID string, cfg *aws.Config) (string, error) {
+	client := elasticloadbalancing.NewFromConfig(*cfg)
+	// DescribeLoadBalancers
+	lb, err := client.DescribeLoadBalancers(ctx, &elasticloadbalancing.DescribeLoadBalancersInput{})
+	if err != nil {
+		return "", err
+	}
+	for _, l := range lb.LoadBalancerDescriptions {
+		if aws.ToString(l.DNSName) == domain {
+			return fmt.Sprintf(
+				"arn:aws:elasticloadbalancing:%s:%s:loadbalancer/%s",
+				cfg.Region, accountID, aws.ToString(l.LoadBalancerName),
+			), nil
+		}
+	}
+	return "", nil
 }

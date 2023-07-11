@@ -81,3 +81,18 @@ func (e *elbAnalyzer) analyzeV2(ctx context.Context, resp *datasource.AnalyzeAtt
 	resp = setNode(e.metadata.IsPublic, "", e.resource, resp)
 	return resp, nil
 }
+
+func searchElbDomainV2(ctx context.Context, domain string, cfg *aws.Config) (string, error) {
+	client := elasticloadbalancingv2.NewFromConfig(*cfg)
+	// https://docs.aws.amazon.com/elasticloadbalancing/2012-06-01/APIReference/API_DescribeLoadBalancers.html
+	lb, err := client.DescribeLoadBalancers(ctx, &elasticloadbalancingv2.DescribeLoadBalancersInput{})
+	if err != nil {
+		return "", err
+	}
+	for _, l := range lb.LoadBalancers {
+		if aws.ToString(l.DNSName) == domain {
+			return aws.ToString(l.LoadBalancerArn), nil
+		}
+	}
+	return "", nil
+}
