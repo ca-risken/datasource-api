@@ -25,6 +25,7 @@ require (
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/core v0.3.1-0.20220725072737-99d976980d0f
+	github.com/coocood/freecache v1.2.3
 	github.com/envoyproxy/protoc-gen-validate v0.6.7
 	github.com/gassara-kys/envconfig v1.4.4
 	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible

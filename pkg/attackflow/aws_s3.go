@@ -44,6 +44,18 @@ type S3Metadata struct {
 func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
+	// cache
+	cachedResource, cachedMeta, err := getS3AttackFlowCache(s.resource.CloudId, s.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil && cachedMeta != nil {
+		s.resource = cachedResource
+		s.metadata = cachedMeta
+		resp = setNode(cachedMeta.IsPublic, "", cachedResource, resp)
+		return resp, nil
+	}
+
 	bucketName := aws.String(s.resource.ShortName)
 
 	// https://docs.aws.amazon.com/AmazonS3/latest/API/API_GetBucketLocation.html
@@ -121,6 +133,11 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 		return nil, err
 	}
 	resp = setNode(s.metadata.IsPublic, "", s.resource, resp)
+
+	// set cache
+	if err := setAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 

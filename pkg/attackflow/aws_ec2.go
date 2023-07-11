@@ -53,6 +53,18 @@ func newEC2Analyzer(ctx context.Context, arn string, cfg *aws.Config, logger log
 func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
+	// cache
+	cachedResource, cachedMeta, err := getEC2AttackFlowCache(e.resource.CloudId, e.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil && cachedMeta != nil {
+		e.resource = cachedResource
+		e.metadata = cachedMeta
+		resp = setNode(cachedMeta.IsPublic, cachedMeta.PublicIpAddress, cachedResource, resp)
+		return resp, nil
+	}
+
 	// https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeInstances.html
 	instances, err := e.client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []string{e.resource.ShortName},
@@ -94,6 +106,11 @@ func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		return nil, err
 	}
 	resp = setNode(e.metadata.IsPublic, e.metadata.PublicIpAddress, e.resource, resp)
+
+	// cache
+	if err := setAttackFlowCache(e.resource.CloudId, e.resource.ResourceName, e.resource); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
