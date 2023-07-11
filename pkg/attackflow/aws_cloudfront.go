@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
@@ -28,17 +29,22 @@ func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (
 }
 
 type CloudFrontMetadata struct {
-	DistributionID    string   `json:"distribution_id"`
-	Description       string   `json:"description"`
-	Status            string   `json:"status"` // Deployed or InProgress
-	Enabled           bool     `json:"enabled"`
-	DomainName        string   `json:"domain_name"`
-	DefaultRootObject string   `json:"default_root_object"`
-	Aliases           []string `json:"aliases"`
-	Origins           []string `json:"origins"`
-	GeoRestriction    []string `json:"geo_restriction"`
-	Logging           string   `json:"logging"`
-	WebACLId          string   `json:"web_acl_id"`
+	DistributionID    string    `json:"distribution_id"`
+	Description       string    `json:"description"`
+	Status            string    `json:"status"` // Deployed or InProgress
+	Enabled           bool      `json:"enabled"`
+	DomainName        string    `json:"domain_name"`
+	DefaultRootObject string    `json:"default_root_object"`
+	Aliases           []string  `json:"aliases"`
+	Origins           []*origin `json:"origins"`
+	GeoRestriction    []string  `json:"geo_restriction"`
+	Logging           string    `json:"logging"`
+	WebACLId          string    `json:"web_acl_id"`
+}
+
+type origin struct {
+	DomainName string `json:"domain_name"`
+	HTTPOnly   bool   `json:"http_only"`
 }
 
 func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
@@ -52,39 +58,33 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		return nil, err
 	}
 
-	var enabled bool
-	var aliases, origins, geoRestriction []string
-	var description, logging, defaultRootObject, waf string
+	c.metadata.DistributionID = aws.ToString(d.Distribution.Id)
+	c.metadata.Status = aws.ToString(d.Distribution.Status)
+	c.metadata.DomainName = aws.ToString(d.Distribution.DomainName)
 	if d.Distribution.DistributionConfig != nil {
-		description = *d.Distribution.DistributionConfig.Comment
-		enabled = *d.Distribution.DistributionConfig.Enabled
+		c.metadata.Description = aws.ToString(d.Distribution.DistributionConfig.Comment)
+		c.metadata.Enabled = aws.ToBool(d.Distribution.DistributionConfig.Enabled)
 		if d.Distribution.DistributionConfig.Aliases != nil {
-			aliases = d.Distribution.DistributionConfig.Aliases.Items
+			c.metadata.Aliases = d.Distribution.DistributionConfig.Aliases.Items
 		}
 		if d.Distribution.DistributionConfig.Origins != nil {
-			for _, origin := range d.Distribution.DistributionConfig.Origins.Items {
-				origins = append(origins, *origin.DomainName)
+			for _, o := range d.Distribution.DistributionConfig.Origins.Items {
+				httpOnly := false
+				if o.CustomOriginConfig != nil {
+					httpOnly = o.CustomOriginConfig.OriginProtocolPolicy == types.OriginProtocolPolicyHttpOnly
+				}
+				c.metadata.Origins = append(c.metadata.Origins, &origin{
+					DomainName: aws.ToString(o.DomainName),
+					HTTPOnly:   httpOnly,
+				})
 			}
 		}
-		defaultRootObject = *d.Distribution.DistributionConfig.DefaultRootObject
-		geoRestriction = d.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
+		c.metadata.DefaultRootObject = *d.Distribution.DistributionConfig.DefaultRootObject
+		c.metadata.GeoRestriction = d.Distribution.DistributionConfig.Restrictions.GeoRestriction.Items
 		if d.Distribution.DistributionConfig.Logging != nil && *d.Distribution.DistributionConfig.Logging.Bucket != "" {
-			logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
+			c.metadata.Logging = *d.Distribution.DistributionConfig.Logging.Bucket + "/" + *d.Distribution.DistributionConfig.Logging.Prefix
 		}
-		waf = *d.Distribution.DistributionConfig.WebACLId
-	}
-	c.metadata = &CloudFrontMetadata{
-		DistributionID:    *d.Distribution.Id,
-		Description:       description,
-		Status:            *d.Distribution.Status,
-		Enabled:           enabled,
-		DomainName:        *d.Distribution.DomainName,
-		Aliases:           aliases,
-		Origins:           origins,
-		DefaultRootObject: defaultRootObject,
-		GeoRestriction:    geoRestriction,
-		Logging:           logging,
-		WebACLId:          waf,
+		c.metadata.WebACLId = *d.Distribution.DistributionConfig.WebACLId
 	}
 	c.resource.MetaData, err = parseMetadata(c.metadata)
 	if err != nil {
@@ -101,23 +101,47 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 	if c.metadata == nil || len(c.metadata.Origins) == 0 {
 		return resp, analyzers, nil
 	}
-	for _, origin := range c.metadata.Origins {
-		awsService := findAWSServiceFromDomain(origin)
+	for _, o := range c.metadata.Origins {
+		awsService := findAWSServiceFromDomain(o.DomainName)
 		if !isSupportedAWSService(awsService) {
-			c.logger.Warnf(ctx, "Not supported origin: %s", origin)
+			c.setCustomDomain(o, resp)
 			continue
 		}
 
 		switch awsService {
 		case SERVICE_S3:
-			s3ARN := getS3ARNFromDomain(origin)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, "origin"))
+			s3ARN := getS3ARNFromDomain(o.DomainName)
 			s3Analyzer, err := newS3Analyzer(s3ARN, c.awsConfig, c.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, s3Analyzer)
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, "origin"))
+		case SERVICE_EC2:
+			ec2ARN, err := getEC2ARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
+			if err != nil {
+				c.logger.Warnf(ctx, "failed to get ec2 ARN from public domain: %s", err)
+				continue
+			}
+			ec2Analyzer, err := newEC2Analyzer(ctx, ec2ARN, c.awsConfig, c.logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			analyzers = append(analyzers, ec2Analyzer)
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, ec2ARN, "origin"))
+		default:
+			c.logger.Warnf(ctx, "unsupported aws service: %s", awsService)
+			c.setCustomDomain(o, resp)
 		}
 	}
 	return resp, analyzers, nil
+}
+
+func (c *cloudFrontAnalyzer) setCustomDomain(o *origin, resp *datasource.AnalyzeAttackFlowResponse) {
+	resourceName := "https://" + o.DomainName
+	if o.HTTPOnly {
+		resourceName = "http://" + o.DomainName
+	}
+	resp.Nodes = append(resp.Nodes, getExternalServiceNode(resourceName))
+	resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, resourceName, "origin"))
 }

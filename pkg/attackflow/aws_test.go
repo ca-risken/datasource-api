@@ -130,6 +130,26 @@ func TestFindAWSServiceFromDomain(t *testing.T) {
 			want:  "s3",
 		},
 		{
+			name:  "lambda",
+			input: "xxx.lambda-url.ap-northeast-1.on.aws",
+			want:  "lambda",
+		},
+		{
+			name:  "elb",
+			input: "xxx.ap-northeast-1.elb.amazonaws.com",
+			want:  "elasticloadbalancing",
+		},
+		{
+			name:  "apigateway",
+			input: "xxx.execute-api.ap-northeast-1.amazonaws.com",
+			want:  "apigateway",
+		},
+		{
+			name:  "ec2",
+			input: "ec2-1-2-3-4.ap-northeast-1.compute.amazonaws.com",
+			want:  "ec2",
+		},
+		{
 			name:  "Unknown",
 			input: "xxxxxx.example.com",
 			want:  "",
