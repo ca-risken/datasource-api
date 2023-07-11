@@ -166,3 +166,29 @@ func extractArnFromMethodIntegration(integrationURI string) string {
 	// unsupported uri
 	return ""
 }
+
+func getAPIGatewayARNFromPublicDomain(ctx context.Context, domain, accountID string, cfg *aws.Config) (string, error) {
+	if !domainPatternAPIGateway.MatchString(domain) {
+		return "", fmt.Errorf("invalid domain: %s", domain)
+	}
+	// domain format: {api-id}.execute-api.{region}.amazonaws.com
+	apiID := strings.Split(domain, ".")[0]
+	region := strings.Split(domain, ".")[2]
+	arn := fmt.Sprintf("arn:aws:apigateway:%s::/restapis/%s", region, apiID) // v1 (REST API)
+
+	var err error
+	if cfg.Region != region {
+		cfg, err = retrieveAWSCredentialWithRegion(ctx, *cfg, region)
+		if err != nil {
+			return "", err
+		}
+	}
+	isV2Api, err := isV2ApiID(ctx, apiID, cfg)
+	if err != nil {
+		return "", err
+	}
+	if isV2Api {
+		arn = fmt.Sprintf("arn:aws:apigateway:%s::/apis/%s", region, apiID) // v2 (HTTP API)
+	}
+	return arn, nil
+}

@@ -87,3 +87,18 @@ func (a *apiGatewayAnalyzer) analyzeV2(ctx context.Context, resp *datasource.Ana
 	resp = setNode(a.metadata.IsPublic, "api", a.resource, resp)
 	return resp, nil
 }
+
+func isV2ApiID(ctx context.Context, apiID string, cfg *aws.Config) (bool, error) {
+	client := apigatewayv2.NewFromConfig(*cfg)
+	// https://docs.aws.amazon.com/apigatewayv2/latest/api-reference/apis-apiid.html
+	apis, err := client.GetApis(ctx, &apigatewayv2.GetApisInput{})
+	if err != nil {
+		return false, err
+	}
+	for _, api := range apis.Items {
+		if aws.ToString(api.ApiId) == apiID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
