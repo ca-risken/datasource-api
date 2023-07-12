@@ -41,7 +41,7 @@ func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
 	// cache
-	cachedResource, cachedMeta, err := getIAMRunnerAttackFlowCache(i.resource.CloudId, i.resource.ResourceName)
+	cachedResource, cachedMeta, err := getIAMAttackFlowCache(i.resource.CloudId, i.resource.ResourceName)
 	if err != nil {
 		return nil, err
 	}

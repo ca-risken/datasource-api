@@ -112,7 +112,7 @@ func getAppRunnerAttackFlowCache(cloudID, resourceName string) (*datasource.Reso
 	return resource, &meta, nil
 }
 
-func getIAMRunnerAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *iamMetadata, error) {
+func getIAMAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *iamMetadata, error) {
 	resource, err := getAttackFlowCache(cloudID, resourceName)
 	if err != nil {
 		return nil, nil, err
