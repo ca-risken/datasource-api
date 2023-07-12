@@ -40,6 +40,18 @@ func newIAMAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudSe
 func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
+	// cache
+	cachedResource, cachedMeta, err := getIAMAttackFlowCache(i.resource.CloudId, i.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil && cachedMeta != nil {
+		i.resource = cachedResource
+		i.metadata = cachedMeta
+		resp = setNode(false, "", cachedResource, resp)
+		return resp, nil
+	}
+
 	i.metadata.IamRoleArn = i.resource.ResourceName
 	// instance-profile
 	if strings.HasPrefix(i.resource.ResourceName, fmt.Sprintf("arn:aws:iam::%s:instance-profile/", i.resource.CloudId)) {
@@ -73,6 +85,11 @@ func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		return nil, err
 	}
 	resp = setNode(false, "", i.resource, resp)
+
+	// cache
+	if err := setAttackFlowCache(i.resource.CloudId, i.resource.ResourceName, i.resource); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 

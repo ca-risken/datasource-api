@@ -52,6 +52,18 @@ func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger 
 func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
+	// cache
+	cachedResource, cachedMeta, err := getLambdaAttackFlowCache(l.resource.CloudId, l.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil && cachedMeta != nil {
+		l.resource = cachedResource
+		l.metadata = cachedMeta
+		resp = setNode(cachedMeta.IsPublic, "function URL", cachedResource, resp)
+		return resp, nil
+	}
+
 	// https://docs.aws.amazon.com/lambda/latest/dg/API_GetFunction.html
 	conf, err := l.client.GetFunctionConfiguration(ctx, &lambda.GetFunctionConfigurationInput{
 		FunctionName: aws.String(l.resource.ResourceName),
@@ -111,6 +123,11 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 		return nil, err
 	}
 	resp = setNode(l.metadata.IsPublic, "function URL", l.resource, resp)
+
+	// cache
+	if err := setAttackFlowCache(l.resource.CloudId, l.resource.ResourceName, l.resource); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 

@@ -44,6 +44,8 @@ var (
 	domainPatternS3         = regexp.MustCompile(`\.s3\..*\.amazonaws\.com$`)  // https://docs.aws.amazon.com/ja_jp/AmazonS3/latest/userguide/VirtualHosting.html
 	domainPatternLambdaURL  = regexp.MustCompile(`\.lambda-url\..*\.on\.aws$`) // https://docs.aws.amazon.com/lambda/latest/dg/lambda-urls.html
 	domainPatternELB        = regexp.MustCompile(`(\.elb\.amazonaws\.com$|\.elb\..*\.amazonaws\.com$)`)
+	domainPatternELB1       = regexp.MustCompile(`\.elb\.amazonaws\.com$`)
+	domainPatternELB2       = regexp.MustCompile(`\.elb\..*\.amazonaws\.com$`)
 	domainPatternAPIGateway = regexp.MustCompile(`\.execute-api\..*\.amazonaws\.com$`)
 	domainPatternEC2        = regexp.MustCompile(`^ec2-.*\.compute\.amazonaws\.com$`)
 

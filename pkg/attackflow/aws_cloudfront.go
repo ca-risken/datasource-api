@@ -129,6 +129,30 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 			}
 			analyzers = append(analyzers, ec2Analyzer)
 			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, ec2ARN, "origin"))
+		case SERVICE_ELB:
+			elbARN, err := getElbARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
+			if err != nil {
+				c.logger.Warnf(ctx, "failed to get elb ARN from public domain: %s", err)
+				continue
+			}
+			elbAnalyzer, err := newELBAnalyzer(ctx, elbARN, c.awsConfig, c.logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			analyzers = append(analyzers, elbAnalyzer)
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, elbARN, "origin"))
+		case SERVICE_API_GATEWAY:
+			apiGatewayARN, err := getAPIGatewayARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
+			if err != nil {
+				c.logger.Warnf(ctx, "failed to get api gateway ARN from public domain: %s", err)
+				continue
+			}
+			apiGatewayAnalyzer, err := newAPIGatewayAnalyzer(ctx, apiGatewayARN, c.awsConfig, c.logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			analyzers = append(analyzers, apiGatewayAnalyzer)
+			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, apiGatewayARN, "origin"))
 		default:
 			c.logger.Warnf(ctx, "unsupported aws service: %s", awsService)
 			c.setCustomDomain(o, resp)

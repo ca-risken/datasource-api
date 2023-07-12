@@ -147,3 +147,41 @@ func (e *elbAnalyzer) setPublic(ctx context.Context) error {
 	}
 	return nil
 }
+
+func getElbARNFromPublicDomain(ctx context.Context, domain, accountID string, cfg *aws.Config) (string, error) {
+	region := ""
+	if domainPatternELB1.MatchString(domain) {
+		// ELB public domain format: xxx.{region}.elb.amazonaws.com
+		region = strings.Split(domain, ".")[1]
+	} else if domainPatternELB2.MatchString(domain) {
+		// ALB public domain format: xxx.elb.{region}.amazonaws.com
+		region = strings.Split(domain, ".")[2]
+	} else {
+		return "", fmt.Errorf("invalid domain: %s", domain)
+	}
+
+	var err error
+	if cfg.Region != region {
+		cfg, err = retrieveAWSCredentialWithRegion(ctx, *cfg, region)
+		if err != nil {
+			return "", err
+		}
+	}
+	arn := ""
+	arn, err = searchElbDomainV2(ctx, domain, cfg)
+	if err != nil {
+		return "", err
+	}
+	if arn != "" {
+		return arn, nil
+	}
+
+	arn, err = searchElbDomainV1(ctx, domain, accountID, cfg)
+	if err != nil {
+		return "", err
+	}
+	if arn == "" {
+		return "", fmt.Errorf("cannot find ELB ARN from domain: %s", domain)
+	}
+	return arn, nil
+}

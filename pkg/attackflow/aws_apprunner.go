@@ -56,6 +56,18 @@ func newAppRunnerAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logg
 func (a *appRunnerAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, error,
 ) {
+	// cache
+	cachedResource, cachedMeta, err := getAppRunnerAttackFlowCache(a.resource.CloudId, a.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil && cachedMeta != nil {
+		a.resource = cachedResource
+		a.metadata = cachedMeta
+		resp = setNode(cachedMeta.IsPublic, "", cachedResource, resp)
+		return resp, nil
+	}
+
 	// https://docs.aws.amazon.com/apprunner/latest/api/API_DescribeService.html
 	service, err := a.client.DescribeService(ctx, &apprunner.DescribeServiceInput{
 		ServiceArn: aws.String(a.resource.ResourceName),
@@ -94,6 +106,11 @@ func (a *appRunnerAnalyzer) Analyze(ctx context.Context, resp *datasource.Analyz
 		return nil, err
 	}
 	resp = setNode(a.metadata.IsPublic, "", a.resource, resp)
+
+	// cache
+	if err := setAttackFlowCache(a.resource.CloudId, a.resource.ResourceName, a.resource); err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
