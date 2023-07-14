@@ -269,6 +269,22 @@ func convertGitleaksCache(data *model.CodeGitleaksCache) *code.GitleaksCache {
 	return &converted
 }
 
+func (c *CodeService) ListGitleaksCache(ctx context.Context, req *code.ListGitleaksCacheRequest) (*code.ListGitleaksCacheResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	data, err := c.repository.ListGitleaksCache(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	gitleaksCache := code.ListGitleaksCacheResponse{}
+	for _, d := range *data {
+		gitleaksCache.GitleaksCache = append(gitleaksCache.GitleaksCache, convertGitleaksCache(&d))
+	}
+
+	return &gitleaksCache, nil
+}
+
 func (c *CodeService) GetGitleaksCache(ctx context.Context, req *code.GetGitleaksCacheRequest) (*code.GetGitleaksCacheResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err

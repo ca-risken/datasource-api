@@ -27,6 +27,7 @@ type CodeRepoInterface interface {
 	DeleteGitleaksSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_cache
+	ListGitleaksCache(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksCache, error)
 	GetGitleaksCache(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksCache, error)
 	UpsertGitleaksCache(ctx context.Context, projectID uint32, data *code.GitleaksCacheForUpsert) (*model.CodeGitleaksCache, error)
 	DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error
@@ -241,6 +242,25 @@ func (c *Client) DeleteGitleaksSetting(ctx context.Context, projectID uint32, gi
 		return err
 	}
 	return nil
+}
+
+const selectListGitleaksCache = `
+select
+  cache.*
+from 
+  code_gitleaks_cache cache
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and cache.code_github_setting_id = ?
+`
+
+func (c *Client) ListGitleaksCache(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksCache, error) {
+	var data []model.CodeGitleaksCache
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListGitleaksCache, projectID, githubSettingID).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
 }
 
 const selectGetGitleaksCache = `
