@@ -73,6 +73,14 @@ func (d *DeleteGitleaksSettingRequest) Validate() error {
 	)
 }
 
+// Validate ListGitleaksCacheRequest
+func (g *ListGitleaksCacheRequest) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.ProjectId, validation.Required),
+		validation.Field(&g.GithubSettingId, validation.Required),
+	)
+}
+
 // Validate GetGitleaksCacheRequest
 func (g *GetGitleaksCacheRequest) Validate() error {
 	return validation.ValidateStruct(g,

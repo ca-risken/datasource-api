@@ -268,6 +268,13 @@ delete-gitleaks-setting:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteGitleaksSetting
 
+.PHONY: list-gitleaks-cache
+list-gitleaks-cache:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.ListGitleaksCache
+
 .PHONY: get-gitleaks-cache
 get-gitleaks-cache:
 	$(GRPCURL) \

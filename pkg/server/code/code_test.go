@@ -669,6 +669,71 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 	}
 }
 
+func TestListGitleaksCache(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name    string
+		input   *code.ListGitleaksCacheRequest
+		want    *code.ListGitleaksCacheResponse
+		wantErr bool
+
+		mockResp *[]model.CodeGitleaksCache
+		mockErr  error
+	}{
+		{
+			name: "OK",
+			input: &code.ListGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1,
+			},
+			want: &code.ListGitleaksCacheResponse{
+				GitleaksCache: []*code.GitleaksCache{
+					{GithubSettingId: 1, RepositoryFullName: "owner/repo", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					{GithubSettingId: 2, RepositoryFullName: "owner/repo2", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				},
+			},
+			mockResp: &[]model.CodeGitleaksCache{
+				{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, RepositoryFullName: "owner/repo2", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			wantErr: false,
+		},
+		{
+			name: "NG(invalid param)",
+			input: &code.ListGitleaksCacheRequest{
+				GithubSettingId: 1,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG(DB error)",
+			input: &code.ListGitleaksCacheRequest{
+				ProjectId: 1, GithubSettingId: 1,
+			},
+			mockErr: gorm.ErrInvalidDB,
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mocks.NewCodeRepoInterface(t)
+			svc := CodeService{repository: mockDB}
+			if c.mockResp != nil || c.mockErr != nil {
+				mockDB.On("ListGitleaksCache", test.RepeatMockAnything(3)...).Return(c.mockResp, c.mockErr).Once()
+			}
+			got, err := svc.ListGitleaksCache(context.TODO(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
 func TestGetGitleaksCache(t *testing.T) {
 	now := time.Now()
 	cases := []struct {

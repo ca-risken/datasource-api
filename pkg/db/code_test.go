@@ -535,6 +535,69 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 
 var codeGitleaksCacheTableColumn = []string{"code_github_setting_id", "repository_full_name", "scan_at", "created_at", "updated_at"}
 
+func TestListGitleaksCache(t *testing.T) {
+	now := time.Now()
+	type args struct {
+		ProjectID           uint32
+		CodeGitHubSettingID uint32
+	}
+	cases := []struct {
+		name        string
+		args        *args
+		want        *[]model.CodeGitleaksCache
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: &args{ProjectID: 1, CodeGitHubSettingID: 1},
+			want: &[]model.CodeGitleaksCache{
+				{CodeGitHubSettingID: 1, RepositoryFullName: "owner/repo", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, RepositoryFullName: "owner/repo2", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectListGitleaksCache)).
+					WillReturnRows(sqlmock.NewRows(codeGitleaksCacheTableColumn).
+						AddRow(uint32(1), "owner/repo", now, now, now).
+						AddRow(uint32(2), "owner/repo2", now, now, now),
+					)
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    &args{ProjectID: 1, CodeGitHubSettingID: 1},
+			want:    nil,
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(
+					regexp.QuoteMeta(selectListGitleaksCache)).
+					WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%+v' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.ListGitleaksCache(context.TODO(), c.args.ProjectID, c.args.CodeGitHubSettingID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestGetGitleaksCache(t *testing.T) {
 	now := time.Now()
 	type args struct {

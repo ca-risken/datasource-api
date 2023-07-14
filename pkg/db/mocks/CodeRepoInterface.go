@@ -255,6 +255,32 @@ func (_m *CodeRepoInterface) ListGitHubSetting(ctx context.Context, projectID ui
 	return r0, r1
 }
 
+// ListGitleaksCache provides a mock function with given fields: ctx, projectID, githubSettingID
+func (_m *CodeRepoInterface) ListGitleaksCache(ctx context.Context, projectID uint32, githubSettingID uint32) (*[]model.CodeGitleaksCache, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID)
+
+	var r0 *[]model.CodeGitleaksCache
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*[]model.CodeGitleaksCache, error)); ok {
+		return rf(ctx, projectID, githubSettingID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) *[]model.CodeGitleaksCache); ok {
+		r0 = rf(ctx, projectID, githubSettingID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]model.CodeGitleaksCache)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = rf(ctx, projectID, githubSettingID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListGitleaksSetting provides a mock function with given fields: ctx, projectID
 func (_m *CodeRepoInterface) ListGitleaksSetting(ctx context.Context, projectID uint32) (*[]model.CodeGitleaksSetting, error) {
 	ret := _m.Called(ctx, projectID)

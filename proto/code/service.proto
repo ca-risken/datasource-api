@@ -27,6 +27,8 @@ service CodeService {
       returns (google.protobuf.Empty);
 
   // GitleaksCache
+  rpc ListGitleaksCache(ListGitleaksCacheRequest)
+      returns (ListGitleaksCacheResponse);
   rpc GetGitleaksCache(GetGitleaksCacheRequest)
       returns (GetGitleaksCacheResponse);
   rpc PutGitleaksCache(PutGitleaksCacheRequest)
@@ -91,6 +93,13 @@ message DeleteGitleaksSettingRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
 }
+
+message ListGitleaksCacheRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+}
+
+message ListGitleaksCacheResponse { repeated GitleaksCache gitleaks_cache = 1; }
 
 message GetGitleaksCacheRequest {
   uint32 project_id = 1;
