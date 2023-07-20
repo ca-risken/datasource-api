@@ -148,8 +148,8 @@ github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kB
 github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932/go.mod h1:NOuUCSz6Q9T7+igc/hlvDOUdtWKryOrtFyIVABv/p7k=
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/bradfitz/gomemcache v0.0.0-20220106215444-fb4bf637b56d/go.mod h1:H0wQNHz2YrLsuXOZozoeDmnHXkNCRmMW0gwFWDfEZDA=
-github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b h1:X7hjob/zUoDqpjmLY16za6Lmvp4j8ORrixyJSltUDo8=
-github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:n1VKFIhMlKCmSzc7Izgz+aH24ihR3K6yPDaNrTEFEGo=
+github.com/ca-risken/common/pkg/database v0.0.0-20230719091915-496f0dc45899 h1:WeUQOqtkL35ODmeeMrPqi0LL/zNXYE9ZPQUOM8vw8h4=
+github.com/ca-risken/common/pkg/database v0.0.0-20230719091915-496f0dc45899/go.mod h1:SvOyFnGm/QwWgOXy0juX7YqOibQAE7L/TnmOp7FLn1M=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b h1:qNttEBJBsXg68Kzj0+9rw7c52L9rhgaChZOyUO/A4VQ=
 github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b/go.mod h1:iqLbvDuf708TWjF8RO5qw6Nx1e3R0/UEHZ8tE/VEPjA=
 github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b h1:S3vrpeI7invfVyBw0PhZ15/A/kIV9AOPTXpc+e7RQdU=

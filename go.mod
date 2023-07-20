@@ -19,7 +19,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.35.0
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.18.4
 	github.com/aws/aws-sdk-go-v2/service/sts v1.16.5
-	github.com/ca-risken/common/pkg/database v0.0.0-20220601065422-5b97bd6efc9b
+	github.com/ca-risken/common/pkg/database v0.0.0-20230719091915-496f0dc45899
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
