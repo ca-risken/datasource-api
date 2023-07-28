@@ -76,9 +76,6 @@ func (s *snsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	s.metadata.Name = sliceArn[len(sliceArn)-1]
 	s.metadata.Policy = topic.Attributes["Policy"]
 	s.metadata.Owner = topic.Attributes["Owner"]
-	if err != nil {
-		return nil, err
-	}
 
 	// https://docs.aws.amazon.com/sns/latest/api/API_ListSubscriptionsByTopic.html
 	subscriptions, err := s.client.ListSubscriptionsByTopic(ctx, &sns.ListSubscriptionsByTopicInput{
