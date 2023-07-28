@@ -188,6 +188,8 @@ func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		serviceAnalyzer, err = newELBAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	case SERVICE_APP_RUNNER:
 		serviceAnalyzer, err = newAppRunnerAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
+	case SERVICE_SNS:
+		serviceAnalyzer, err = newSnsAnalyzer(ctx, req.ResourceName, a.awsConfig, a.logger)
 	default:
 		return nil, fmt.Errorf("not supported service: %s", a.initialService)
 	}

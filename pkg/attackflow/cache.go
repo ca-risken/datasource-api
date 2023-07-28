@@ -126,3 +126,18 @@ func getIAMAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, 
 	}
 	return resource, &meta, nil
 }
+
+func getSnsAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *snsMetadata, error) {
+	resource, err := getAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta snsMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
+}
