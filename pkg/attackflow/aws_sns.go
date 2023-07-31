@@ -118,8 +118,14 @@ func (s *snsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFl
 			if err != nil {
 				return nil, nil, err
 			}
+		case "sqs":
+			resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
+			sqsAnalyzer, err := newSqsAnalyzer(ctx, subscription.Endpoint, s.awsConfig, s.logger)
+			analyzers = append(analyzers, sqsAnalyzer)
+			if err != nil {
+				return nil, nil, err
+			}
 		default:
-			// TODO sqs
 			r := getExternalServiceNode(subscription.Endpoint)
 			resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
 			resp.Nodes = append(resp.Nodes, r)
