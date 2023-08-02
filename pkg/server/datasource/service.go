@@ -2,8 +2,10 @@ package datasource
 
 import (
 	"context"
+	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/proto/datasource"
@@ -18,14 +20,18 @@ type dsDBClient interface {
 }
 
 type DataSourceService struct {
-	dbClient dsDBClient
-	logger   logging.Logger
+	dbClient    dsDBClient
+	alertClient alert.AlertServiceClient
+	baseURL     string
+	logger      logging.Logger
 }
 
-func NewDataSourceService(dbClient dsDBClient, l logging.Logger) *DataSourceService {
+func NewDataSourceService(dbClient dsDBClient, alertClient alert.AlertServiceClient, url string, l logging.Logger) *DataSourceService {
 	return &DataSourceService{
-		dbClient: dbClient,
-		logger:   l,
+		dbClient:    dbClient,
+		alertClient: alertClient,
+		baseURL:     url,
+		logger:      l,
 	}
 }
 
@@ -92,4 +98,54 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	}
 
 	return resp, nil
+}
+
+type ScanErrors struct {
+	// TODO: GCP, OSINT, Diagnosis, Code
+	awsErrors []*db.AWSScanError
+}
+
+func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
+	scanErrors := map[uint32]*ScanErrors{}
+
+	// AWS
+	awsList, err := d.dbClient.ListAWSScanErrorForNotify(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to ListAWSScanError: %s", err.Error())
+	}
+	for _, aws := range awsList {
+		if _, ok := scanErrors[aws.ProjectID]; !ok {
+			scanErrors[aws.ProjectID] = &ScanErrors{}
+		}
+		scanErrors[aws.ProjectID].awsErrors = append(scanErrors[aws.ProjectID].awsErrors, aws)
+	}
+
+	// Notify error per project
+	for projectID, errs := range scanErrors {
+		// notify
+		resp, err := d.alertClient.ListNotificationForInternal(ctx, &alert.ListNotificationForInternalRequest{
+			ProjectId: projectID,
+			Type:      "slack",
+		})
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to ListNotification: %s", err.Error())
+		}
+		if len(resp.Notification) == 0 {
+			continue
+		}
+		for _, n := range resp.Notification {
+			if err := d.notifyScanError(ctx, n, errs); err != nil {
+				d.logger.Notifyf(ctx, logging.WarnLevel, "Failed to notify scan error: project_id=%d, notification_id=%d, err=%s",
+					n.ProjectId, n.NotificationId, err.Error())
+			}
+		}
+
+		// update err_notified_at
+		for _, aws := range errs.awsErrors {
+			if err := d.dbClient.UpdateAWSErrorNotifiedAt(ctx, time.Now(), aws.AWSID, aws.AWSDataSourceID, projectID); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to UpdateErrorNotifiedAt: %s", err.Error())
+			}
+		}
+	}
+	return &empty.Empty{}, nil
 }

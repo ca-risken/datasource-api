@@ -29,6 +29,7 @@ type AppConf struct {
 	ProfileExporter string   `split_words:"true" default:"nop"`
 	ProfileTypes    []string `split_words:"true"`
 	TraceDebug      bool     `split_words:"true" default:"false"`
+	BaseURL         string   `split_words:"true" default:"http://localhost"`
 
 	// gRPC
 	CoreSvcAddr string `required:"true" split_words:"true" default:"core.core.svc.cluster.local:8080"`
@@ -166,6 +167,7 @@ func main() {
 		conf.CodeDataKey,
 		d,
 		q,
+		conf.BaseURL,
 		logger,
 	)
 
