@@ -130,6 +130,9 @@ func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to ListNotification: %s", err.Error())
 		}
+		if len(resp.Notification) == 0 {
+			continue
+		}
 		for _, n := range resp.Notification {
 			if err := d.notifyScanError(ctx, n, errs); err != nil {
 				d.logger.Notifyf(ctx, logging.WarnLevel, "Failed to notify scan error: project_id=%d, notification_id=%d, err=%s",

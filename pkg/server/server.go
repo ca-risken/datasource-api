@@ -65,11 +65,11 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 
 func (s *Server) Run(ctx context.Context) error {
 	localServerAddr := fmt.Sprintf(":%s", s.port)
-	pjClient, err := s.newProjectClient(s.coreSvcAddr)
+	pjClient, err := newProjectClient(s.coreSvcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to create project client: %w", err)
 	}
-	alertClient, err := s.newAlertClient(s.coreSvcAddr)
+	alertClient, err := newAlertClient(s.coreSvcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to create alert client: %w", err)
 	}
@@ -164,7 +164,7 @@ func healthCheck(ctx context.Context, addr string) error {
 	return nil
 }
 
-func (s *Server) newProjectClient(svcAddr string) (project.ProjectServiceClient, error) {
+func newProjectClient(svcAddr string) (project.ProjectServiceClient, error) {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *Server) newProjectClient(svcAddr string) (project.ProjectServiceClient,
 	return project.NewProjectServiceClient(conn), nil
 }
 
-func (s *Server) newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
+func newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {

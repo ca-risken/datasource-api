@@ -44,9 +44,9 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 	return nil
 }
 
-func (d *DataSourceService) getScanErrorPayload(local string, projectID uint32, scanErrors *ScanErrors) *slack.WebhookMessage {
+func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32, scanErrors *ScanErrors) *slack.WebhookMessage {
 	text := MESSAGE_EN
-	if local == LOCALE_JA {
+	if locale == LOCALE_JA {
 		text = MESSAGE_JA
 	}
 	msg := slack.WebhookMessage{
