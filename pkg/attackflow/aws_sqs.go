@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/logging"
@@ -12,18 +13,26 @@ import (
 )
 
 type sqsAnalyzer struct {
-	resource  *datasource.Resource
-	metadata  *sqsMetadata
-	awsConfig *aws.Config
-	client    *sqs.Client
-	logger    logging.Logger
+	resource     *datasource.Resource
+	metadata     *sqsMetadata
+	awsConfig    *aws.Config
+	client       *sqs.Client
+	lambdaClient *lambda.Client
+	logger       logging.Logger
 }
 type sqsMetadata struct {
-	Name                 string `json:"name"`
-	Policy               string `json:"policy"`
-	VisibilityTimeout    string `json:"visibility_timeout"`
-	KmsMasterKeyId       string `json:"kms_master_key_id"`
-	SqsManagedSseEnabled bool   `json:"sqs_managed_sse_enabled"`
+	Name                 string          `json:"name"`
+	Policy               string          `json:"policy"`
+	VisibilityTimeout    string          `json:"visibility_timeout"`
+	KmsMasterKeyId       string          `json:"kms_master_key_id"`
+	SqsManagedSseEnabled bool            `json:"sqs_managed_sse_enabled"`
+	LambdaTrigger        []lambdaTrigger `json:"lambda_trigger"`
+}
+
+type lambdaTrigger struct {
+	UUID        string `json:"uuid"`
+	FunctionArn string `json:"function_arn"`
+	State       string `json:"state"`
 }
 
 func newSqsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
@@ -36,11 +45,12 @@ func newSqsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger log
 		}
 	}
 	return &sqsAnalyzer{
-		resource:  resource,
-		metadata:  &sqsMetadata{},
-		awsConfig: cfg,
-		client:    sqs.NewFromConfig(*cfg),
-		logger:    logger,
+		resource:     resource,
+		metadata:     &sqsMetadata{},
+		awsConfig:    cfg,
+		client:       sqs.NewFromConfig(*cfg),
+		lambdaClient: lambda.NewFromConfig(*cfg),
+		logger:       logger,
 	}, nil
 }
 
@@ -78,6 +88,11 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	s.metadata.KmsMasterKeyId = attributes.Attributes["KmsMasterKeyId"]
 	s.metadata.SqsManagedSseEnabled = attributes.Attributes["SqsManagedSseEnabled"] == "true"
 
+	s.metadata.LambdaTrigger, err = s.getLambdaTrigger(ctx, s.resource.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+
 	s.resource.MetaData, err = parseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
@@ -90,8 +105,35 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	return resp, nil
 }
 
+func (s *sqsAnalyzer) getLambdaTrigger(ctx context.Context, queueArn string) ([]lambdaTrigger, error) {
+	eventSourceMappings, err := s.lambdaClient.ListEventSourceMappings(ctx, &lambda.ListEventSourceMappingsInput{
+		EventSourceArn: &queueArn,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var triggers []lambdaTrigger
+	for _, eventSourceMapping := range eventSourceMappings.EventSourceMappings {
+		triggers = append(triggers, lambdaTrigger{
+			UUID:        aws.ToString(eventSourceMapping.UUID),
+			FunctionArn: aws.ToString(eventSourceMapping.FunctionArn),
+			State:       aws.ToString(eventSourceMapping.State),
+		})
+	}
+	return triggers, nil
+}
+
 func (s *sqsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
 ) {
-	return resp, []CloudServiceAnalyzer{}, nil
+	analyzers := []CloudServiceAnalyzer{}
+	for _, trigger := range s.metadata.LambdaTrigger {
+		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, trigger.FunctionArn, "trigger"))
+		lambdaAnalyzer, err := newLambdaAnalyzer(ctx, trigger.FunctionArn, s.awsConfig, s.logger)
+		analyzers = append(analyzers, lambdaAnalyzer)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return resp, analyzers, nil
 }
