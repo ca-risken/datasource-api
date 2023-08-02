@@ -22,6 +22,8 @@ type AWSRepoInterface interface {
 	DeleteAWSRelDataSource(ctx context.Context, projectID, awsID, awsDataSourceID uint32) error
 	GetAWSDataSourceForMessage(ctx context.Context, awsID, awsDataSourceID, projectID uint32) (*DataSource, error)
 	GetAWSRelDataSourceByAccountID(ctx context.Context, projectID uint32, awsAccountID string) (*model.AWSRelDataSource, error)
+	ListAWSScanErrorForNotify(ctx context.Context) ([]*AWSScanError, error)
+	UpdateAWSErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, awsID, awsDataSourceID, projectID uint32) error
 }
 
 var _ AWSRepoInterface = (*Client)(nil) // verify interface compliance
@@ -280,4 +282,40 @@ func (c *Client) GetAWSRelDataSourceByAccountID(ctx context.Context, projectID u
 		return nil, err
 	}
 	return &data, nil
+}
+
+type AWSScanError struct {
+	AWSID           uint32 `json:"aws_id"`
+	AWSDataSourceID uint32 `json:"aws_data_source_id"`
+	ProjectID       uint32 `json:"project_id"`
+	DataSource      string `json:"data_source"`
+	StatusDetail    string `json:"status_detail"`
+}
+
+const selectListAWSScanError = `
+select
+  ards.aws_id, ards.aws_data_source_id, ads.data_source, ards.project_id, ards.status_detail
+from
+  aws_rel_data_source ards 
+  inner join aws_data_source ads using(aws_data_source_id) 
+where
+  ards.status = 'ERROR'
+  and ards.error_notified_at is null
+`
+
+func (c *Client) ListAWSScanErrorForNotify(ctx context.Context) ([]*AWSScanError, error) {
+	data := []*AWSScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListAWSScanError).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateAWSErrorNotifiedAt = `update aws_rel_data_source set error_notified_at = ? where aws_id = ? and aws_data_source_id = ? and project_id = ?`
+
+func (c *Client) UpdateAWSErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, awsID, awsDataSourceID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateAWSErrorNotifiedAt, errNotifiedAt, awsID, awsDataSourceID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
 }

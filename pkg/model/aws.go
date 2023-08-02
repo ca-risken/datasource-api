@@ -32,6 +32,7 @@ type AWSRelDataSource struct {
 	Status          string
 	StatusDetail    string
 	ScanAt          time.Time
+	ErrorNotifiedAt time.Time
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

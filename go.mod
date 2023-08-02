@@ -25,7 +25,7 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.3.1-0.20220725072737-99d976980d0f
+	github.com/ca-risken/core v0.8.1-0.20230802005225-c9bcfdb2579c
 	github.com/coocood/freecache v1.2.3
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
 	github.com/gassara-kys/envconfig v1.4.4
@@ -33,6 +33,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/golang/protobuf v1.5.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/slack-go/slack v0.12.2
 	github.com/stretchr/testify v1.8.3
 	github.com/vikyd/zero v0.0.0-20190921142904-0f738d0bc858
 	google.golang.org/api v0.121.0
@@ -79,6 +80,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect

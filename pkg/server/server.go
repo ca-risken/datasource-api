@@ -12,6 +12,7 @@ import (
 
 	"github.com/ca-risken/common/pkg/logging"
 	mimosarpc "github.com/ca-risken/common/pkg/rpc"
+	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/queue"
@@ -44,10 +45,11 @@ type Server struct {
 	dataKey              string
 	db                   *db.Client
 	queue                *queue.Client
+	baseURL              string
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url string, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
@@ -56,6 +58,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		dataKey:              dataKey,
 		db:                   db,
 		queue:                q,
+		baseURL:              url,
 		logger:               logger,
 	}
 }
@@ -65,6 +68,10 @@ func (s *Server) Run(ctx context.Context) error {
 	pjClient, err := s.newProjectClient(s.coreSvcAddr)
 	if err != nil {
 		return fmt.Errorf("failed to create project client: %w", err)
+	}
+	alertClient, err := s.newAlertClient(s.coreSvcAddr)
+	if err != nil {
+		return fmt.Errorf("failed to create alert client: %w", err)
 	}
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc, err := googleServer.NewGoogleService(ctx, s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
@@ -77,7 +84,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
-	dsSvc := dsServer.NewDataSourceService(s.db, s.logger)
+	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, s.baseURL, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -164,6 +171,15 @@ func (s *Server) newProjectClient(svcAddr string) (project.ProjectServiceClient,
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
 	return project.NewProjectServiceClient(conn), nil
+}
+
+func (s *Server) newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
+	ctx := context.Background()
+	conn, err := getGRPCConn(ctx, svcAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
+	}
+	return alert.NewAlertServiceClient(conn), nil
 }
 
 func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {

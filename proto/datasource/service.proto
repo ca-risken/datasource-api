@@ -11,6 +11,7 @@ service DataSourceService {
   rpc CleanDataSource(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc AnalyzeAttackFlow(AnalyzeAttackFlowRequest)
       returns (AnalyzeAttackFlowResponse);
+  rpc NotifyScanError(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
 message AnalyzeAttackFlowRequest {

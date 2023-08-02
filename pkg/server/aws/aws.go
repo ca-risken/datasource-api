@@ -140,26 +140,31 @@ func (a *AWSService) AttachDataSource(ctx context.Context, req *aws.AttachDataSo
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := a.repository.UpsertAWSRelDataSource(ctx, req.AttachDataSource)
+	registered, err := a.repository.UpsertAWSRelDataSource(ctx, req.AttachDataSource)
 	if err != nil {
 		return nil, err
 	}
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != aws.Status_ERROR.String() {
+		if err := a.repository.UpdateAWSErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.AWSID, registered.AWSDataSourceID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
 	var scanAt int64
-	if !registerd.ScanAt.IsZero() {
-		scanAt = registerd.ScanAt.Unix()
+	if !registered.ScanAt.IsZero() {
+		scanAt = registered.ScanAt.Unix()
 	}
 	return &aws.AttachDataSourceResponse{DataSource: &aws.AWSRelDataSource{
-		AwsId:           registerd.AWSID,
-		AwsDataSourceId: registerd.AWSDataSourceID,
-		ProjectId:       registerd.ProjectID,
-		AssumeRoleArn:   registerd.AssumeRoleArn,
-		ExternalId:      registerd.ExternalID,
-		SpecificVersion: registerd.SpecificVersion,
-		Status:          getStatus(registerd.Status),
-		StatusDetail:    registerd.StatusDetail,
+		AwsId:           registered.AWSID,
+		AwsDataSourceId: registered.AWSDataSourceID,
+		ProjectId:       registered.ProjectID,
+		AssumeRoleArn:   registered.AssumeRoleArn,
+		ExternalId:      registered.ExternalID,
+		SpecificVersion: registered.SpecificVersion,
+		Status:          getStatus(registered.Status),
+		StatusDetail:    registered.StatusDetail,
 		ScanAt:          scanAt,
-		CreatedAt:       registerd.CreatedAt.Unix(),
-		UpdatedAt:       registerd.UpdatedAt.Unix(),
+		CreatedAt:       registered.CreatedAt.Unix(),
+		UpdatedAt:       registered.UpdatedAt.Unix(),
 	}}, nil
 }
 

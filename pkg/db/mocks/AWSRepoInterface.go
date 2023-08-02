@@ -229,6 +229,32 @@ func (_m *AWSRepoInterface) ListAWSRelDataSource(ctx context.Context, projectID 
 	return r0, r1
 }
 
+// ListAWSScanErrorForNotify provides a mock function with given fields: ctx
+func (_m *AWSRepoInterface) ListAWSScanErrorForNotify(ctx context.Context) ([]*db.AWSScanError, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*db.AWSScanError
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*db.AWSScanError, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*db.AWSScanError); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*db.AWSScanError)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListDataSourceByAWSDataSourceID provides a mock function with given fields: ctx, awsDataSourceID
 func (_m *AWSRepoInterface) ListDataSourceByAWSDataSourceID(ctx context.Context, awsDataSourceID uint32) (*[]db.DataSource, error) {
 	ret := _m.Called(ctx, awsDataSourceID)
@@ -253,6 +279,20 @@ func (_m *AWSRepoInterface) ListDataSourceByAWSDataSourceID(ctx context.Context,
 	}
 
 	return r0, r1
+}
+
+// UpdateAWSErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, awsID, awsDataSourceID, projectID
+func (_m *AWSRepoInterface) UpdateAWSErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, awsID uint32, awsDataSourceID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, awsID, awsDataSourceID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, awsID, awsDataSourceID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertAWS provides a mock function with given fields: ctx, data

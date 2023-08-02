@@ -150,6 +150,13 @@ analyze-attack-flow:
 		-d '{"project_id":1001, "resource_name":"arn:aws:cloudfront::123456789012:distribution/Exxxxxxxxxx", "cloud_type":"aws", "cloud_id":"123456789012"}' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
 
+.PHONY: notify-scan-error
+notify-scan-error:
+	$(GRPCURL) \
+		-plaintext \
+		-d '' \
+		$(DATASOURCE_API_ADDR) datasource.DataSourceService.NotifyScanError
+
 ####################################################
 ## AWS
 ####################################################
