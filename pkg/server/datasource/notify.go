@@ -15,9 +15,17 @@ const (
 	LOCALE_EN      = "en"
 	DEFAULT_LOCALE = LOCALE_EN
 	MESSAGE_JA     = `スキャンエラーが発生しました。
-エラー原因は複数の可能性があります。エラーメッセージから判断がつかない場合はシステム管理者にお問い合わせください。`
+エラー原因は複数の可能性があります。エラーメッセージから判断がつかない場合はシステム管理者にお問い合わせください。
+
+- 設定ミスの場合はスキャン設定を修正してください。
+- スキャン対象の障害や一時的なネットワークエラーなどが発生している場合(サーバー側の問題)は、しばらく待ってから再度スキャンを実行するか次回のスケール実行までお待ち下さい。
+`
 	MESSAGE_EN = `Scan error has occurred.
-There could be multiple possible reasons for the error. If you cannot determine the cause from the error message, please contact your system administrator.`
+There could be multiple possible reasons for the error. If you cannot determine the cause from the error message, please contact your system administrator.
+
+- If there is a setting mistake, please correct your scan settings.
+- If there are issues such as malfunctions of the scan target or temporary network errors (server-side issues), please wait for a while before running the scan again, or wait until the next scale execution.
+`
 )
 
 type slackNotifySetting struct {
