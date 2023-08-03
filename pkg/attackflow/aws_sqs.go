@@ -19,11 +19,12 @@ type sqsAnalyzer struct {
 	logger    logging.Logger
 }
 type sqsMetadata struct {
-	Name                 string `json:"name"`
-	Policy               string `json:"policy"`
-	VisibilityTimeout    string `json:"visibility_timeout"`
-	KmsMasterKeyId       string `json:"kms_master_key_id"`
-	SqsManagedSseEnabled bool   `json:"sqs_managed_sse_enabled"`
+	Name                 string          `json:"name"`
+	Policy               string          `json:"policy"`
+	VisibilityTimeout    string          `json:"visibility_timeout"`
+	KmsMasterKeyId       string          `json:"kms_master_key_id"`
+	SqsManagedSseEnabled bool            `json:"sqs_managed_sse_enabled"`
+	LambdaTrigger        []lambdaTrigger `json:"lambda_trigger"`
 }
 
 func newSqsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
@@ -78,6 +79,11 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	s.metadata.KmsMasterKeyId = attributes.Attributes["KmsMasterKeyId"]
 	s.metadata.SqsManagedSseEnabled = attributes.Attributes["SqsManagedSseEnabled"] == "true"
 
+	s.metadata.LambdaTrigger, err = getLambdaTrigger(ctx, s.resource.ResourceName, s.awsConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	s.resource.MetaData, err = parseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
@@ -93,5 +99,14 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 func (s *sqsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
 	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
 ) {
-	return resp, []CloudServiceAnalyzer{}, nil
+	analyzers := []CloudServiceAnalyzer{}
+	for _, trigger := range s.metadata.LambdaTrigger {
+		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, trigger.FunctionArn, "trigger"))
+		lambdaAnalyzer, err := newLambdaAnalyzer(ctx, trigger.FunctionArn, s.awsConfig, s.logger)
+		analyzers = append(analyzers, lambdaAnalyzer)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	return resp, analyzers, nil
 }

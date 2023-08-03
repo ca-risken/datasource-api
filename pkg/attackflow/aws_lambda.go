@@ -31,6 +31,11 @@ type lambdaMetadata struct {
 	Destination    []string `json:"destination"`
 }
 
+type lambdaTrigger struct {
+	FunctionArn string `json:"function_arn"`
+	State       string `json:"state"`
+}
+
 func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
@@ -129,6 +134,24 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 		return nil, err
 	}
 	return resp, nil
+}
+
+func getLambdaTrigger(ctx context.Context, sourceArn string, awsConfig *aws.Config) ([]lambdaTrigger, error) {
+	lambdaClient := lambda.NewFromConfig(*awsConfig)
+	eventSourceMappings, err := lambdaClient.ListEventSourceMappings(ctx, &lambda.ListEventSourceMappingsInput{
+		EventSourceArn: &sourceArn,
+	})
+	if err != nil {
+		return nil, err
+	}
+	var triggers []lambdaTrigger
+	for _, eventSourceMapping := range eventSourceMappings.EventSourceMappings {
+		triggers = append(triggers, lambdaTrigger{
+			FunctionArn: aws.ToString(eventSourceMapping.FunctionArn),
+			State:       aws.ToString(eventSourceMapping.State),
+		})
+	}
+	return triggers, nil
 }
 
 func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
