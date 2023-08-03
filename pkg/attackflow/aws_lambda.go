@@ -192,8 +192,14 @@ func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttac
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, sqsAnalyzer)
+		case SERVICE_EVENT_BRIDGE:
+			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			eventBridgeAnalyzer, err := newEventBridgeAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			analyzers = append(analyzers, eventBridgeAnalyzer)
 		default:
-			// TODO: support for EventBridge
 			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			resp.Nodes = append(resp.Nodes, r)
 		}
