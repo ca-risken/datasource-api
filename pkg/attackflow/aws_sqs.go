@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/logging"
@@ -80,7 +79,7 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	s.metadata.KmsMasterKeyId = attributes.Attributes["KmsMasterKeyId"]
 	s.metadata.SqsManagedSseEnabled = attributes.Attributes["SqsManagedSseEnabled"] == "true"
 
-	s.metadata.LambdaTrigger, err = s.getLambdaTrigger(ctx, s.resource.ResourceName)
+	s.metadata.LambdaTrigger, err = getLambdaTrigger(ctx, s.resource.ResourceName, s.awsConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -95,15 +94,6 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		return nil, err
 	}
 	return resp, nil
-}
-
-func (s *sqsAnalyzer) getLambdaTrigger(ctx context.Context, arn string) ([]lambdaTrigger, error) {
-	lambdaClient := lambda.NewFromConfig(*s.awsConfig)
-	lambdaTrigger, err := getLambdaTrigger(ctx, arn, lambdaClient)
-	if err != nil {
-		return nil, err
-	}
-	return lambdaTrigger, nil
 }
 
 func (s *sqsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (

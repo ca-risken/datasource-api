@@ -136,7 +136,8 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 	return resp, nil
 }
 
-func getLambdaTrigger(ctx context.Context, sourceArn string, lambdaClient *lambda.Client) ([]lambdaTrigger, error) {
+func getLambdaTrigger(ctx context.Context, sourceArn string, awsConfig *aws.Config) ([]lambdaTrigger, error) {
+	lambdaClient := lambda.NewFromConfig(*awsConfig)
 	eventSourceMappings, err := lambdaClient.ListEventSourceMappings(ctx, &lambda.ListEventSourceMappingsInput{
 		EventSourceArn: &sourceArn,
 	})
