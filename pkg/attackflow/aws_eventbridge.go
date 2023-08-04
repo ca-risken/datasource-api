@@ -25,9 +25,9 @@ type eventBridgeMetadata struct {
 }
 
 type eventBridgeTarget struct {
-	Name  string `json:"name"`
-	State string `json:"state"`
-	Arn   string `json:"arn"`
+	RuleName string `json:"rule_name"`
+	State    string `json:"state"`
+	Arn      string `json:"arn"`
 }
 
 func newEventBridgeAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
@@ -99,9 +99,9 @@ func (e *eventBridgeAnalyzer) Analyze(ctx context.Context, resp *datasource.Anal
 		eventBridgeTargets := []eventBridgeTarget{}
 		for _, target := range targets.Targets {
 			eventBridgeTargets = append(eventBridgeTargets, eventBridgeTarget{
-				Name:  aws.ToString(r.Name),
-				State: string(r.State),
-				Arn:   aws.ToString(target.Arn),
+				RuleName: aws.ToString(r.Name),
+				State:    string(r.State),
+				Arn:      aws.ToString(target.Arn),
 			})
 		}
 		e.metadata.Targets = append(e.metadata.Targets, eventBridgeTargets...)
