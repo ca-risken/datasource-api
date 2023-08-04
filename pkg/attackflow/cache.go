@@ -156,3 +156,18 @@ func getSqsAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, 
 	}
 	return resource, &meta, nil
 }
+
+func getEventBridgeAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *eventBridgeMetadata, error) {
+	resource, err := getAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta eventBridgeMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
+}

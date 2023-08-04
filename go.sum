@@ -54,6 +54,7 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.28/go.mod h1:7VRpKQQedkf
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.33/go.mod h1:zG2FcwjQarWaqXSCGpgcr3RSjZ6dHGguZSppUL0XR7Q=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34 h1:gGLG7yKaXG02/jBlg210R7VgQIotiQntNhsCFejawx8=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.34/go.mod h1:Etz2dj6UHYuw+Xw830KfzCfWGMzqvUTCjUj5b76GVDc=
+github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.24/go.mod h1:+fFaIjycTmpV6hjmPTbyU9Kp5MI/lA+bbibcAtmlhYA=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26 h1:wscW+pnn3J1OYnanMnza5ZVYXLX4cKk5rAvUAl4Qu+c=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26/go.mod h1:MtYiox5gvyB+OyP0Mr0Sm/yzbEAIPL9eijj/ouHAPw0=
 github.com/aws/aws-sdk-go-v2/service/apigateway v1.16.13 h1:tuMAfftQBj8AP8ycSTi1u4XFxzPfOHDK/v0WJ5s96OA=
@@ -70,6 +71,8 @@ github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing v1.15.12 h1:JSA6FaEC3W
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing v1.15.12/go.mod h1:0J9ucX8y5YVq+b9wjePe5fD/uBIYPi8RoSAH6K/HBrM=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.19.13 h1:g/Kzed9qNdvz5p7Av3ffavD19eN11deWqlHgR2JuXuw=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.19.13/go.mod h1:BNkuX97Xp8meRKwZkWlXajo3u4cP/B3TC+YsadbOfaM=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.18.9 h1:ZRs58K4BH5u8Zzvsy0z9yZlhYW7BsbyUXEsDjy+wZVg=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.18.9/go.mod h1:eQx2HIMJsUQhEXStHzwtbTOcCKUsmWKgJwowhahrEZE=
 github.com/aws/aws-sdk-go-v2/service/iam v1.21.0 h1:8hEpu60CWlrp7iEBUFRZhgPoX6+gadaGL1sD4LoRYS0=
 github.com/aws/aws-sdk-go-v2/service/iam v1.21.0/go.mod h1:aQZ8BI+reeaY7RI/QQp7TKCSUHOesTdrzzylp3CW85c=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 h1:y2+VQzC6Zh2ojtV2LoC0MNwHWc6qXv/j2vrQtlftkdA=

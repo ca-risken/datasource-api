@@ -99,7 +99,7 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 	// arn:aws:iam::123456789012:user/MyUser -> Service: iam, Region: global, ShortName: MyUser
 	splitArn := strings.Split(arn, ":")
 	if len(splitArn) < 5 {
-		return nil
+		return &datasource.Resource{}
 	}
 
 	// shortName

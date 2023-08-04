@@ -2,6 +2,7 @@ package attackflow
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
@@ -74,6 +75,10 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 		FunctionName: aws.String(l.resource.ResourceName),
 	})
 	if err != nil {
+		var rnfe *types.ResourceNotFoundException
+		if errors.As(err, &rnfe) {
+			return resp, nil
+		}
 		return nil, err
 	}
 	// https://docs.aws.amazon.com/lambda/latest/dg/API_ListFunctionUrlConfigs.html
@@ -159,13 +164,15 @@ func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttac
 ) {
 	analyzers := []CloudServiceAnalyzer{}
 	// IAM role
-	iamRole := getAWSInfoFromARN(l.metadata.Role)
-	resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, iamRole.ResourceName, "iam role"))
-	iamAnalyzer, err := newIAMAnalyzer(iamRole.ResourceName, l.awsConfig, l.logger)
-	if err != nil {
-		return nil, nil, err
+	if l.metadata.Role != "" {
+		iamRole := getAWSInfoFromARN(l.metadata.Role)
+		resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, iamRole.ResourceName, "iam role"))
+		iamAnalyzer, err := newIAMAnalyzer(iamRole.ResourceName, l.awsConfig, l.logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		analyzers = append(analyzers, iamAnalyzer)
 	}
-	analyzers = append(analyzers, iamAnalyzer)
 
 	// Destinations
 	for _, dest := range l.metadata.Destination {
@@ -192,8 +199,14 @@ func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttac
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, sqsAnalyzer)
+		case SERVICE_EVENT_BRIDGE:
+			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			eventBridgeAnalyzer, err := newEventBridgeAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			analyzers = append(analyzers, eventBridgeAnalyzer)
 		default:
-			// TODO: support for EventBridge
 			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			resp.Nodes = append(resp.Nodes, r)
 		}
