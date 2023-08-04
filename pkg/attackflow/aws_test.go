@@ -68,12 +68,12 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 		{
 			name:  "Blank",
 			input: "",
-			want:  nil,
+			want:  &datasource.Resource{},
 		},
 		{
 			name:  "Invalid arn",
 			input: "arnaws:iam123456789012:user/MyUser",
-			want:  nil,
+			want:  &datasource.Resource{},
 		},
 	}
 	for _, c := range cases {
