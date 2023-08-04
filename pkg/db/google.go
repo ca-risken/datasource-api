@@ -25,6 +25,10 @@ type GoogleRepoInterface interface {
 	UpsertGCPDataSource(ctx context.Context, gcpDataSource *google.GCPDataSourceForUpsert) (*GCPDataSource, error)
 	DeleteGCPDataSource(ctx context.Context, projectID, gcpID, googleDataSourceID uint32) error
 	ListGCPDataSourceByDataSourceID(ctx context.Context, googleDataSourceID uint32) (*[]GCPDataSource, error)
+
+	// scan_error
+	ListGCPScanErrorForNotify(ctx context.Context) ([]*GCPScanError, error)
+	UpdateGCPErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, gcpID, googleDataSourceID, projectID uint32) error
 }
 
 var _ GoogleRepoInterface = (*Client)(nil) // verify interface compliance
@@ -151,6 +155,7 @@ type GCPDataSource struct {
 	Description        string  // google_data_source.description
 	MaxScore           float32 // google_data_source.max_score
 	GCPProjectID       string  // gcp.gcp_project_id
+	ErrorNotifiedAt    time.Time
 }
 
 func (c *Client) ListGCPDataSource(ctx context.Context, projectID, gcpID uint32) (*[]GCPDataSource, error) {
@@ -182,7 +187,7 @@ where
 
 const selectGetGCPDataSource string = `
 select
-  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id
+  gds.*, google.name, google.max_score, google.description, gcp.gcp_project_id, gds.error_notified_at
 from
   gcp_data_source gds
   inner join google_data_source google using(google_data_source_id)
@@ -271,4 +276,40 @@ from
 		return nil, err
 	}
 	return &data, nil
+}
+
+type GCPScanError struct {
+	GCPID              uint32
+	GoogleDataSourceID uint32
+	ProjectID          uint32
+	DataSource         string
+	StatusDetail       string
+}
+
+const selectListGCPScanError = `
+select
+  gds.gcp_id, gds.google_data_source_id, g.name as data_source, gds.project_id, gds.status_detail
+from
+  gcp_data_source gds 
+  inner join google_data_source g using(google_data_source_id) 
+where
+  gds.status = 'ERROR'
+  and gds.error_notified_at is null
+`
+
+func (c *Client) ListGCPScanErrorForNotify(ctx context.Context) ([]*GCPScanError, error) {
+	data := []*GCPScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListGCPScanError).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateGCPErrorNotifiedAt = `update gcp_data_source set error_notified_at = ? where gcp_id = ? and google_data_source_id = ? and project_id = ?`
+
+func (c *Client) UpdateGCPErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, gcpID, googleDataSourceID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateGCPErrorNotifiedAt, errNotifiedAt, gcpID, googleDataSourceID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
 }
