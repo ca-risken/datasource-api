@@ -2,7 +2,6 @@ package datasource
 
 import (
 	"context"
-	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/alert"
@@ -17,6 +16,7 @@ import (
 type dsDBClient interface {
 	db.DataSourceRepoInterface
 	db.AWSRepoInterface
+	db.GoogleRepoInterface
 }
 
 type DataSourceService struct {
@@ -100,24 +100,11 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	return resp, nil
 }
 
-type ScanErrors struct {
-	// TODO: GCP, OSINT, Diagnosis, Code
-	awsErrors []*db.AWSScanError
-}
-
 func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
+	// Get scan errors
 	scanErrors := map[uint32]*ScanErrors{}
-
-	// AWS
-	awsList, err := d.dbClient.ListAWSScanErrorForNotify(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to ListAWSScanError: %s", err.Error())
-	}
-	for _, aws := range awsList {
-		if _, ok := scanErrors[aws.ProjectID]; !ok {
-			scanErrors[aws.ProjectID] = &ScanErrors{}
-		}
-		scanErrors[aws.ProjectID].awsErrors = append(scanErrors[aws.ProjectID].awsErrors, aws)
+	if err := d.setScanErrors(ctx, scanErrors); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to setScanErrors: %s", err.Error())
 	}
 
 	// Notify error per project
@@ -141,10 +128,8 @@ func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty)
 		}
 
 		// update err_notified_at
-		for _, aws := range errs.awsErrors {
-			if err := d.dbClient.UpdateAWSErrorNotifiedAt(ctx, time.Now(), aws.AWSID, aws.AWSDataSourceID, projectID); err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to UpdateErrorNotifiedAt: %s", err.Error())
-			}
+		if err := d.updateScanErrorNotifiedAt(ctx, projectID, errs); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to updateScanErrorNotifiedAt: %s", err.Error())
 		}
 	}
 	return &empty.Empty{}, nil

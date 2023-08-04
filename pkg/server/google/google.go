@@ -214,11 +214,16 @@ func (g *GoogleService) AttachGCPDataSource(ctx context.Context, req *google.Att
 	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
 		return nil, err
 	}
-	registerd, err := g.repository.UpsertGCPDataSource(ctx, req.GcpDataSource)
+	registered, err := g.repository.UpsertGCPDataSource(ctx, req.GcpDataSource)
 	if err != nil {
 		return nil, err
 	}
-	return &google.AttachGCPDataSourceResponse{GcpDataSource: convertGCPDataSource(registerd)}, nil
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != google.Status_ERROR.String() {
+		if err := g.repository.UpdateGCPErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.GCPID, registered.GoogleDataSourceID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &google.AttachGCPDataSourceResponse{GcpDataSource: convertGCPDataSource(registered)}, nil
 }
 
 func (g *GoogleService) DetachGCPDataSource(ctx context.Context, req *google.DetachGCPDataSourceRequest) (*google.Empty, error) {

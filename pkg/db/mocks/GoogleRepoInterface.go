@@ -176,6 +176,32 @@ func (_m *GoogleRepoInterface) ListGCPDataSourceByDataSourceID(ctx context.Conte
 	return r0, r1
 }
 
+// ListGCPScanErrorForNotify provides a mock function with given fields: ctx
+func (_m *GoogleRepoInterface) ListGCPScanErrorForNotify(ctx context.Context) ([]*db.GCPScanError, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*db.GCPScanError
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*db.GCPScanError, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*db.GCPScanError); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*db.GCPScanError)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListGoogleDataSource provides a mock function with given fields: ctx, googleDataSourceID, name
 func (_m *GoogleRepoInterface) ListGoogleDataSource(ctx context.Context, googleDataSourceID uint32, name string) (*[]model.GoogleDataSource, error) {
 	ret := _m.Called(ctx, googleDataSourceID, name)
@@ -200,6 +226,20 @@ func (_m *GoogleRepoInterface) ListGoogleDataSource(ctx context.Context, googleD
 	}
 
 	return r0, r1
+}
+
+// UpdateGCPErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, gcpID, googleDataSourceID, projectID
+func (_m *GoogleRepoInterface) UpdateGCPErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, gcpID uint32, googleDataSourceID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, gcpID, googleDataSourceID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, gcpID, googleDataSourceID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertGCP provides a mock function with given fields: ctx, gcp
