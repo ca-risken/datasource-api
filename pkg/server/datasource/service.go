@@ -101,10 +101,10 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 }
 
 func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
-	// Get scan errors
-	scanErrors := map[uint32]*ScanErrors{}
-	if err := d.setScanErrors(ctx, scanErrors); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to setScanErrors: %s", err.Error())
+	// Get scan errors for all projects
+	scanErrors, err := d.getScanErrors(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to getScanErrors: %s", err.Error())
 	}
 
 	// Notify error per project

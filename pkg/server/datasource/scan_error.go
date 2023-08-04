@@ -13,12 +13,13 @@ type ScanErrors struct {
 	gcpErrors []*db.GCPScanError
 }
 
-// setScanErrors sets the scan error as a map of scan error data keyed by the project ID
-func (d *DataSourceService) setScanErrors(ctx context.Context, scanErrors map[uint32]*ScanErrors) error {
+// getScanErrors returns the scan error as a map of scan error data keyed by the project ID
+func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*ScanErrors, error) {
+	scanErrors := map[uint32]*ScanErrors{}
 	// AWS
 	awsList, err := d.dbClient.ListAWSScanErrorForNotify(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, aws := range awsList {
 		if _, ok := scanErrors[aws.ProjectID]; !ok {
@@ -29,7 +30,7 @@ func (d *DataSourceService) setScanErrors(ctx context.Context, scanErrors map[ui
 	// GCP
 	gcpList, err := d.dbClient.ListGCPScanErrorForNotify(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, gcp := range gcpList {
 		if _, ok := scanErrors[gcp.ProjectID]; !ok {
@@ -37,7 +38,7 @@ func (d *DataSourceService) setScanErrors(ctx context.Context, scanErrors map[ui
 		}
 		scanErrors[gcp.ProjectID].gcpErrors = append(scanErrors[gcp.ProjectID].gcpErrors, gcp)
 	}
-	return nil
+	return scanErrors, nil
 }
 
 func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, projectID uint32, errs *ScanErrors) error {
