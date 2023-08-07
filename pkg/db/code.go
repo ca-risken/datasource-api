@@ -37,6 +37,11 @@ type CodeRepoInterface interface {
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
+
+	// scan error
+	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
+	UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
+	UpdateCodeDependencyErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
 }
 
 var _ CodeRepoInterface = (*Client)(nil) // verify interface compliance
@@ -342,7 +347,18 @@ func (c *Client) GetDependencySetting(ctx context.Context, projectID uint32, git
 }
 
 func (c *Client) UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error) {
-	param := model.CodeDependencySetting{
+	// exclude ErrorNotifiedAt
+	type codeDependencySetting struct {
+		CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
+		CodeDataSourceID    uint32
+		ProjectID           uint32
+		Status              string
+		StatusDetail        string
+		ScanAt              time.Time
+		CreatedAt           time.Time
+		UpdatedAt           time.Time
+	}
+	param := codeDependencySetting{
 		CodeGitHubSettingID: data.GithubSettingId,
 		CodeDataSourceID:    data.CodeDataSourceId,
 		ProjectID:           data.ProjectId,
@@ -350,11 +366,11 @@ func (c *Client) UpsertDependencySetting(ctx context.Context, data *code.Depende
 		StatusDetail:        data.StatusDetail,
 		ScanAt:              time.Unix(data.ScanAt, 0),
 	}
-	var savedData model.CodeDependencySetting
+	var savedData codeDependencySetting
 	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", param.ProjectID, param.CodeGitHubSettingID).Assign(param).FirstOrCreate(&savedData).Error; err != nil {
 		return nil, err
 	}
-	return &savedData, nil
+	return c.GetDependencySetting(ctx, param.ProjectID, param.CodeGitHubSettingID)
 }
 
 func (c *Client) DeleteDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
@@ -372,4 +388,57 @@ func (c *Client) GetGitHubSettingByUniqueIndex(ctx context.Context, projectID ui
 		return nil, err
 	}
 	return &data, nil
+}
+
+type GitHubScanError struct {
+	CodeGithubSettingID uint32
+	ProjectID           uint32
+	DataSource          string
+	StatusDetail        string
+}
+
+const selectListCodeGitHubScanError = `
+select
+  gitleaks.code_github_setting_id, cds.name as data_source, gitleaks.project_id, gitleaks.status_detail
+from
+  code_gitleaks_setting gitleaks
+  inner join code_data_source cds using(code_data_source_id) 
+where
+  gitleaks.status = 'ERROR'
+  and gitleaks.error_notified_at is null 
+union 
+select 
+  dependency.code_github_setting_id, cds.name as data_source, dependency.project_id, dependency.status_detail
+from
+  code_dependency_setting dependency
+  inner join code_data_source cds using(code_data_source_id) 
+where
+  dependency.status = 'ERROR'
+  and dependency.error_notified_at is null 
+`
+
+func (c *Client) ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error) {
+	data := []*GitHubScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListCodeGitHubScanError).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateCodeGitleaksErrorNotifiedAt = `update code_gitleaks_setting set error_notified_at = ? where code_github_setting_id = ? and project_id = ?`
+
+func (c *Client) UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeGitleaksErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+const updateCodeDependencyErrorNotifiedAt = `update code_dependency_setting set error_notified_at = ? where code_github_setting_id = ? and project_id = ?`
+
+func (c *Client) UpdateCodeDependencyErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeDependencyErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
 }

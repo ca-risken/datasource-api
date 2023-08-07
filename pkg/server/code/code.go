@@ -232,11 +232,16 @@ func (c *CodeService) PutGitleaksSetting(ctx context.Context, req *code.PutGitle
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := c.repository.UpsertGitleaksSetting(ctx, req.GitleaksSetting)
+	registered, err := c.repository.UpsertGitleaksSetting(ctx, req.GitleaksSetting)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutGitleaksSettingResponse{GitleaksSetting: convertGitleaksSetting(registerd)}, nil
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != code.Status_ERROR.String() {
+		if err := c.repository.UpdateCodeGitleaksErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.CodeGitHubSettingID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &code.PutGitleaksSettingResponse{GitleaksSetting: convertGitleaksSetting(registered)}, nil
 }
 
 func (c *CodeService) DeleteGitleaksSetting(ctx context.Context, req *code.DeleteGitleaksSettingRequest) (*empty.Empty, error) {
@@ -318,11 +323,16 @@ func (c *CodeService) PutDependencySetting(ctx context.Context, req *code.PutDep
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := c.repository.UpsertDependencySetting(ctx, req.DependencySetting)
+	registered, err := c.repository.UpsertDependencySetting(ctx, req.DependencySetting)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutDependencySettingResponse{DependencySetting: convertDependencySetting(registerd)}, nil
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != code.Status_ERROR.String() {
+		if err := c.repository.UpdateCodeDependencyErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.CodeGitHubSettingID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &code.PutDependencySettingResponse{DependencySetting: convertDependencySetting(registered)}, nil
 }
 
 func (c *CodeService) DeleteDependencySetting(ctx context.Context, req *code.DeleteDependencySettingRequest) (*empty.Empty, error) {

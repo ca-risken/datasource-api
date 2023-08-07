@@ -7,6 +7,8 @@ import (
 
 	code "github.com/ca-risken/datasource-api/proto/code"
 
+	db "github.com/ca-risken/datasource-api/pkg/db"
+
 	mock "github.com/stretchr/testify/mock"
 
 	model "github.com/ca-risken/datasource-api/pkg/model"
@@ -203,6 +205,32 @@ func (_m *CodeRepoInterface) ListCodeDataSource(ctx context.Context, codeDataSou
 	return r0, r1
 }
 
+// ListCodeGitHubScanErrorForNotify provides a mock function with given fields: ctx
+func (_m *CodeRepoInterface) ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*db.GitHubScanError, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*db.GitHubScanError
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*db.GitHubScanError, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*db.GitHubScanError); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*db.GitHubScanError)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListDependencySetting provides a mock function with given fields: ctx, projectID
 func (_m *CodeRepoInterface) ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error) {
 	ret := _m.Called(ctx, projectID)
@@ -305,6 +333,34 @@ func (_m *CodeRepoInterface) ListGitleaksSetting(ctx context.Context, projectID 
 	}
 
 	return r0, r1
+}
+
+// UpdateCodeDependencyErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, codeGithubSettingID, projectID
+func (_m *CodeRepoInterface) UpdateCodeDependencyErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, codeGithubSettingID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, codeGithubSettingID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateCodeGitleaksErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, codeGithubSettingID, projectID
+func (_m *CodeRepoInterface) UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, codeGithubSettingID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, codeGithubSettingID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertDependencySetting provides a mock function with given fields: ctx, data

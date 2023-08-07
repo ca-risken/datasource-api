@@ -104,6 +104,25 @@ func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *Sc
 			},
 		})
 	}
+	for _, g := range scanErrors.githubErrors {
+		attachments = append(attachments, slack.Attachment{
+			Color: "warning",
+			Fields: []slack.AttachmentField{
+				{
+					Title: "DataSource",
+					Value: fmt.Sprintf("<%s?project_id=%d&from=slack|%s>",
+						getDataSourceSettingURL(d.baseURL, g.DataSource),
+						projectID,
+						g.DataSource,
+					),
+				},
+				{
+					Title: "ErrorMessage",
+					Value: g.StatusDetail,
+				},
+			},
+		})
+	}
 	return attachments
 }
 
@@ -113,6 +132,8 @@ func getDataSourceSettingURL(baseURL, dataSource string) string {
 		return fmt.Sprintf("%s/#/aws/data-source", baseURL)
 	case strings.HasPrefix(dataSource, "google:"):
 		return fmt.Sprintf("%s/#/google/gcp-data-source", baseURL)
+	case strings.HasPrefix(dataSource, "code:"):
+		return fmt.Sprintf("%s/#/code/github", baseURL)
 	default:
 		return baseURL
 	}
