@@ -8,9 +8,10 @@ import (
 )
 
 type ScanErrors struct {
-	// TODO: OSINT, Diagnosis, Code
-	awsErrors []*db.AWSScanError
-	gcpErrors []*db.GCPScanError
+	// TODO: OSINT, Diagnosis
+	awsErrors      []*db.AWSScanError
+	gcpErrors      []*db.GCPScanError
+	gitleaksErrors []*db.GitleaksScanError
 }
 
 // getScanErrors returns the scan error as a map of scan error data keyed by the project ID
@@ -38,6 +39,18 @@ func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*Scan
 		}
 		scanErrors[gcp.ProjectID].gcpErrors = append(scanErrors[gcp.ProjectID].gcpErrors, gcp)
 	}
+	// Code
+	gitleaksList, err := d.dbClient.ListCodeGitleaksScanErrorForNotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, gitleaks := range gitleaksList {
+		if _, ok := scanErrors[gitleaks.ProjectID]; !ok {
+			scanErrors[gitleaks.ProjectID] = &ScanErrors{}
+		}
+		scanErrors[gitleaks.ProjectID].gitleaksErrors = append(scanErrors[gitleaks.ProjectID].gitleaksErrors, gitleaks)
+	}
+
 	return scanErrors, nil
 }
 
@@ -49,6 +62,11 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 	}
 	for _, gcp := range errs.gcpErrors {
 		if err := d.dbClient.UpdateGCPErrorNotifiedAt(ctx, time.Now(), gcp.GCPID, gcp.GoogleDataSourceID, projectID); err != nil {
+			return err
+		}
+	}
+	for _, gitleaks := range errs.gitleaksErrors {
+		if err := d.dbClient.UpdateCodeGitleaksErrorNotifiedAt(ctx, time.Now(), gitleaks.CodeGithubSettingID, projectID); err != nil {
 			return err
 		}
 	}

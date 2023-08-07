@@ -37,6 +37,10 @@ type CodeRepoInterface interface {
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
+
+	// scan error
+	ListCodeGitleaksScanErrorForNotify(ctx context.Context) ([]*GitleaksScanError, error)
+	UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
 }
 
 var _ CodeRepoInterface = (*Client)(nil) // verify interface compliance
@@ -372,4 +376,39 @@ func (c *Client) GetGitHubSettingByUniqueIndex(ctx context.Context, projectID ui
 		return nil, err
 	}
 	return &data, nil
+}
+
+type GitleaksScanError struct {
+	CodeGithubSettingID uint32
+	ProjectID           uint32
+	DataSource          string
+	StatusDetail        string
+}
+
+const selectListCodeGitleaksScanError = `
+select
+  cgs.code_github_setting_id, cds.name as data_source, cgs.project_id, cgs.status_detail
+from
+  code_gitleaks_setting cgs
+  inner join code_data_source cds using(code_data_source_id) 
+where
+  cgs.status = 'ERROR'
+  and cgs.error_notified_at is null
+`
+
+func (c *Client) ListCodeGitleaksScanErrorForNotify(ctx context.Context) ([]*GitleaksScanError, error) {
+	data := []*GitleaksScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListCodeGitleaksScanError).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateCodeGitleaksErrorNotifiedAt = `update code_gitleaks_setting set error_notified_at = ? where code_github_setting_id = ? and project_id = ?`
+
+func (c *Client) UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeGitleaksErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
 }
