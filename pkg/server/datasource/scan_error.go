@@ -2,16 +2,18 @@ package datasource
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/message"
 )
 
 type ScanErrors struct {
 	// TODO: OSINT, Diagnosis
-	awsErrors      []*db.AWSScanError
-	gcpErrors      []*db.GCPScanError
-	gitleaksErrors []*db.GitleaksScanError
+	awsErrors    []*db.AWSScanError
+	gcpErrors    []*db.GCPScanError
+	githubErrors []*db.GitHubScanError
 }
 
 // getScanErrors returns the scan error as a map of scan error data keyed by the project ID
@@ -40,15 +42,15 @@ func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*Scan
 		scanErrors[gcp.ProjectID].gcpErrors = append(scanErrors[gcp.ProjectID].gcpErrors, gcp)
 	}
 	// Code
-	gitleaksList, err := d.dbClient.ListCodeGitleaksScanErrorForNotify(ctx)
+	githubList, err := d.dbClient.ListCodeGitHubScanErrorForNotify(ctx)
 	if err != nil {
 		return nil, err
 	}
-	for _, gitleaks := range gitleaksList {
-		if _, ok := scanErrors[gitleaks.ProjectID]; !ok {
-			scanErrors[gitleaks.ProjectID] = &ScanErrors{}
+	for _, github := range githubList {
+		if _, ok := scanErrors[github.ProjectID]; !ok {
+			scanErrors[github.ProjectID] = &ScanErrors{}
 		}
-		scanErrors[gitleaks.ProjectID].gitleaksErrors = append(scanErrors[gitleaks.ProjectID].gitleaksErrors, gitleaks)
+		scanErrors[github.ProjectID].githubErrors = append(scanErrors[github.ProjectID].githubErrors, github)
 	}
 
 	return scanErrors, nil
@@ -65,9 +67,18 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 			return err
 		}
 	}
-	for _, gitleaks := range errs.gitleaksErrors {
-		if err := d.dbClient.UpdateCodeGitleaksErrorNotifiedAt(ctx, time.Now(), gitleaks.CodeGithubSettingID, projectID); err != nil {
-			return err
+	for _, github := range errs.githubErrors {
+		switch {
+		case github.DataSource == message.GitleaksDataSource:
+			if err := d.dbClient.UpdateCodeGitleaksErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
+				return err
+			}
+		case github.DataSource == message.DependencyDataSource:
+			if err := d.dbClient.UpdateCodeDependencyErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown data source: %s", github.DataSource)
 		}
 	}
 	return nil

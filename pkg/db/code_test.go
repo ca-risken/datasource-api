@@ -941,15 +941,18 @@ func TestUpsertDependencySetting(t *testing.T) {
 			args: args{
 				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
-			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, ErrorNotifiedAt: now, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now))
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now))
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta("UPDATE `code_dependency_setting` SET `code_data_source_id`=?,`code_github_setting_id`=?,`project_id`=?,`scan_at`=?,`status`=?,`status_detail`=?,`updated_at`=? WHERE (project_id = ? AND code_github_setting_id = ?) AND `code_github_setting_id` = ?")).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now, now))
 			},
 		},
 		{
@@ -957,7 +960,7 @@ func TestUpsertDependencySetting(t *testing.T) {
 			args: args{
 				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
-			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, ErrorNotifiedAt: now, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
@@ -965,6 +968,9 @@ func TestUpsertDependencySetting(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `code_dependency_setting` (`code_data_source_id`,`project_id`,`status`,`status_detail`,`scan_at`,`created_at`,`updated_at`,`code_github_setting_id`) VALUES (?,?,?,?,?,?,?,?)")).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now, now))
 			},
 		},
 		{
@@ -1061,17 +1067,17 @@ func TestListCodeGitleaksScanErrorForNotify(t *testing.T) {
 	}
 	cases := []struct {
 		name        string
-		want        []*GitleaksScanError
+		want        []*GitHubScanError
 		wantErr     bool
 		mockClosure func(mock sqlmock.Sqlmock)
 	}{
 		{
 			name: "OK",
-			want: []*GitleaksScanError{
+			want: []*GitHubScanError{
 				{CodeGithubSettingID: 1, ProjectID: 1, DataSource: "code:gitleaks", StatusDetail: "detail"},
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(selectListCodeGitleaksScanError)).WillReturnRows(
+				mock.ExpectQuery(regexp.QuoteMeta(selectListCodeGitHubScanError)).WillReturnRows(
 					sqlmock.NewRows([]string{"code_github_setting_id", "project_id", "data_source", "status_detail"}).
 						AddRow(1, 1, "code:gitleaks", "detail"))
 			},
@@ -1080,7 +1086,7 @@ func TestListCodeGitleaksScanErrorForNotify(t *testing.T) {
 			name:    "NG DB error",
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(selectListCodeGitleaksScanError)).WillReturnError(errors.New("DB error"))
+				mock.ExpectQuery(regexp.QuoteMeta(selectListCodeGitHubScanError)).WillReturnError(errors.New("DB error"))
 			},
 		},
 	}
@@ -1088,7 +1094,7 @@ func TestListCodeGitleaksScanErrorForNotify(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := context.Background()
 			c.mockClosure(mock)
-			got, err := db.ListCodeGitleaksScanErrorForNotify(ctx)
+			got, err := db.ListCodeGitHubScanErrorForNotify(ctx)
 			if err != nil && !c.wantErr {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
@@ -1141,6 +1147,55 @@ func TestUpdateCodeGitleaksErrorNotifiedAt(t *testing.T) {
 			ctx := context.Background()
 			c.mockClosure(mock)
 			err = db.UpdateCodeGitleaksErrorNotifiedAt(ctx, c.args.errNotifiedAt, c.args.codeGithubSettingID, c.args.projectID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("There were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestUpdateCodeDependencyErrorNotifiedAt(t *testing.T) {
+	now := time.Now()
+	db, mock, err := newDBMock()
+	if err != nil {
+		t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+	}
+
+	type args struct {
+		errNotifiedAt       interface{}
+		codeGithubSettingID uint32
+		projectID           uint32
+	}
+	cases := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: args{errNotifiedAt: now, projectID: 1, codeGithubSettingID: 1},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeDependencyErrorNotifiedAt)).WillReturnResult(sqlmock.NewResult(1, 1))
+			},
+		},
+		{
+			name:    "NG DB error",
+			args:    args{errNotifiedAt: now, projectID: 1, codeGithubSettingID: 1},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeDependencyErrorNotifiedAt)).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			c.mockClosure(mock)
+			err = db.UpdateCodeDependencyErrorNotifiedAt(ctx, c.args.errNotifiedAt, c.args.codeGithubSettingID, c.args.projectID)
 			if err != nil && !c.wantErr {
 				t.Fatalf("Unexpected error: %+v", err)
 			}

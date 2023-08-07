@@ -323,11 +323,16 @@ func (c *CodeService) PutDependencySetting(ctx context.Context, req *code.PutDep
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	registerd, err := c.repository.UpsertDependencySetting(ctx, req.DependencySetting)
+	registered, err := c.repository.UpsertDependencySetting(ctx, req.DependencySetting)
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutDependencySettingResponse{DependencySetting: convertDependencySetting(registerd)}, nil
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != code.Status_ERROR.String() {
+		if err := c.repository.UpdateCodeDependencyErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.CodeGitHubSettingID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &code.PutDependencySettingResponse{DependencySetting: convertDependencySetting(registered)}, nil
 }
 
 func (c *CodeService) DeleteDependencySetting(ctx context.Context, req *code.DeleteDependencySettingRequest) (*empty.Empty, error) {

@@ -104,7 +104,7 @@ func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *Sc
 			},
 		})
 	}
-	for _, g := range scanErrors.gitleaksErrors {
+	for _, g := range scanErrors.githubErrors {
 		attachments = append(attachments, slack.Attachment{
 			Color: "warning",
 			Fields: []slack.AttachmentField{
