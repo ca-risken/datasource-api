@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	db "github.com/ca-risken/datasource-api/pkg/db"
 	mock "github.com/stretchr/testify/mock"
 
 	model "github.com/ca-risken/datasource-api/pkg/model"
@@ -373,6 +374,32 @@ func (_m *DiagnosisRepoInterface) ListDiagnosisDataSource(_a0 context.Context, _
 	return r0, r1
 }
 
+// ListDiagnosisScanErrorForNotify provides a mock function with given fields: ctx
+func (_m *DiagnosisRepoInterface) ListDiagnosisScanErrorForNotify(ctx context.Context) ([]*db.DiagnosisScanError, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*db.DiagnosisScanError
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*db.DiagnosisScanError, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*db.DiagnosisScanError); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*db.DiagnosisScanError)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListPortscanSetting provides a mock function with given fields: _a0, _a1, _a2
 func (_m *DiagnosisRepoInterface) ListPortscanSetting(_a0 context.Context, _a1 uint32, _a2 uint32) (*[]model.PortscanSetting, error) {
 	ret := _m.Called(_a0, _a1, _a2)
@@ -449,6 +476,48 @@ func (_m *DiagnosisRepoInterface) ListWpscanSetting(_a0 context.Context, _a1 uin
 	}
 
 	return r0, r1
+}
+
+// UpdateDiagnosisAppScanErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, scanID, projectID
+func (_m *DiagnosisRepoInterface) UpdateDiagnosisAppScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, scanID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, scanID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateDiagnosisPortscanErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, scanID, projectID
+func (_m *DiagnosisRepoInterface) UpdateDiagnosisPortscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, scanID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, scanID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpdateDiagnosisWpscanErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, scanID, projectID
+func (_m *DiagnosisRepoInterface) UpdateDiagnosisWpscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, scanID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, scanID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertApplicationScan provides a mock function with given fields: _a0, _a1

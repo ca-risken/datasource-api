@@ -36,6 +36,12 @@ type DiagnosisRepoInterface interface {
 
 	//for InvokeScan
 	ListAllWpscanSetting(context.Context) (*[]model.WpscanSetting, error)
+
+	// scan error
+	ListDiagnosisScanErrorForNotify(ctx context.Context) ([]*DiagnosisScanError, error)
+	UpdateDiagnosisWpscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error
+	UpdateDiagnosisPortscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error
+	UpdateDiagnosisAppScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error
 }
 
 var _ DiagnosisRepoInterface = (*Client)(nil) // verify interface compliance
@@ -364,4 +370,76 @@ func applicationScanBasicSettingToMap(applicationScanBasicSetting *model.Applica
 		"max_children":                      applicationScanBasicSetting.MaxChildren,
 	}
 	return settingMap
+}
+
+type DiagnosisScanError struct {
+	ScanID       uint32
+	ProjectID    uint32
+	DataSource   string
+	StatusDetail string
+}
+
+const selectListDiagnosisScanErrorForNotify = `
+select
+  wp.wpscan_setting_id as scan_id, ds.name as data_source, wp.project_id, wp.status_detail
+from
+  wpscan_setting wp
+  inner join diagnosis_data_source ds using(diagnosis_data_source_id) 
+where
+  wp.status = 'ERROR'
+  and wp.error_notified_at is null 
+union 
+select 
+  pt.portscan_target_id as scan_id, ds.name as data_source, pt.project_id, pt.status_detail
+from
+  portscan_target pt
+  inner join portscan_setting ps using(portscan_setting_id)
+  inner join diagnosis_data_source ds using(diagnosis_data_source_id) 
+where
+  pt.status = 'ERROR'
+  and pt.error_notified_at is null 
+union 
+select 
+  app.application_scan_id as scan_id, ds.name as data_source, app.project_id, app.status_detail
+from
+  application_scan app
+  inner join diagnosis_data_source ds using(diagnosis_data_source_id) 
+where
+  app.status = 'ERROR'
+  and app.error_notified_at is null 
+`
+
+func (c *Client) ListDiagnosisScanErrorForNotify(ctx context.Context) ([]*DiagnosisScanError, error) {
+	data := []*DiagnosisScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListDiagnosisScanErrorForNotify).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateDiagnosisWpscanErrorNotifiedAt = `update wpscan_setting set error_notified_at = ? where wpscan_setting_id = ? and project_id = ?`
+
+func (c *Client) UpdateDiagnosisWpscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateDiagnosisWpscanErrorNotifiedAt, errNotifiedAt, scanID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+const updateDiagnosisPortscanErrorNotifiedAt = `update portscan_target set error_notified_at = ? where portscan_target_id = ? and project_id = ?`
+
+func (c *Client) UpdateDiagnosisPortscanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateDiagnosisPortscanErrorNotifiedAt, errNotifiedAt, scanID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+const updateDiagnosisAppScanErrorNotifiedAt = `update application_scan set error_notified_at = ? where application_scan_id = ? and project_id = ?`
+
+func (c *Client) UpdateDiagnosisAppScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, scanID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateDiagnosisAppScanErrorNotifiedAt, errNotifiedAt, scanID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
 }

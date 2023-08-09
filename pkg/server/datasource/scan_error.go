@@ -10,10 +10,11 @@ import (
 )
 
 type ScanErrors struct {
-	// TODO: OSINT, Diagnosis
-	awsErrors    []*db.AWSScanError
-	gcpErrors    []*db.GCPScanError
-	githubErrors []*db.GitHubScanError
+	// TODO: OSINT
+	awsErrors       []*db.AWSScanError
+	gcpErrors       []*db.GCPScanError
+	githubErrors    []*db.GitHubScanError
+	diagnosisErrors []*db.DiagnosisScanError
 }
 
 // getScanErrors returns the scan error as a map of scan error data keyed by the project ID
@@ -52,6 +53,17 @@ func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*Scan
 		}
 		scanErrors[github.ProjectID].githubErrors = append(scanErrors[github.ProjectID].githubErrors, github)
 	}
+	// Diagnosis
+	diagnosisList, err := d.dbClient.ListDiagnosisScanErrorForNotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, diagnosis := range diagnosisList {
+		if _, ok := scanErrors[diagnosis.ProjectID]; !ok {
+			scanErrors[diagnosis.ProjectID] = &ScanErrors{}
+		}
+		scanErrors[diagnosis.ProjectID].diagnosisErrors = append(scanErrors[diagnosis.ProjectID].diagnosisErrors, diagnosis)
+	}
 
 	return scanErrors, nil
 }
@@ -81,5 +93,24 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 			return fmt.Errorf("unknown data source: %s", github.DataSource)
 		}
 	}
+	for _, diagnosis := range errs.diagnosisErrors {
+		switch {
+		case diagnosis.DataSource == message.DataSourceNameWPScan:
+			if err := d.dbClient.UpdateDiagnosisWpscanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
+				return err
+			}
+		case diagnosis.DataSource == message.DataSourceNamePortScan:
+			if err := d.dbClient.UpdateDiagnosisPortscanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
+				return err
+			}
+		case diagnosis.DataSource == message.DataSourceNameApplicationScan:
+			if err := d.dbClient.UpdateDiagnosisAppScanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unknown data source: %s", diagnosis.DataSource)
+		}
+	}
+
 	return nil
 }

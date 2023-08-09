@@ -72,12 +72,17 @@ func (d *DiagnosisService) PutApplicationScan(ctx context.Context, req *diagnosi
 		ScanAt:                time.Unix(req.ApplicationScan.ScanAt, 0),
 	}
 
-	registerdData, err := d.repository.UpsertApplicationScan(ctx, data)
+	registeredData, err := d.repository.UpsertApplicationScan(ctx, data)
 	if err != nil {
 		d.logger.Errorf(ctx, "Failed to Put ApplicationScan, error: %v", err)
 		return nil, err
 	}
-	return &diagnosis.PutApplicationScanResponse{ApplicationScan: convertApplicationScan(registerdData)}, nil
+	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != diagnosis.Status_ERROR.String() {
+		if err := d.repository.UpdateDiagnosisAppScanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.ApplicationScanID, registeredData.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &diagnosis.PutApplicationScanResponse{ApplicationScan: convertApplicationScan(registeredData)}, nil
 }
 
 func (d *DiagnosisService) DeleteApplicationScan(ctx context.Context, req *diagnosis.DeleteApplicationScanRequest) (*empty.Empty, error) {
