@@ -24,6 +24,7 @@ type WpscanSetting struct {
 	Status                string
 	StatusDetail          string
 	ScanAt                time.Time
+	ErrorNotifiedAt       time.Time
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 }
@@ -47,6 +48,7 @@ type PortscanTarget struct {
 	Status            string
 	StatusDetail      string
 	ScanAt            time.Time
+	ErrorNotifiedAt   time.Time
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }
@@ -61,6 +63,7 @@ type ApplicationScan struct {
 	Status                string
 	StatusDetail          string
 	ScanAt                time.Time
+	ErrorNotifiedAt       time.Time
 	CreatedAt             time.Time
 	UpdatedAt             time.Time
 }

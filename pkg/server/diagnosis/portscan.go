@@ -139,12 +139,17 @@ func (d *DiagnosisService) PutPortscanTarget(ctx context.Context, req *diagnosis
 		ScanAt:            time.Unix(req.PortscanTarget.ScanAt, 0),
 	}
 
-	registerdData, err := d.repository.UpsertPortscanTarget(ctx, data)
+	registeredData, err := d.repository.UpsertPortscanTarget(ctx, data)
 	if err != nil {
 		d.logger.Errorf(ctx, "Failed to Put PortscanTarget, error: %v", err)
 		return nil, err
 	}
-	return &diagnosis.PutPortscanTargetResponse{PortscanTarget: convertPortscanTarget(registerdData)}, nil
+	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != diagnosis.Status_ERROR.String() {
+		if err := d.repository.UpdateDiagnosisPortscanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.PortscanTargetID, registeredData.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &diagnosis.PutPortscanTargetResponse{PortscanTarget: convertPortscanTarget(registeredData)}, nil
 }
 
 func (d *DiagnosisService) DeletePortscanTarget(ctx context.Context, req *diagnosis.DeletePortscanTargetRequest) (*empty.Empty, error) {

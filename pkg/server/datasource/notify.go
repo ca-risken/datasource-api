@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ca-risken/core/proto/alert"
+	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/slack-go/slack"
 )
 
@@ -67,63 +68,38 @@ func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32,
 func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *ScanErrors) []slack.Attachment {
 	attachments := []slack.Attachment{}
 	for _, aws := range scanErrors.awsErrors {
-		attachments = append(attachments, slack.Attachment{
-			Color: "warning",
-			Fields: []slack.AttachmentField{
-				{
-					Title: "DataSource",
-					Value: fmt.Sprintf("<%s?project_id=%d&from=slack|%s>",
-						getDataSourceSettingURL(d.baseURL, aws.DataSource),
-						projectID,
-						aws.DataSource,
-					),
-				},
-				{
-					Title: "ErrorMessage",
-					Value: aws.StatusDetail,
-				},
-			},
-		})
+		attachments = append(attachments, generateSlackAttachMent(d.baseURL, aws.DataSource, aws.StatusDetail, projectID))
 	}
 	for _, gcp := range scanErrors.gcpErrors {
-		attachments = append(attachments, slack.Attachment{
-			Color: "warning",
-			Fields: []slack.AttachmentField{
-				{
-					Title: "DataSource",
-					Value: fmt.Sprintf("<%s?project_id=%d&from=slack|%s>",
-						getDataSourceSettingURL(d.baseURL, gcp.DataSource),
-						projectID,
-						gcp.DataSource,
-					),
-				},
-				{
-					Title: "ErrorMessage",
-					Value: gcp.StatusDetail,
-				},
-			},
-		})
+		attachments = append(attachments, generateSlackAttachMent(d.baseURL, gcp.DataSource, gcp.StatusDetail, projectID))
 	}
 	for _, g := range scanErrors.githubErrors {
-		attachments = append(attachments, slack.Attachment{
-			Color: "warning",
-			Fields: []slack.AttachmentField{
-				{
-					Title: "DataSource",
-					Value: fmt.Sprintf("<%s?project_id=%d&from=slack|%s>",
-						getDataSourceSettingURL(d.baseURL, g.DataSource),
-						projectID,
-						g.DataSource,
-					),
-				},
-				{
-					Title: "ErrorMessage",
-					Value: g.StatusDetail,
-				},
-			},
-		})
+		attachments = append(attachments, generateSlackAttachMent(d.baseURL, g.DataSource, g.StatusDetail, projectID))
+	}
+	for _, diagnosis := range scanErrors.diagnosisErrors {
+		attachments = append(attachments, generateSlackAttachMent(d.baseURL, diagnosis.DataSource, diagnosis.StatusDetail, projectID))
 	}
 	return attachments
+}
+
+func generateSlackAttachMent(baseURL, dataSource, errorMessage string, projectID uint32) slack.Attachment {
+	return slack.Attachment{
+		Color: "warning",
+		Fields: []slack.AttachmentField{
+			{
+				Title: "DataSource",
+				Value: fmt.Sprintf("<%s?project_id=%d&from=slack|%s>",
+					getDataSourceSettingURL(baseURL, dataSource),
+					projectID,
+					dataSource,
+				),
+			},
+			{
+				Title: "ErrorMessage",
+				Value: errorMessage,
+			},
+		},
+	}
 }
 
 func getDataSourceSettingURL(baseURL, dataSource string) string {
@@ -134,6 +110,12 @@ func getDataSourceSettingURL(baseURL, dataSource string) string {
 		return fmt.Sprintf("%s/#/google/gcp-data-source", baseURL)
 	case strings.HasPrefix(dataSource, "code:"):
 		return fmt.Sprintf("%s/#/code/github", baseURL)
+	case dataSource == message.DataSourceNameWPScan:
+		return fmt.Sprintf("%s/#/diagnosis/wpscan", baseURL)
+	case dataSource == message.DataSourceNamePortScan:
+		return fmt.Sprintf("%s/#/diagnosis/portscan", baseURL)
+	case dataSource == message.DataSourceNameApplicationScan:
+		return fmt.Sprintf("%s/#/diagnosis/applicationscan", baseURL)
 	default:
 		return baseURL
 	}
