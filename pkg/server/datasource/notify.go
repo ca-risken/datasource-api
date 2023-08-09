@@ -68,24 +68,24 @@ func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32,
 func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *ScanErrors) []slack.Attachment {
 	attachments := []slack.Attachment{}
 	for _, aws := range scanErrors.awsErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, aws.DataSource, aws.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, aws.DataSource, aws.StatusDetail, projectID))
 	}
 	for _, gcp := range scanErrors.gcpErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, gcp.DataSource, gcp.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, gcp.DataSource, gcp.StatusDetail, projectID))
 	}
 	for _, g := range scanErrors.githubErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, g.DataSource, g.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, g.DataSource, g.StatusDetail, projectID))
 	}
 	for _, diagnosis := range scanErrors.diagnosisErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, diagnosis.DataSource, diagnosis.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, diagnosis.DataSource, diagnosis.StatusDetail, projectID))
 	}
 	for _, o := range scanErrors.osintErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, o.DataSource, o.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, o.DataSource, o.StatusDetail, projectID))
 	}
 	return attachments
 }
 
-func generateSlackAttachMent(baseURL, dataSource, errorMessage string, projectID uint32) slack.Attachment {
+func generateSlackAttachment(baseURL, dataSource, errorMessage string, projectID uint32) slack.Attachment {
 	return slack.Attachment{
 		Color: "warning",
 		Fields: []slack.AttachmentField{
