@@ -26,6 +26,10 @@ type OSINTRepoInterface interface {
 	DeleteOsintDetectWord(context.Context, uint32, uint32) error
 	// For Invoke
 	ListAllRelOsintDataSource(context.Context, uint32) (*[]model.RelOsintDataSource, error)
+
+	// scan error
+	ListOsintScanErrorForNotify(ctx context.Context) ([]*OsintScanError, error)
+	UpdateOsintErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, relOsintDataSourceID, projectID uint32) error
 }
 
 var _ OSINTRepoInterface = (*Client)(nil) // verify interface compliance
@@ -198,6 +202,41 @@ func (c *Client) UpsertOsintDetectWord(ctx context.Context, data *model.OsintDet
 
 func (c *Client) DeleteOsintDetectWord(ctx context.Context, projectID uint32, osintDetectWordID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND osint_detect_word_id = ?", projectID, osintDetectWordID).Delete(&model.OsintDetectWord{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+type OsintScanError struct {
+	RelOsintDataSourceID uint32 `json:"rel_osint_data_source"`
+	ProjectID            uint32 `json:"project_id"`
+	DataSource           string `json:"data_source"`
+	StatusDetail         string `json:"status_detail"`
+}
+
+const selectListOsintScanErrorForNotify = `
+select
+  rods.rel_osint_data_source_id, ods.name as data_source, rods.project_id, rods.status_detail
+from
+  rel_osint_data_source rods
+  inner join osint_data_source ods using(osint_data_source_id) 
+where
+  rods.status = 'ERROR'
+  and rods.error_notified_at is null
+`
+
+func (c *Client) ListOsintScanErrorForNotify(ctx context.Context) ([]*OsintScanError, error) {
+	data := []*OsintScanError{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListOsintScanErrorForNotify).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+const updateOsintErrorNotifiedAt = `update rel_osint_data_source set error_notified_at = ? where rel_osint_data_source_id = ? and project_id = ?`
+
+func (c *Client) UpdateOsintErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, relOsintDataSourceID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateOsintErrorNotifiedAt, errNotifiedAt, relOsintDataSourceID, projectID).Error; err != nil {
 		return err
 	}
 	return nil

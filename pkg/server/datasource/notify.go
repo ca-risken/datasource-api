@@ -19,13 +19,13 @@ const (
 エラー原因は複数の可能性があります。エラーメッセージから判断がつかない場合はシステム管理者にお問い合わせください。
 
 - 設定ミスの場合はスキャン設定を修正してください。
-- スキャン対象の障害や一時的なネットワークエラーなどが発生している場合(サーバー側の問題)は、しばらく待ってから再度スキャンを実行するか次回のスケール実行までお待ち下さい。
+- スキャン対象の障害や一時的なネットワークエラーなどが発生している場合(サーバー側の問題)は、しばらく待ってから再度スキャンを実行するか次回のスケジュール実行までお待ち下さい。
 `
 	MESSAGE_EN = `Scan error has occurred.
 There could be multiple possible reasons for the error. If you cannot determine the cause from the error message, please contact your system administrator.
 
 - If there is a setting mistake, please correct your scan settings.
-- If there are issues such as malfunctions of the scan target or temporary network errors (server-side issues), please wait for a while before running the scan again, or wait until the next scale execution.
+- If there are issues such as malfunctions of the scan target or temporary network errors (server-side issues), please wait for a while before running the scan again, or wait until the next scheduled scan.
 `
 )
 
@@ -68,21 +68,24 @@ func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32,
 func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *ScanErrors) []slack.Attachment {
 	attachments := []slack.Attachment{}
 	for _, aws := range scanErrors.awsErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, aws.DataSource, aws.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, aws.DataSource, aws.StatusDetail, projectID))
 	}
 	for _, gcp := range scanErrors.gcpErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, gcp.DataSource, gcp.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, gcp.DataSource, gcp.StatusDetail, projectID))
 	}
 	for _, g := range scanErrors.githubErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, g.DataSource, g.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, g.DataSource, g.StatusDetail, projectID))
 	}
 	for _, diagnosis := range scanErrors.diagnosisErrors {
-		attachments = append(attachments, generateSlackAttachMent(d.baseURL, diagnosis.DataSource, diagnosis.StatusDetail, projectID))
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, diagnosis.DataSource, diagnosis.StatusDetail, projectID))
+	}
+	for _, o := range scanErrors.osintErrors {
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, o.DataSource, o.StatusDetail, projectID))
 	}
 	return attachments
 }
 
-func generateSlackAttachMent(baseURL, dataSource, errorMessage string, projectID uint32) slack.Attachment {
+func generateSlackAttachment(baseURL, dataSource, errorMessage string, projectID uint32) slack.Attachment {
 	return slack.Attachment{
 		Color: "warning",
 		Fields: []slack.AttachmentField{
@@ -116,6 +119,8 @@ func getDataSourceSettingURL(baseURL, dataSource string) string {
 		return fmt.Sprintf("%s/#/diagnosis/portscan", baseURL)
 	case dataSource == message.DataSourceNameApplicationScan:
 		return fmt.Sprintf("%s/#/diagnosis/applicationscan", baseURL)
+	case strings.HasPrefix(dataSource, "osint:"):
+		return fmt.Sprintf("%s/#/osint/data-source", baseURL)
 	default:
 		return baseURL
 	}
