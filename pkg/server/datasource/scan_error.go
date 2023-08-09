@@ -10,11 +10,11 @@ import (
 )
 
 type ScanErrors struct {
-	// TODO: OSINT
 	awsErrors       []*db.AWSScanError
 	gcpErrors       []*db.GCPScanError
 	githubErrors    []*db.GitHubScanError
 	diagnosisErrors []*db.DiagnosisScanError
+	osintErrors     []*db.OsintScanError
 }
 
 // getScanErrors returns the scan error as a map of scan error data keyed by the project ID
@@ -64,6 +64,17 @@ func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*Scan
 		}
 		scanErrors[diagnosis.ProjectID].diagnosisErrors = append(scanErrors[diagnosis.ProjectID].diagnosisErrors, diagnosis)
 	}
+	// OSINT
+	osintList, err := d.dbClient.ListOsintScanErrorForNotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, osint := range osintList {
+		if _, ok := scanErrors[osint.ProjectID]; !ok {
+			scanErrors[osint.ProjectID] = &ScanErrors{}
+		}
+		scanErrors[osint.ProjectID].osintErrors = append(scanErrors[osint.ProjectID].osintErrors, osint)
+	}
 
 	return scanErrors, nil
 }
@@ -109,6 +120,11 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 			}
 		default:
 			return fmt.Errorf("unknown data source: %s", diagnosis.DataSource)
+		}
+	}
+	for _, o := range errs.osintErrors {
+		if err := d.dbClient.UpdateOsintErrorNotifiedAt(ctx, time.Now(), o.RelOsintDataSourceID, projectID); err != nil {
+			return err
 		}
 	}
 

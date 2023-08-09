@@ -19,6 +19,7 @@ type dsDBClient interface {
 	db.GoogleRepoInterface
 	db.CodeRepoInterface
 	db.DiagnosisRepoInterface
+	db.OSINTRepoInterface
 }
 
 type DataSourceService struct {

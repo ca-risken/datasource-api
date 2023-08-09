@@ -12,6 +12,7 @@ import (
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/pkg/model"
+	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/ca-risken/datasource-api/proto/osint"
 	"github.com/golang/protobuf/ptypes/empty"
 	"gorm.io/gorm"
@@ -67,12 +68,17 @@ func (o *OsintService) PutRelOsintDataSource(ctx context.Context, req *osint.Put
 		ScanAt:               time.Unix(req.RelOsintDataSource.ScanAt, 0),
 	}
 
-	registerdData, err := o.repository.UpsertRelOsintDataSource(ctx, data)
+	registeredData, err := o.repository.UpsertRelOsintDataSource(ctx, data)
 	if err != nil {
 		o.logger.Errorf(ctx, "Failed to Put RelOsintDataSource. error: %v", err)
 		return nil, err
 	}
-	return &osint.PutRelOsintDataSourceResponse{RelOsintDataSource: convertRelOsintDataSource(registerdData)}, nil
+	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != aws.Status_ERROR.String() {
+		if err := o.repository.UpdateOsintErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.RelOsintDataSourceID, registeredData.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &osint.PutRelOsintDataSourceResponse{RelOsintDataSource: convertRelOsintDataSource(registeredData)}, nil
 }
 
 func (o *OsintService) DeleteRelOsintDataSource(ctx context.Context, req *osint.DeleteRelOsintDataSourceRequest) (*empty.Empty, error) {

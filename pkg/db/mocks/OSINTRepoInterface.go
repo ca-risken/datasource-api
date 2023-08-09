@@ -5,6 +5,7 @@ package mocks
 import (
 	context "context"
 
+	db "github.com/ca-risken/datasource-api/pkg/db"
 	mock "github.com/stretchr/testify/mock"
 
 	model "github.com/ca-risken/datasource-api/pkg/model"
@@ -279,6 +280,32 @@ func (_m *OSINTRepoInterface) ListOsintDetectWord(_a0 context.Context, _a1 uint3
 	return r0, r1
 }
 
+// ListOsintScanErrorForNotify provides a mock function with given fields: ctx
+func (_m *OSINTRepoInterface) ListOsintScanErrorForNotify(ctx context.Context) ([]*db.OsintScanError, error) {
+	ret := _m.Called(ctx)
+
+	var r0 []*db.OsintScanError
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]*db.OsintScanError, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []*db.OsintScanError); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]*db.OsintScanError)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // ListRelOsintDataSource provides a mock function with given fields: _a0, _a1, _a2, _a3
 func (_m *OSINTRepoInterface) ListRelOsintDataSource(_a0 context.Context, _a1 uint32, _a2 uint32, _a3 uint32) (*[]model.RelOsintDataSource, error) {
 	ret := _m.Called(_a0, _a1, _a2, _a3)
@@ -303,6 +330,20 @@ func (_m *OSINTRepoInterface) ListRelOsintDataSource(_a0 context.Context, _a1 ui
 	}
 
 	return r0, r1
+}
+
+// UpdateOsintErrorNotifiedAt provides a mock function with given fields: ctx, errNotifiedAt, relOsintDataSourceID, projectID
+func (_m *OSINTRepoInterface) UpdateOsintErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, relOsintDataSourceID uint32, projectID uint32) error {
+	ret := _m.Called(ctx, errNotifiedAt, relOsintDataSourceID, projectID)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, interface{}, uint32, uint32) error); ok {
+		r0 = rf(ctx, errNotifiedAt, relOsintDataSourceID, projectID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertOsint provides a mock function with given fields: _a0, _a1
