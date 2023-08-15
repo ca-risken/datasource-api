@@ -46,10 +46,11 @@ type Server struct {
 	db                   *db.Client
 	queue                *queue.Client
 	baseURL              string
+	defaultLocale        string
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url string, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale string, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
@@ -59,6 +60,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		db:                   db,
 		queue:                q,
 		baseURL:              url,
+		defaultLocale:        defaultLocale,
 		logger:               logger,
 	}
 }
@@ -84,7 +86,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
-	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, s.baseURL, s.logger)
+	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, s.baseURL, s.defaultLocale, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(

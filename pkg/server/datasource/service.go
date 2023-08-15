@@ -23,18 +23,24 @@ type dsDBClient interface {
 }
 
 type DataSourceService struct {
-	dbClient    dsDBClient
-	alertClient alert.AlertServiceClient
-	baseURL     string
-	logger      logging.Logger
+	dbClient      dsDBClient
+	alertClient   alert.AlertServiceClient
+	baseURL       string
+	defaultLocale string
+	logger        logging.Logger
 }
 
-func NewDataSourceService(dbClient dsDBClient, alertClient alert.AlertServiceClient, url string, l logging.Logger) *DataSourceService {
+func NewDataSourceService(dbClient dsDBClient, alertClient alert.AlertServiceClient, url, defaultLocale string, l logging.Logger) *DataSourceService {
+	local := defaultLocale
+	if local == "" {
+		local = DEFAULT_LOCALE
+	}
 	return &DataSourceService{
-		dbClient:    dbClient,
-		alertClient: alertClient,
-		baseURL:     url,
-		logger:      l,
+		dbClient:      dbClient,
+		alertClient:   alertClient,
+		baseURL:       url,
+		defaultLocale: local,
+		logger:        l,
 	}
 }
 
