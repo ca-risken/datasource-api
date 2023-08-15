@@ -43,7 +43,7 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 		d.logger.Warnf(ctx, "webhook url is empty: project_id=%d, notification_id=%d", n.ProjectId, n.NotificationId)
 		return nil
 	}
-	locale := DEFAULT_LOCALE
+	locale := d.defaultLocale
 	if setting.Locale != "" {
 		locale = setting.Locale
 	}
