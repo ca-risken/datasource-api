@@ -108,19 +108,19 @@ func generateSlackAttachment(baseURL, dataSource, errorMessage string, projectID
 func getDataSourceSettingURL(baseURL, dataSource string) string {
 	switch {
 	case strings.HasPrefix(dataSource, "aws:"):
-		return fmt.Sprintf("%s/#/aws/data-source", baseURL)
+		return fmt.Sprintf("%s/aws/data-source", baseURL)
 	case strings.HasPrefix(dataSource, "google:"):
-		return fmt.Sprintf("%s/#/google/gcp-data-source", baseURL)
+		return fmt.Sprintf("%s/google/gcp-data-source", baseURL)
 	case strings.HasPrefix(dataSource, "code:"):
-		return fmt.Sprintf("%s/#/code/github", baseURL)
+		return fmt.Sprintf("%s/code/github", baseURL)
 	case dataSource == message.DataSourceNameWPScan:
-		return fmt.Sprintf("%s/#/diagnosis/wpscan", baseURL)
+		return fmt.Sprintf("%s/diagnosis/wpscan", baseURL)
 	case dataSource == message.DataSourceNamePortScan:
-		return fmt.Sprintf("%s/#/diagnosis/portscan", baseURL)
+		return fmt.Sprintf("%s/diagnosis/portscan", baseURL)
 	case dataSource == message.DataSourceNameApplicationScan:
-		return fmt.Sprintf("%s/#/diagnosis/applicationscan", baseURL)
+		return fmt.Sprintf("%s/diagnosis/applicationscan", baseURL)
 	case strings.HasPrefix(dataSource, "osint:"):
-		return fmt.Sprintf("%s/#/osint/data-source", baseURL)
+		return fmt.Sprintf("%s/osint/data-source", baseURL)
 	default:
 		return baseURL
 	}
