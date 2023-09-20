@@ -38,7 +38,7 @@ func newResourceManagerClient(ctx context.Context, credentialPath string, logger
 
 const (
 	verificationLabelKey       = "risken"
-	verificationErrMsgTemplate = "Faild to verify code, Please check your GCP project label(key=%s), And then the registered verification_code must be the same value.(verification_code=%s)"
+	verificationErrMsgTemplate = "[Invalid code] Please check your GCP project label(key=%s), And then the registered verification_code must be the same value.(verification_code=%s)"
 )
 
 func (r *ResourceManagerClient) verifyCode(ctx context.Context, gcpProjectID, verificationCode string) (bool, error) {
