@@ -252,12 +252,24 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
-		return nil, err
-	}
 	data, err := g.repository.GetGCPDataSource(ctx, req.ProjectId, req.GcpId, req.GoogleDataSourceId)
 	if err != nil {
 		return nil, err
+	}
+	if ok, err := g.resourceManager.verifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
+		if _, upErr := g.repository.UpsertGCPDataSource(ctx, &google.GCPDataSourceForUpsert{
+			GcpId:              data.GCPID,
+			GoogleDataSourceId: data.GoogleDataSourceID,
+			ProjectId:          data.ProjectID,
+			Status:             google.Status_ERROR,
+			StatusDetail:       err.Error(),
+			ScanAt:             data.ScanAt.Unix(),
+			SpecificVersion:    data.SpecificVersion,
+		}); upErr != nil {
+			return nil, upErr
+		}
+		g.logger.Warnf(ctx, "Failed to verify code: gcp_id=%d, gcp_project_id=%s, err=%v", data.GCPID, data.GCPProjectID, err)
+		return &google.Empty{}, nil
 	}
 	msg := &message.GCPQueueMessage{
 		GCPID:              data.GCPID,
@@ -296,7 +308,7 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	}); err != nil {
 		return nil, err
 	}
-	g.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+	g.logger.Infof(ctx, "Invoke scanned: gcp_project_id=%s, messageId=%v", data.GCPProjectID,resp.MessageId)
 	return &google.Empty{}, nil
 }
 
@@ -325,7 +337,7 @@ func (g *GoogleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 		}); err != nil {
 			// In GCP, an error may occur during InvokeScan due to user misconfiguration(e.g. invalid verification_code).
 			// But to avoid having a single error stop the entire process, a notification log is output and other processes continue.
-			g.logger.Notifyf(ctx, logging.ErrorLevel, "InvokeScanGCP error occured: gcp_id=%d, err=%+v", gcp.GCPID, err)
+			g.logger.Notifyf(ctx, logging.ErrorLevel, "InvokeScanGCP error occured: gcp_id=%d, gcp_project_id=%s, err=%+v", gcp.GCPID, gcp.GCPProjectID,err)
 			continue
 		}
 	}
