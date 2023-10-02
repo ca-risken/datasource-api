@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -58,8 +59,8 @@ func TestGetSourceCodeNode(t *testing.T) {
 			want: &datasource.Resource{
 				ResourceName: "ca-risken/datasource-api",
 				ShortName:    "ca-risken/datasource-api",
-				Layer:        LAYER_CODE_REPOSITORY,
-				Region:       REGION_GLOBAL,
+				Layer:        attackflow.LAYER_CODE_REPOSITORY,
+				Region:       attackflow.REGION_GLOBAL,
 				Service:      "github",
 			},
 		},
@@ -69,8 +70,8 @@ func TestGetSourceCodeNode(t *testing.T) {
 			want: &datasource.Resource{
 				ResourceName: "https://gitlab.com/owner/repo",
 				ShortName:    "https://gitlab.com/owner/repo",
-				Layer:        LAYER_CODE_REPOSITORY,
-				Region:       REGION_GLOBAL,
+				Layer:        attackflow.LAYER_CODE_REPOSITORY,
+				Region:       attackflow.REGION_GLOBAL,
 				Service:      "code-repository",
 			},
 		},
@@ -100,8 +101,8 @@ func TestGetPublicEcrNode(t *testing.T) {
 				ShortName:    "risken-datasource-api",
 				CloudType:    "aws",
 				CloudId:      "risken",
-				Layer:        LAYER_DATASTORE,
-				Region:       REGION_GLOBAL,
+				Layer:        attackflow.LAYER_DATASTORE,
+				Region:       attackflow.REGION_GLOBAL,
 				Service:      "ecr-public",
 			},
 		},
@@ -142,7 +143,7 @@ func TestGetPrivateEcrNode(t *testing.T) {
 				ShortName:    "attack-flow-test",
 				CloudType:    "aws",
 				CloudId:      "123456789012",
-				Layer:        LAYER_DATASTORE,
+				Layer:        attackflow.LAYER_DATASTORE,
 				Region:       "ap-northeast-1",
 				Service:      "ecr",
 			},
@@ -164,6 +165,67 @@ func TestGetPrivateEcrNode(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, c.want) {
 				t.Errorf("Unexpected response: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestGetAppRunnerAttackFlowCache(t *testing.T) {
+	type args struct {
+		cloudID      string
+		resourceName string
+		resource     *datasource.Resource
+	}
+	type output struct {
+		resource *datasource.Resource
+		meta     *appRunnerMetadata
+	}
+	cases := []struct {
+		name    string
+		input   args
+		want    output
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: args{
+				cloudID:      "123456789012",
+				resourceName: "arn:aws:apprunner:ap-northeast-1:123456789012:service/service-name/xxx",
+				resource: &datasource.Resource{
+					CloudId:      "123456789012",
+					ResourceName: "arn:aws:apprunner:ap-northeast-1:123456789012:service/service-name/xxx",
+					MetaData:     `{"is_public":true}`,
+				},
+			},
+			want: output{
+				resource: &datasource.Resource{
+					CloudId:      "123456789012",
+					ResourceName: "arn:aws:apprunner:ap-northeast-1:123456789012:service/service-name/xxx",
+					MetaData:     `{"is_public":true}`,
+				},
+				meta: &appRunnerMetadata{
+					IsPublic: true,
+				},
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// set cache
+			_ = attackflow.SetAttackFlowCache(c.input.cloudID, c.input.resourceName, c.input.resource)
+			// get cache
+			gotResource, gotMeta, err := getAppRunnerAttackFlowCache(c.input.cloudID, c.input.resourceName)
+			if err != nil && !c.wantErr {
+				t.Errorf("Unexpected error: %+v", err)
+			}
+			if err == nil && c.wantErr {
+				t.Errorf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(gotResource, c.want.resource) {
+				t.Errorf("Unexpected response: want=%+v, got=%+v", c.want.resource, gotResource)
+			}
+			if !reflect.DeepEqual(gotMeta, c.want.meta) {
+				t.Errorf("Unexpected response: want=%+v, got=%+v", c.want.meta, gotMeta)
 			}
 		})
 	}

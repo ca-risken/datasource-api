@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"testing"

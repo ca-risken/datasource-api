@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
 	v2types "github.com/aws/aws-sdk-go-v2/service/apigatewayv2/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -41,7 +42,7 @@ type apiGatewayIntegration struct {
 	Target            string `json:"target"`
 }
 
-func newAPIGatewayAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newAPIGatewayAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	r := getAWSInfoFromARN(arn)
 	apiID, err := extractApiID(arn)
 	if err != nil {
@@ -77,15 +78,15 @@ func (a *apiGatewayAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 }
 
 func (a *apiGatewayAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	for _, destination := range a.metadata.Destination {
 
 		// external service
 		if strings.HasPrefix(destination.Target, "http") {
-			r := getExternalServiceNode(destination.Target)
-			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, destination.Target, "integration"))
+			r := attackflow.GetExternalServiceNode(destination.Target)
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, destination.Target, "integration"))
 			resp.Nodes = append(resp.Nodes, r)
 			continue
 		}
@@ -93,14 +94,14 @@ func (a *apiGatewayAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 		r := getAWSInfoFromARN(destination.Target)
 		switch r.Service {
 		case SERVICE_S3:
-			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, r.ResourceName, "integration"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, r.ResourceName, "integration"))
 			s3Analyzer, err := newS3Analyzer(r.ResourceName, a.awsConfig, a.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, s3Analyzer)
 		case SERVICE_LAMBDA:
-			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, r.ResourceName, "integration"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, r.ResourceName, "integration"))
 			lambdaAnalyzer, err := newLambdaAnalyzer(ctx, r.ResourceName, a.awsConfig, a.logger)
 			if err != nil {
 				return nil, nil, err

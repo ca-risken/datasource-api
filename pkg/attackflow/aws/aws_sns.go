@@ -1,12 +1,14 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -31,7 +33,7 @@ type SnsSubscription struct {
 	SubscriptionArn string `json:"subscription_arn"`
 }
 
-func newSnsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newSnsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -61,7 +63,7 @@ func (s *snsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		s.logger.Infof(ctx, "cache hit: %+v", cachedResource)
 		s.resource = cachedResource
 		s.metadata = cachedMeta
-		resp = setNode(false, "sns", cachedResource, resp)
+		resp = attackflow.SetNode(false, "sns", cachedResource, resp)
 		return resp, nil
 	}
 
@@ -93,43 +95,58 @@ func (s *snsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		}
 		s.metadata.Subscriptions = append(s.metadata.Subscriptions, sub)
 	}
-	s.resource.MetaData, err = parseMetadata(s.metadata)
+	s.resource.MetaData, err = attackflow.ParseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(false, "sns", s.resource, resp)
+	resp = attackflow.SetNode(false, "sns", s.resource, resp)
 	// cache
-	if err := setAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
 func (s *snsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	for _, subscription := range s.metadata.Subscriptions {
 		switch subscription.Protocol {
 		case "lambda":
-			resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
 			lambdaAnalyzer, err := newLambdaAnalyzer(ctx, subscription.Endpoint, s.awsConfig, s.logger)
 			analyzers = append(analyzers, lambdaAnalyzer)
 			if err != nil {
 				return nil, nil, err
 			}
 		case "sqs":
-			resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
 			sqsAnalyzer, err := newSqsAnalyzer(ctx, subscription.Endpoint, s.awsConfig, s.logger)
 			analyzers = append(analyzers, sqsAnalyzer)
 			if err != nil {
 				return nil, nil, err
 			}
 		default:
-			r := getExternalServiceNode(subscription.Endpoint)
-			resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
+			r := attackflow.GetExternalServiceNode(subscription.Endpoint)
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, subscription.Endpoint, "subscription"))
 			resp.Nodes = append(resp.Nodes, r)
 		}
 	}
 	return resp, analyzers, nil
+}
+
+func getSnsAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *snsMetadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta snsMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

@@ -1,7 +1,8 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/apprunner"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -35,7 +37,7 @@ type appRunnerMetadata struct {
 	VpcID           string `json:"vpc_id"`
 }
 
-func newAppRunnerAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newAppRunnerAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -64,7 +66,7 @@ func (a *appRunnerAnalyzer) Analyze(ctx context.Context, resp *datasource.Analyz
 	if cachedResource != nil && cachedMeta != nil {
 		a.resource = cachedResource
 		a.metadata = cachedMeta
-		resp = setNode(cachedMeta.IsPublic, "", cachedResource, resp)
+		resp = attackflow.SetNode(cachedMeta.IsPublic, "", cachedResource, resp)
 		return resp, nil
 	}
 
@@ -101,26 +103,26 @@ func (a *appRunnerAnalyzer) Analyze(ctx context.Context, resp *datasource.Analyz
 	a.metadata.IsPublic = aws.ToBool(&service.Service.NetworkConfiguration.IngressConfiguration.IsPubliclyAccessible)
 	a.metadata.VpcID = aws.ToString(service.Service.NetworkConfiguration.EgressConfiguration.VpcConnectorArn)
 
-	a.resource.MetaData, err = parseMetadata(a.metadata)
+	a.resource.MetaData, err = attackflow.ParseMetadata(a.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(a.metadata.IsPublic, "", a.resource, resp)
+	resp = attackflow.SetNode(a.metadata.IsPublic, "", a.resource, resp)
 
 	// cache
-	if err := setAttackFlowCache(a.resource.CloudId, a.resource.ResourceName, a.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(a.resource.CloudId, a.resource.ResourceName, a.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
 func (a *appRunnerAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	// IAM Role
 	if a.metadata.IamRole != "" {
-		resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, a.metadata.IamRole, "iam role"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, a.metadata.IamRole, "iam role"))
 		iamAnalyzer, err := newIAMAnalyzer(a.metadata.IamRole, a.awsConfig, a.logger)
 		if err != nil {
 			return nil, nil, err
@@ -131,7 +133,7 @@ func (a *appRunnerAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAt
 	if a.metadata.CodeRepository != "" {
 		node := getSourceCodeNode(a.metadata.CodeRepository)
 		resp.Nodes = append(resp.Nodes, node)
-		resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "source code"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, node.ResourceName, "source code"))
 	}
 
 	// Image Repository
@@ -142,14 +144,14 @@ func (a *appRunnerAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAt
 				return nil, nil, err
 			}
 			resp.Nodes = append(resp.Nodes, node)
-			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "image"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, node.ResourceName, "image"))
 		} else {
 			node, err := getPrivateEcrNode(a.metadata.ImageRepository)
 			if err != nil {
 				return nil, nil, err
 			}
 			resp.Nodes = append(resp.Nodes, node)
-			resp.Edges = append(resp.Edges, getEdge(a.resource.ResourceName, node.ResourceName, "image"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(a.resource.ResourceName, node.ResourceName, "image"))
 		}
 	}
 	return resp, analyzers, nil
@@ -181,7 +183,7 @@ func getSourceCodeNode(repo string) *datasource.Resource {
 		service = "github"
 		repo = strings.TrimPrefix(repo, "https://github.com/")
 	}
-	return getCodeRepositoryNode(repo, service)
+	return attackflow.GetCodeRepositoryNode(repo, service)
 }
 
 func getPublicEcrNode(repo string) (*datasource.Resource, error) {
@@ -209,4 +211,19 @@ func getPrivateEcrNode(repo string) (*datasource.Resource, error) {
 	repoName := strings.Split(splitRepo[len(splitRepo)-1], ":")[0] // remove tag
 	arn := fmt.Sprintf("arn:aws:ecr:%s:%s:repository/%s", split[3], split[0], repoName)
 	return getAWSInfoFromARN(arn), nil
+}
+
+func getAppRunnerAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *appRunnerMetadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta appRunnerMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

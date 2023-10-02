@@ -1,13 +1,15 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
 	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -37,7 +39,7 @@ type lambdaTrigger struct {
 	State       string `json:"state"`
 }
 
-func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newLambdaAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -66,7 +68,7 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 	if cachedResource != nil && cachedMeta != nil {
 		l.resource = cachedResource
 		l.metadata = cachedMeta
-		resp = setNode(cachedMeta.IsPublic, "function URL", cachedResource, resp)
+		resp = attackflow.SetNode(cachedMeta.IsPublic, "function URL", cachedResource, resp)
 		return resp, nil
 	}
 
@@ -128,14 +130,14 @@ func (l *lambdaAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAt
 				aws.ToString(destConf.OnFailure.Destination))
 		}
 	}
-	l.resource.MetaData, err = parseMetadata(l.metadata)
+	l.resource.MetaData, err = attackflow.ParseMetadata(l.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(l.metadata.IsPublic, "function URL", l.resource, resp)
+	resp = attackflow.SetNode(l.metadata.IsPublic, "function URL", l.resource, resp)
 
 	// cache
-	if err := setAttackFlowCache(l.resource.CloudId, l.resource.ResourceName, l.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(l.resource.CloudId, l.resource.ResourceName, l.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -160,13 +162,13 @@ func getLambdaTrigger(ctx context.Context, sourceArn string, awsConfig *aws.Conf
 }
 
 func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	// IAM role
 	if l.metadata.Role != "" {
 		iamRole := getAWSInfoFromARN(l.metadata.Role)
-		resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, iamRole.ResourceName, "iam role"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, iamRole.ResourceName, "iam role"))
 		iamAnalyzer, err := newIAMAnalyzer(iamRole.ResourceName, l.awsConfig, l.logger)
 		if err != nil {
 			return nil, nil, err
@@ -179,37 +181,52 @@ func (l *lambdaAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttac
 		r := getAWSInfoFromARN(dest)
 		switch r.Service {
 		case SERVICE_LAMBDA:
-			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			lambdaAnalyzer, err := newLambdaAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, lambdaAnalyzer)
 		case SERVICE_SNS:
-			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			snsAnalyzer, err := newSnsAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, snsAnalyzer)
 		case SERVICE_SQS:
-			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			sqsAnalyzer, err := newSqsAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, sqsAnalyzer)
 		case SERVICE_EVENT_BRIDGE:
-			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			eventBridgeAnalyzer, err := newEventBridgeAnalyzer(ctx, r.ResourceName, l.awsConfig, l.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, eventBridgeAnalyzer)
 		default:
-			resp.Edges = append(resp.Edges, getEdge(l.resource.ResourceName, r.ResourceName, "destination"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(l.resource.ResourceName, r.ResourceName, "destination"))
 			resp.Nodes = append(resp.Nodes, r)
 		}
 	}
 	return resp, analyzers, nil
+}
+
+func getLambdaAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *lambdaMetadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta lambdaMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -18,7 +19,7 @@ type cloudFrontAnalyzer struct {
 	logger    logging.Logger
 }
 
-func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newCloudFrontAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	return &cloudFrontAnalyzer{
 		resource:  getAWSInfoFromARN(arn),
 		metadata:  &CloudFrontMetadata{},
@@ -86,18 +87,18 @@ func (c *cloudFrontAnalyzer) Analyze(ctx context.Context, resp *datasource.Analy
 		}
 		c.metadata.WebACLId = *d.Distribution.DistributionConfig.WebACLId
 	}
-	c.resource.MetaData, err = parseMetadata(c.metadata)
+	c.resource.MetaData, err = attackflow.ParseMetadata(c.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(c.metadata.Enabled, c.metadata.DomainName, c.resource, resp)
+	resp = attackflow.SetNode(c.metadata.Enabled, c.metadata.DomainName, c.resource, resp)
 	return resp, nil
 }
 
 func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	if c.metadata == nil || len(c.metadata.Origins) == 0 {
 		return resp, analyzers, nil
 	}
@@ -116,7 +117,7 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, s3Analyzer)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, s3ARN, "origin"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(c.resource.ResourceName, s3ARN, "origin"))
 		case SERVICE_EC2:
 			ec2ARN, err := getEC2ARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
 			if err != nil {
@@ -128,7 +129,7 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, ec2Analyzer)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, ec2ARN, "origin"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(c.resource.ResourceName, ec2ARN, "origin"))
 		case SERVICE_ELB:
 			elbARN, err := getElbARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
 			if err != nil {
@@ -140,7 +141,7 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, elbAnalyzer)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, elbARN, "origin"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(c.resource.ResourceName, elbARN, "origin"))
 		case SERVICE_API_GATEWAY:
 			apiGatewayARN, err := getAPIGatewayARNFromPublicDomain(ctx, o.DomainName, c.resource.CloudId, c.awsConfig)
 			if err != nil {
@@ -152,7 +153,7 @@ func (c *cloudFrontAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeA
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, apiGatewayAnalyzer)
-			resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, apiGatewayARN, "origin"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(c.resource.ResourceName, apiGatewayARN, "origin"))
 		default:
 			c.logger.Warnf(ctx, "unsupported aws service: %s", awsService)
 			c.setCustomDomain(o, resp)
@@ -166,6 +167,6 @@ func (c *cloudFrontAnalyzer) setCustomDomain(o *origin, resp *datasource.Analyze
 	if o.HTTPOnly {
 		resourceName = "http://" + o.DomainName
 	}
-	resp.Nodes = append(resp.Nodes, getExternalServiceNode(resourceName))
-	resp.Edges = append(resp.Edges, getEdge(c.resource.ResourceName, resourceName, "origin"))
+	resp.Nodes = append(resp.Nodes, attackflow.GetExternalServiceNode(resourceName))
+	resp.Edges = append(resp.Edges, attackflow.GetEdge(c.resource.ResourceName, resourceName, "origin"))
 }

@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/datasource"
@@ -75,7 +76,7 @@ func NewAWS(
 	req *datasource.AnalyzeAttackFlowRequest,
 	awsrepo db.AWSRepoInterface,
 	logger logging.Logger,
-) (CSP, error) {
+) (attackflow.CSP, error) {
 
 	r := getAWSInfoFromARN(req.ResourceName)
 	role, err := awsrepo.GetAWSRelDataSourceByAccountID(ctx, req.ProjectId, req.CloudId)
@@ -112,7 +113,7 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 	// region
 	region := splitArn[3]
 	if region == "" {
-		region = REGION_GLOBAL
+		region = attackflow.REGION_GLOBAL
 	}
 	return &datasource.Resource{
 		ResourceName: arn,
@@ -127,7 +128,7 @@ func getAWSInfoFromARN(arn string) *datasource.Resource {
 
 func (a *AWS) retrieveAWSCredential(ctx context.Context) error {
 	region := a.region
-	if region == REGION_GLOBAL {
+	if region == attackflow.REGION_GLOBAL {
 		region = REGION_US_EAST_1
 	}
 
@@ -167,10 +168,10 @@ func retrieveAWSCredentialWithRegion(ctx context.Context, awsConfig aws.Config, 
 }
 
 func (a *AWS) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (
-	CloudServiceAnalyzer, error,
+	attackflow.CloudServiceAnalyzer, error,
 ) {
 	var err error
-	var serviceAnalyzer CloudServiceAnalyzer
+	var serviceAnalyzer attackflow.CloudServiceAnalyzer
 
 	// check supported initial service
 	switch a.initialService {
@@ -225,17 +226,17 @@ func findAWSServiceFromDomain(domain string) string {
 func getLayerFromAWSService(service string) string {
 	switch service {
 	case SERVICE_CLOUDFRONT:
-		return LAYER_CDN
+		return attackflow.LAYER_CDN
 	case SERVICE_ELB:
-		return LAYER_LB
+		return attackflow.LAYER_LB
 	case SERVICE_API_GATEWAY:
-		return LAYER_GATEWAY
+		return attackflow.LAYER_GATEWAY
 	case SERVICE_LAMBDA, SERVICE_EC2, SERVICE_APP_RUNNER:
-		return LAYER_COMPUTE
+		return attackflow.LAYER_COMPUTE
 	case SERVICE_S3, SERVICE_SQS, SERVICE_SNS, SERVICE_EVENT_BRIDGE, SERVICE_ECR, SERVICE_ECR_PUBLIC:
-		return LAYER_DATASTORE
+		return attackflow.LAYER_DATASTORE
 	case SERVICE_IAM:
-		return LAYER_LATERAL_MOVEMENT
+		return attackflow.LAYER_LATERAL_MOVEMENT
 	default:
 		return ""
 	}

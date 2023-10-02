@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancing"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -43,7 +44,7 @@ type targetGroup struct {
 	TargetType string `json:"target_type"`
 }
 
-func newELBAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newELBAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -74,9 +75,9 @@ func (e *elbAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 }
 
 func (e *elbAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	for _, target := range e.metadata.TargetGroups {
 		switch target.TargetType {
 		case "instance":
@@ -86,24 +87,24 @@ func (e *elbAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFl
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, ec2Analyzer)
-			resp.Edges = append(resp.Edges, getEdge(e.resource.ResourceName, ec2Arn, "target"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(e.resource.ResourceName, ec2Arn, "target"))
 		case "lambda":
 			lambdaAnalyzer, err := newLambdaAnalyzer(ctx, target.TargetID, e.awsConfig, e.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, lambdaAnalyzer)
-			resp.Edges = append(resp.Edges, getEdge(e.resource.ResourceName, target.TargetID, "target"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(e.resource.ResourceName, target.TargetID, "target"))
 		case "alb":
 			albAnalyzer, err := newELBAnalyzer(ctx, target.TargetID, e.awsConfig, e.logger)
 			if err != nil {
 				return nil, nil, err
 			}
 			analyzers = append(analyzers, albAnalyzer)
-			resp.Edges = append(resp.Edges, getEdge(e.resource.ResourceName, target.TargetID, "target"))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(e.resource.ResourceName, target.TargetID, "target"))
 		case "ip":
-			resp.Edges = append(resp.Edges, getEdge(e.resource.ResourceName, target.TargetID, "target"))
-			resp.Nodes = append(resp.Nodes, getInternalServiceNode(target.TargetID, e.awsConfig.Region))
+			resp.Edges = append(resp.Edges, attackflow.GetEdge(e.resource.ResourceName, target.TargetID, "target"))
+			resp.Nodes = append(resp.Nodes, attackflow.GetInternalServiceNode(target.TargetID, e.awsConfig.Region))
 		}
 	}
 	return resp, analyzers, nil

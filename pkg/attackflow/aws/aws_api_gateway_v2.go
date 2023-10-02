@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -80,11 +81,11 @@ func (a *apiGatewayAnalyzer) analyzeV2(ctx context.Context, resp *datasource.Ana
 		}
 	}
 
-	a.resource.MetaData, err = parseMetadata(*a.metadata)
+	a.resource.MetaData, err = attackflow.ParseMetadata(*a.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(a.metadata.IsPublic, "api", a.resource, resp)
+	resp = attackflow.SetNode(a.metadata.IsPublic, "api", a.resource, resp)
 	return resp, nil
 }
 

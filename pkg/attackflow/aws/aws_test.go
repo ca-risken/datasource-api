@@ -1,9 +1,10 @@
-package attackflow
+package aws
 
 import (
 	"reflect"
 	"testing"
 
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -23,7 +24,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudId:      "123456789012",
 				Service:      "iam",
 				Region:       "global",
-				Layer:        LAYER_LATERAL_MOVEMENT,
+				Layer:        attackflow.LAYER_LATERAL_MOVEMENT,
 			},
 		},
 		{
@@ -36,7 +37,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudId:      "123456789012",
 				Service:      "ec2",
 				Region:       "us-east-1",
-				Layer:        LAYER_COMPUTE,
+				Layer:        attackflow.LAYER_COMPUTE,
 			},
 		},
 		{
@@ -49,7 +50,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudId:      "",
 				Service:      "s3",
 				Region:       "global",
-				Layer:        LAYER_DATASTORE,
+				Layer:        attackflow.LAYER_DATASTORE,
 			},
 		},
 		{
@@ -62,7 +63,7 @@ func TestGetAWSInfoFromARN(t *testing.T) {
 				CloudId:      "123456789012",
 				Service:      "lambda",
 				Region:       "ap-northeast-1",
-				Layer:        LAYER_COMPUTE,
+				Layer:        attackflow.LAYER_COMPUTE,
 			},
 		},
 		{
