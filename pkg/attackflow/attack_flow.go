@@ -62,7 +62,7 @@ func getInternetNode() *datasource.Resource {
 	}
 }
 
-func getEdge(source, target, edgeLabel string) *datasource.ResourceRelationship {
+func GetEdge(source, target, edgeLabel string) *datasource.ResourceRelationship {
 	return &datasource.ResourceRelationship{
 		RelationId:         fmt.Sprintf("ed-[%s]-[%s]", source, target),
 		SourceResourceName: source,
@@ -71,7 +71,7 @@ func getEdge(source, target, edgeLabel string) *datasource.ResourceRelationship 
 	}
 }
 
-func parseMetadata(metadata interface{}) (string, error) {
+func ParseMetadata(metadata interface{}) (string, error) {
 	metaJSON, err := json.Marshal(metadata)
 	if err != nil {
 		return "", err
@@ -79,19 +79,19 @@ func parseMetadata(metadata interface{}) (string, error) {
 	return string(metaJSON), nil
 }
 
-func setNode(isPublic bool, internetEdgeLabel string, resource *datasource.Resource, resp *datasource.AnalyzeAttackFlowResponse) *datasource.AnalyzeAttackFlowResponse {
+func SetNode(isPublic bool, internetEdgeLabel string, resource *datasource.Resource, resp *datasource.AnalyzeAttackFlowResponse) *datasource.AnalyzeAttackFlowResponse {
 	if isPublic {
 		internet := getInternetNode()
 		if !existsInternetNode(resp.Nodes) {
 			resp.Nodes = append(resp.Nodes, internet)
 		}
-		resp.Edges = append(resp.Edges, getEdge(internet.ResourceName, resource.ResourceName, internetEdgeLabel))
+		resp.Edges = append(resp.Edges, GetEdge(internet.ResourceName, resource.ResourceName, internetEdgeLabel))
 	}
 	resp.Nodes = append(resp.Nodes, resource)
 	return resp
 }
 
-func getExternalServiceNode(target string) *datasource.Resource {
+func GetExternalServiceNode(target string) *datasource.Resource {
 	return &datasource.Resource{
 		ResourceName: target,
 		ShortName:    target,
@@ -101,7 +101,7 @@ func getExternalServiceNode(target string) *datasource.Resource {
 	}
 }
 
-func getInternalServiceNode(target, region string) *datasource.Resource {
+func GetInternalServiceNode(target, region string) *datasource.Resource {
 	return &datasource.Resource{
 		ResourceName: target,
 		ShortName:    target,
@@ -111,7 +111,7 @@ func getInternalServiceNode(target, region string) *datasource.Resource {
 	}
 }
 
-func getCodeRepositoryNode(repository, service string) *datasource.Resource {
+func GetCodeRepositoryNode(repository, service string) *datasource.Resource {
 	return &datasource.Resource{
 		ResourceName: repository,
 		ShortName:    repository,

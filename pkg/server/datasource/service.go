@@ -6,6 +6,7 @@ import (
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
+	"github.com/ca-risken/datasource-api/pkg/attackflow/aws"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -62,7 +63,7 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	var err error
 	switch req.CloudType {
 	case attackflow.CLOUD_TYPE_AWS:
-		csp, err = attackflow.NewAWS(ctx, req, d.dbClient, d.logger)
+		csp, err = aws.NewAWS(ctx, req, d.dbClient, d.logger)
 		if err != nil {
 			return nil, status.Errorf(codes.FailedPrecondition, "failed to create aws: %s", err.Error())
 		}

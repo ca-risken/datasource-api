@@ -1,13 +1,15 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -19,7 +21,7 @@ type s3Analyzer struct {
 	logger    logging.Logger
 }
 
-func newS3Analyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newS3Analyzer(arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	return &s3Analyzer{
 		resource:  getAWSInfoFromARN(arn),
 		metadata:  &S3Metadata{},
@@ -52,7 +54,7 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 	if cachedResource != nil && cachedMeta != nil {
 		s.resource = cachedResource
 		s.metadata = cachedMeta
-		resp = setNode(cachedMeta.IsPublic, "", cachedResource, resp)
+		resp = attackflow.SetNode(cachedMeta.IsPublic, "", cachedResource, resp)
 		return resp, nil
 	}
 
@@ -128,32 +130,32 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 		s.metadata.EventBridgeConfiguration = fmt.Sprint(notification.EventBridgeConfiguration)
 	}
 
-	s.resource.MetaData, err = parseMetadata(s.metadata)
+	s.resource.MetaData, err = attackflow.ParseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(s.metadata.IsPublic, "", s.resource, resp)
+	resp = attackflow.SetNode(s.metadata.IsPublic, "", s.resource, resp)
 
 	// set cache
-	if err := setAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
 func (s *s3Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzer := []CloudServiceAnalyzer{}
+	analyzer := []attackflow.CloudServiceAnalyzer{}
 	// TODO: support for EventBridge, SNS, SQS
 	for _, arn := range s.metadata.SNSConfiguration {
 		r := getAWSInfoFromARN(arn)
-		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, r.ResourceName, "event"))
 		resp.Nodes = append(resp.Nodes, r)
 	}
 	for _, arn := range s.metadata.SQSConfiguration {
 		r := getAWSInfoFromARN(arn)
-		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, r.ResourceName, "event"))
 		resp.Nodes = append(resp.Nodes, r)
 	}
 	for _, arn := range s.metadata.LambdaConfiguration {
@@ -162,7 +164,7 @@ func (s *s3Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlo
 		if err != nil {
 			return nil, nil, err
 		}
-		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, r.ResourceName, "event"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, r.ResourceName, "event"))
 		analyzer = append(analyzer, lambdaAnalyzer)
 	}
 
@@ -176,4 +178,19 @@ func getS3ARNFromDomain(domain string) string {
 	// bucket-name.com.s3.{region}.amazonaws.com -> bucket-name.com
 	bucketName := domainPatternS3.ReplaceAll([]byte(domain), []byte{})
 	return fmt.Sprintf("arn:aws:s3:::%s", bucketName)
+}
+
+func getS3AttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *S3Metadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta S3Metadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

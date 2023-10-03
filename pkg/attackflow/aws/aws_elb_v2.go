@@ -1,4 +1,4 @@
-package attackflow
+package aws
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	"github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2/types"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -74,11 +75,11 @@ func (e *elbAnalyzer) analyzeV2(ctx context.Context, resp *datasource.AnalyzeAtt
 		return nil, err
 	}
 
-	e.resource.MetaData, err = parseMetadata(e.metadata)
+	e.resource.MetaData, err = attackflow.ParseMetadata(e.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(e.metadata.IsPublic, "", e.resource, resp)
+	resp = attackflow.SetNode(e.metadata.IsPublic, "", e.resource, resp)
 	return resp, nil
 }
 

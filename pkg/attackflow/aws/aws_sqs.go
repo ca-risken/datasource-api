@@ -1,13 +1,15 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -27,7 +29,7 @@ type sqsMetadata struct {
 	LambdaTrigger        []lambdaTrigger `json:"lambda_trigger"`
 }
 
-func newSqsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newSqsAnalyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -57,7 +59,7 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		s.logger.Infof(ctx, "cache hit: %+v", cachedResource)
 		s.resource = cachedResource
 		s.metadata = cachedMeta
-		resp = setNode(false, "sqs", cachedResource, resp)
+		resp = attackflow.SetNode(false, "sqs", cachedResource, resp)
 		return resp, nil
 	}
 	awsInfo := getAWSInfoFromARN(s.resource.ResourceName)
@@ -84,24 +86,24 @@ func (s *sqsAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 		return nil, err
 	}
 
-	s.resource.MetaData, err = parseMetadata(s.metadata)
+	s.resource.MetaData, err = attackflow.ParseMetadata(s.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(false, "sqs", s.resource, resp)
+	resp = attackflow.SetNode(false, "sqs", s.resource, resp)
 	// cache
-	if err := setAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(s.resource.CloudId, s.resource.ResourceName, s.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
 }
 
 func (s *sqsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	for _, trigger := range s.metadata.LambdaTrigger {
-		resp.Edges = append(resp.Edges, getEdge(s.resource.ResourceName, trigger.FunctionArn, "trigger"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(s.resource.ResourceName, trigger.FunctionArn, "trigger"))
 		lambdaAnalyzer, err := newLambdaAnalyzer(ctx, trigger.FunctionArn, s.awsConfig, s.logger)
 		analyzers = append(analyzers, lambdaAnalyzer)
 		if err != nil {
@@ -109,4 +111,19 @@ func (s *sqsAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFl
 		}
 	}
 	return resp, analyzers, nil
+}
+
+func getSqsAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *sqsMetadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta sqsMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

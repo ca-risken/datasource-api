@@ -1,7 +1,8 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
 	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -32,7 +34,7 @@ type ec2Metadata struct {
 	DefaultEncrypt     bool   `json:"default_encrypt"`
 }
 
-func newEC2Analyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newEC2Analyzer(ctx context.Context, arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	resource := getAWSInfoFromARN(arn)
 	var err error
 	if cfg.Region != resource.Region {
@@ -61,7 +63,7 @@ func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	if cachedResource != nil && cachedMeta != nil {
 		e.resource = cachedResource
 		e.metadata = cachedMeta
-		resp = setNode(cachedMeta.IsPublic, cachedMeta.PublicIpAddress, cachedResource, resp)
+		resp = attackflow.SetNode(cachedMeta.IsPublic, cachedMeta.PublicIpAddress, cachedResource, resp)
 		return resp, nil
 	}
 
@@ -101,14 +103,14 @@ func (e *ec2Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	}
 	e.metadata.DefaultEncrypt = aws.ToBool(encryption.EbsEncryptionByDefault)
 
-	e.resource.MetaData, err = parseMetadata(e.metadata)
+	e.resource.MetaData, err = attackflow.ParseMetadata(e.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(e.metadata.IsPublic, e.metadata.PublicIpAddress, e.resource, resp)
+	resp = attackflow.SetNode(e.metadata.IsPublic, e.metadata.PublicIpAddress, e.resource, resp)
 
 	// cache
-	if err := setAttackFlowCache(e.resource.CloudId, e.resource.ResourceName, e.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(e.resource.CloudId, e.resource.ResourceName, e.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -128,13 +130,13 @@ func (e *ec2Analyzer) hasPublicSecurityGroups(ctx context.Context, instance type
 }
 
 func (e *ec2Analyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	analyzers := []CloudServiceAnalyzer{}
+	analyzers := []attackflow.CloudServiceAnalyzer{}
 	// IAM role
 	if e.metadata.IamInstanceProfile != "" {
 		instanceProfile := getAWSInfoFromARN(e.metadata.IamInstanceProfile)
-		resp.Edges = append(resp.Edges, getEdge(e.resource.ResourceName, instanceProfile.ResourceName, "iam role"))
+		resp.Edges = append(resp.Edges, attackflow.GetEdge(e.resource.ResourceName, instanceProfile.ResourceName, "iam role"))
 		iamAnalyzer, err := newIAMAnalyzer(instanceProfile.ResourceName, e.awsConfig, e.logger)
 		if err != nil {
 			return nil, nil, err
@@ -175,4 +177,19 @@ func getEC2ARNFromPublicDomain(ctx context.Context, domain, accountID string, cf
 	}
 	i := instances.Reservations[0].Instances[0] // only 1 instance (because filter by dns-name)
 	return fmt.Sprintf("arn:aws:ec2:%s:%s:instance/%s", cfg.Region, accountID, aws.ToString(i.InstanceId)), nil
+}
+
+func getEC2AttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *ec2Metadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta ec2Metadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }

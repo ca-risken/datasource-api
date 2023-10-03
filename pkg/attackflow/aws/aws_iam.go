@@ -1,7 +1,8 @@
-package attackflow
+package aws
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/ca-risken/common/pkg/logging"
+	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
 
@@ -27,7 +29,7 @@ type iamMetadata struct {
 	AccessedService []*string `json:"accessed_service"`
 }
 
-func newIAMAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (CloudServiceAnalyzer, error) {
+func newIAMAnalyzer(arn string, cfg *aws.Config, logger logging.Logger) (attackflow.CloudServiceAnalyzer, error) {
 	return &iamAnalyzer{
 		resource:  getAWSInfoFromARN(arn),
 		metadata:  &iamMetadata{},
@@ -48,7 +50,7 @@ func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	if cachedResource != nil && cachedMeta != nil {
 		i.resource = cachedResource
 		i.metadata = cachedMeta
-		resp = setNode(false, "", cachedResource, resp)
+		resp = attackflow.SetNode(false, "", cachedResource, resp)
 		return resp, nil
 	}
 
@@ -80,14 +82,14 @@ func (i *iamAnalyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttac
 	i.metadata.AllowedService = allowedServices
 	i.metadata.AccessedService = accessedServices
 
-	i.resource.MetaData, err = parseMetadata(i.metadata)
+	i.resource.MetaData, err = attackflow.ParseMetadata(i.metadata)
 	if err != nil {
 		return nil, err
 	}
-	resp = setNode(false, "", i.resource, resp)
+	resp = attackflow.SetNode(false, "", i.resource, resp)
 
 	// cache
-	if err := setAttackFlowCache(i.resource.CloudId, i.resource.ResourceName, i.resource); err != nil {
+	if err := attackflow.SetAttackFlowCache(i.resource.CloudId, i.resource.ResourceName, i.resource); err != nil {
 		return nil, err
 	}
 	return resp, nil
@@ -145,7 +147,22 @@ func (i *iamAnalyzer) analyzeServiceLastAccessedDetails(ctx context.Context, job
 }
 
 func (i *iamAnalyzer) Next(ctx context.Context, resp *datasource.AnalyzeAttackFlowResponse) (
-	*datasource.AnalyzeAttackFlowResponse, []CloudServiceAnalyzer, error,
+	*datasource.AnalyzeAttackFlowResponse, []attackflow.CloudServiceAnalyzer, error,
 ) {
-	return resp, []CloudServiceAnalyzer{}, nil
+	return resp, []attackflow.CloudServiceAnalyzer{}, nil
+}
+
+func getIAMAttackFlowCache(cloudID, resourceName string) (*datasource.Resource, *iamMetadata, error) {
+	resource, err := attackflow.GetAttackFlowCache(cloudID, resourceName)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resource == nil {
+		return nil, nil, nil
+	}
+	var meta iamMetadata
+	if err := json.Unmarshal([]byte(resource.MetaData), &meta); err != nil {
+		return nil, nil, err
+	}
+	return resource, &meta, nil
 }
