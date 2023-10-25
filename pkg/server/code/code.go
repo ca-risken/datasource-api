@@ -50,7 +50,13 @@ func (c *CodeService) ListDataSource(ctx context.Context, req *code.ListDataSour
 
 const maskData = "xxxxxxxxxx"
 
-func convertGitHubSetting(gitHubSetting *model.CodeGitHubSetting, gitleaksSetting *model.CodeGitleaksSetting, dependencySetting *model.CodeDependencySetting, maskKey bool) *code.GitHubSetting {
+func convertGitHubSetting(
+	gitHubSetting *model.CodeGitHubSetting,
+	gitleaksSetting *model.CodeGitleaksSetting,
+	dependencySetting *model.CodeDependencySetting,
+	codeScanSetting *model.CodeCodeScanSetting,
+	maskKey bool,
+) *code.GitHubSetting {
 	var convertedGithubSetting code.GitHubSetting
 	if gitHubSetting == nil {
 		return &convertedGithubSetting
@@ -75,6 +81,9 @@ func convertGitHubSetting(gitHubSetting *model.CodeGitHubSetting, gitleaksSettin
 	}
 	if dependencySetting != nil {
 		convertedGithubSetting.DependencySetting = convertDependencySetting(dependencySetting)
+	}
+	if codeScanSetting != nil {
+		convertedGithubSetting.CodeScanSetting = convertCodeScanSetting(codeScanSetting)
 	}
 	return &convertedGithubSetting
 }
@@ -122,6 +131,30 @@ func convertDependencySetting(data *model.CodeDependencySetting) *code.Dependenc
 	return &dependencySetting
 }
 
+func convertCodeScanSetting(data *model.CodeCodeScanSetting) *code.CodeScanSetting {
+	var converted code.CodeScanSetting
+	if data == nil {
+		return &converted
+	}
+	converted = code.CodeScanSetting{
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		ScanPublic:        data.ScanPublic,
+		ScanInternal:      data.ScanInternal,
+		ScanPrivate:       data.ScanPrivate,
+		Status:            getStatus(data.Status),
+		StatusDetail:      data.StatusDetail,
+		CreatedAt:         data.CreatedAt.Unix(),
+		UpdatedAt:         data.UpdatedAt.Unix(),
+	}
+	if !zero.IsZeroVal(data.ScanAt) {
+		converted.ScanAt = data.ScanAt.Unix()
+	}
+	return &converted
+}
+
 func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHubSettingRequest) (*code.ListGitHubSettingResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
@@ -142,6 +175,10 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 	if err != nil {
 		return nil, err
 	}
+	codeScanSettings, err := c.repository.ListCodeScanSetting(ctx, req.ProjectId)
+	if err != nil {
+		return nil, err
+	}
 	mapGitleaksSetting := map[uint32]model.CodeGitleaksSetting{}
 	for _, gitleaksSetting := range *gitleaksSettings {
 		mapGitleaksSetting[gitleaksSetting.CodeGitHubSettingID] = gitleaksSetting
@@ -150,9 +187,15 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 	for _, dependencySetting := range *dependencySettings {
 		mapDependencySetting[dependencySetting.CodeGitHubSettingID] = dependencySetting
 	}
+	mapCodeScanSetting := map[uint32]model.CodeCodeScanSetting{}
+	for _, codeScanSetting := range *codeScanSettings {
+		mapCodeScanSetting[codeScanSetting.CodeGitHubSettingID] = codeScanSetting
+	}
+
 	for _, gitHubSetting := range *gitHubSettings {
 		var gitleaks *model.CodeGitleaksSetting
 		var dependency *model.CodeDependencySetting
+		var codescan *model.CodeCodeScanSetting
 		valGitleaks, ok := mapGitleaksSetting[gitHubSetting.CodeGitHubSettingID]
 		if ok {
 			gitleaks = &valGitleaks
@@ -161,7 +204,11 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 		if ok {
 			dependency = &valDependency
 		}
-		data.GithubSetting = append(data.GithubSetting, convertGitHubSetting(&gitHubSetting, gitleaks, dependency, true))
+		valCodeScan, ok := mapCodeScanSetting[gitHubSetting.CodeGitHubSettingID]
+		if ok {
+			codescan = &valCodeScan
+		}
+		data.GithubSetting = append(data.GithubSetting, convertGitHubSetting(&gitHubSetting, gitleaks, dependency, codescan, true))
 	}
 	return &data, nil
 }
@@ -185,7 +232,11 @@ func (c *CodeService) GetGitHubSetting(ctx context.Context, req *code.GetGitHubS
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
-	return &code.GetGitHubSettingResponse{GithubSetting: convertGitHubSetting(githubSetting, gitleaksSetting, dependencySetting, false)}, nil
+	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+	return &code.GetGitHubSettingResponse{GithubSetting: convertGitHubSetting(githubSetting, gitleaksSetting, dependencySetting, codeScanSetting, false)}, nil
 }
 
 func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubSettingRequest) (*code.PutGitHubSettingResponse, error) {
@@ -206,7 +257,7 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 	if err != nil {
 		return nil, err
 	}
-	return &code.PutGitHubSettingResponse{GithubSetting: convertGitHubSetting(registeredGitHubSetting, nil, nil, true)}, nil
+	return &code.PutGitHubSettingResponse{GithubSetting: convertGitHubSetting(registeredGitHubSetting, nil, nil, nil, true)}, nil
 }
 
 func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteGitHubSettingRequest) (*empty.Empty, error) {
@@ -220,6 +271,9 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 		return nil, err
 	}
 	if err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
+	}
+	if err := c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	if err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
@@ -346,6 +400,33 @@ func (c *CodeService) DeleteDependencySetting(ctx context.Context, req *code.Del
 	return &empty.Empty{}, nil
 }
 
+func (c *CodeService) PutCodeScanSetting(ctx context.Context, req *code.PutCodeScanSettingRequest) (*code.PutCodeScanSettingResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	registered, err := c.repository.UpsertCodeScanSetting(ctx, req.CodeScanSetting)
+	if err != nil {
+		return nil, err
+	}
+	if !registered.ErrorNotifiedAt.IsZero() && registered.Status != code.Status_ERROR.String() {
+		if err := c.repository.UpdateCodeCodeScanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registered.CodeGitHubSettingID, registered.ProjectID); err != nil {
+			return nil, err
+		}
+	}
+	return &code.PutCodeScanSettingResponse{CodeScanSetting: convertCodeScanSetting(registered)}, nil
+}
+
+func (c *CodeService) DeleteCodeScanSetting(ctx context.Context, req *code.DeleteCodeScanSettingRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	err := c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	return &empty.Empty{}, nil
+}
+
 func getType(s string) code.Type {
 	typeKey := strings.ToUpper(s)
 	if _, ok := code.Type_value[typeKey]; !ok {
@@ -438,6 +519,40 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		Status:           code.Status_IN_PROGRESS,
 		StatusDetail:     fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
 		ScanAt:           data.ScanAt.Unix(),
+	}); err != nil {
+		return nil, err
+	}
+	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+	return &empty.Empty{}, nil
+}
+
+func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeScanCodeScanRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	data, err := c.repository.GetCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+		GitHubSettingID: data.CodeGitHubSettingID,
+		ProjectID:       data.ProjectID,
+		ScanOnly:        req.ScanOnly,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		ScanPublic:        data.ScanPublic,
+		ScanInternal:      data.ScanInternal,
+		ScanPrivate:       data.ScanPrivate,
+		Status:            code.Status_IN_PROGRESS,
+		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}

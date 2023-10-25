@@ -52,6 +52,7 @@ type AppConf struct {
 	GooglePortscanQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-portscan"`
 	CodeGitleaksQueueURL             string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-gitleaks"`
 	CodeDependencyQueueURL           string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-dependency"`
+	CodeCodeScanQueueURL             string `split_words:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/code-codescan"`
 	OSINTSubdomainQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-subdomain"`
 	OSINTWebsiteQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/osint-website"`
 	DiagnosisWpscanQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-wpscan"`
@@ -150,6 +151,7 @@ func main() {
 		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
 		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
 		CodeDependencyQueueURL:           conf.CodeDependencyQueueURL,
+		CodeCodeScanQueueURL:             conf.CodeCodeScanQueueURL,
 		OSINTSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
 		OSINTWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
