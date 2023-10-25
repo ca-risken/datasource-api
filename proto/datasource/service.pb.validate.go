@@ -82,7 +82,7 @@ func (m *AnalyzeAttackFlowRequest) validate(all bool) error {
 	if _, ok := _AnalyzeAttackFlowRequest_CloudType_InLookup[m.GetCloudType()]; !ok {
 		err := AnalyzeAttackFlowRequestValidationError{
 			field:  "CloudType",
-			reason: "value must be in list [aws]",
+			reason: "value must be in list [aws gcp]",
 		}
 		if !all {
 			return err
@@ -183,6 +183,7 @@ var _ interface {
 
 var _AnalyzeAttackFlowRequest_CloudType_InLookup = map[string]struct{}{
 	"aws": {},
+	"gcp": {},
 }
 
 // Validate checks the field values on AnalyzeAttackFlowResponse with the rules

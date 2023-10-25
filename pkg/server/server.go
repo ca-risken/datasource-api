@@ -15,6 +15,7 @@ import (
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
 	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
@@ -75,8 +76,13 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create alert client: %w", err)
 	}
+	gcpClient, err := gcp.NewGcpClient(ctx, s.googleCredentialPath, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create gcp client: %w", err)
+	}
+
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
-	googleSvc, err := googleServer.NewGoogleService(ctx, s.googleCredentialPath, s.db, s.queue, pjClient, s.logger)
+	googleSvc, err := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create google service: %w", err)
 	}
@@ -86,7 +92,10 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
-	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, s.baseURL, s.defaultLocale, s.logger)
+	dsSvc, err := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, s.baseURL, s.defaultLocale, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create datasource service: %w", err)
+	}
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(

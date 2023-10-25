@@ -8,10 +8,10 @@ import (
 
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/db/mocks"
+	gcpmock "github.com/ca-risken/datasource-api/pkg/gcp/mocks"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/google"
-	"github.com/stretchr/testify/mock"
 	"gorm.io/gorm"
 )
 
@@ -476,11 +476,12 @@ func TestAttachGCPDataSource(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewGoogleRepoInterface(t)
-			mockRM := mockResourceManager{}
-			svc := GoogleService{repository: mockDB, resourceManager: &mockRM}
+			mockGCP := gcpmock.NewGcpServiceClient(t)
+			svc := GoogleService{repository: mockDB, gcpClient: mockGCP}
 
 			if c.callGetGCP {
 				mockDB.On("GetGCP", test.RepeatMockAnything(3)...).Return(&model.GCP{}, nil)
+				mockGCP.On("VerifyCode", test.RepeatMockAnything(3)...).Return(true, nil)
 			}
 
 			if c.mockResponce != nil || c.mockError != nil {
@@ -542,12 +543,4 @@ func TestDetachGCPDataSource(t *testing.T) {
 			}
 		})
 	}
-}
-
-type mockResourceManager struct {
-	mock.Mock
-}
-
-func (m *mockResourceManager) verifyCode(ctx context.Context, gcpProjectID, verificationCode string) (bool, error) {
-	return true, nil
 }

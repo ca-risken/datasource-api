@@ -7,7 +7,9 @@ import (
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/pkg/attackflow/aws"
+	"github.com/ca-risken/datasource-api/pkg/attackflow/gcp"
 	"github.com/ca-risken/datasource-api/pkg/db"
+	gcpsvc "github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc/codes"
@@ -28,10 +30,15 @@ type DataSourceService struct {
 	alertClient   alert.AlertServiceClient
 	baseURL       string
 	defaultLocale string
+	gcpClient     gcpsvc.GcpServiceClient
 	logger        logging.Logger
 }
 
-func NewDataSourceService(dbClient dsDBClient, alertClient alert.AlertServiceClient, url, defaultLocale string, l logging.Logger) *DataSourceService {
+func NewDataSourceService(
+	dbClient dsDBClient, alertClient alert.AlertServiceClient, gcpClient gcpsvc.GcpServiceClient, url, defaultLocale string, l logging.Logger,
+) (
+	*DataSourceService, error,
+) {
 	local := defaultLocale
 	if local == "" {
 		local = DEFAULT_LOCALE
@@ -41,8 +48,9 @@ func NewDataSourceService(dbClient dsDBClient, alertClient alert.AlertServiceCli
 		alertClient:   alertClient,
 		baseURL:       url,
 		defaultLocale: local,
+		gcpClient:     gcpClient,
 		logger:        l,
-	}
+	}, nil
 }
 
 func (d *DataSourceService) CleanDataSource(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
@@ -67,12 +75,24 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 		if err != nil {
 			return nil, status.Errorf(codes.FailedPrecondition, "failed to create aws: %s", err.Error())
 		}
+	case attackflow.CLOUD_TYPE_GCP:
+		if d.gcpClient == nil {
+			return nil, status.Errorf(codes.FailedPrecondition, "gcp service is not available")
+		}
+		csp, err = gcp.NewGCP(ctx, req, d.dbClient, d.gcpClient, d.logger)
+		if err != nil {
+			return nil, status.Errorf(codes.FailedPrecondition, "failed to create gcp: %s", err.Error())
+		}
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid cloud type: %s", req.CloudType)
 	}
 	serviceAnalyzer, err := csp.GetInitialServiceAnalyzer(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get initial analyzer: %s", err.Error())
+	}
+	// TODO
+	if serviceAnalyzer == nil {
+		return nil, status.Errorf(codes.Internal, "failed to get initial analyzer: no serviceAnalyzer")
 	}
 
 	resp := &datasource.AnalyzeAttackFlowResponse{}
