@@ -1293,10 +1293,14 @@ func TestInvokeScanAll(t *testing.T) {
 		mockListGitleaksError        error
 		mockListDependencyResponse   *[]model.CodeDependencySetting
 		mockListDependencyError      error
+		mockListCodeScanResponse     *[]model.CodeCodeScanSetting
+		mockListCodeScanError        error
 		mockGetGitleaksResponse      *model.CodeGitleaksSetting
 		mockGetGitleaksError         error
 		mockGetDependencyResponse    *model.CodeDependencySetting
 		mockGetDependencyError       error
+		mockGetCodeScanResponse      *model.CodeCodeScanSetting
+		mockGetCodeScanError         error
 		mockIsActiveResponse         *project.IsActiveResponse
 		mockIsActiveError            error
 		mockQueue                    CodeQueue
@@ -1304,6 +1308,8 @@ func TestInvokeScanAll(t *testing.T) {
 		mockUpsertGitleaksError      error
 		mockUpsertDependencyResponse *model.CodeDependencySetting
 		mockUpsertDependencyError    error
+		mockUpsertCodeScanResponse   *model.CodeCodeScanSetting
+		mockUpsertCodeScanError      error
 		wantErr                      bool
 	}{
 		{
@@ -1311,6 +1317,7 @@ func TestInvokeScanAll(t *testing.T) {
 			ProjectID:                  1,
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:      "OK scan gitleaks",
@@ -1319,6 +1326,7 @@ func TestInvokeScanAll(t *testing.T) {
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
 			mockGetGitleaksResponse:    &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockQueue:                  newFakeCodeQueue("succeed", nil),
@@ -1331,6 +1339,7 @@ func TestInvokeScanAll(t *testing.T) {
 				{CodeGitHubSettingID: 0, CodeDataSourceID: 1, ProjectID: 0, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:      "OK found gitleaks setting but project isn't active",
@@ -1340,6 +1349,7 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockIsActiveResponse:       &project.IsActiveResponse{Active: false},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:                     "OK scan dependency",
@@ -1348,6 +1358,7 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
+			mockListCodeScanResponse:     &[]model.CodeCodeScanSetting{},
 			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
 			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
@@ -1360,7 +1371,7 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 0, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
-			// mockIsActiveResponse: &project.IsActiveResponse{Active: false},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:                     "OK found dependency setting but project isn't active",
@@ -1369,8 +1380,42 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:     &project.IsActiveResponse{Active: false},
+		},
+		{
+			name:                       "OK scan CodeScan",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:    &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockQueue:                  newFakeCodeQueue("succeed", nil),
+			mockUpsertCodeScanResponse: &model.CodeCodeScanSetting{},
+		},
+		{
+			name:                       "OK found CodeScan setting but projectID is zero",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 0, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+		},
+		{
+			name:                       "OK found CodeScan setting but project isn't active",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
 			mockIsActiveResponse: &project.IsActiveResponse{Active: false},
 		},
+
 		{
 			name:                  "NG db error when ListGitleaksSetting",
 			ProjectID:             1,
@@ -1384,6 +1429,15 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyError:  gorm.ErrRecordNotFound,
 			wantErr:                  true,
 		},
+		{
+			name:                       "NG db error when ListCodeScanSetting",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanError:      gorm.ErrRecordNotFound,
+			wantErr:                    true,
+		},
+
 		{
 			name:      "NG project client error when scanning gitleaks",
 			ProjectID: 1,
@@ -1424,6 +1478,18 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetDependencyError: gorm.ErrInvalidDB,
 			wantErr:                true,
 		},
+		{
+			name:                       "NG error GetCodeScan",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
+			mockGetCodeScanError: gorm.ErrInvalidDB,
+			wantErr:              true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -1437,6 +1503,9 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockListDependencyResponse != nil || c.mockListDependencyError != nil {
 				mockDB.On("ListDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockListDependencyResponse, c.mockListDependencyError).Once()
 			}
+			if c.mockListCodeScanResponse != nil || c.mockListCodeScanError != nil {
+				mockDB.On("ListCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockListCodeScanResponse, c.mockListCodeScanError).Once()
+			}
 			if c.mockGetGitleaksResponse != nil || c.mockGetGitleaksError != nil {
 				mockDB.On("GetGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitleaksResponse, c.mockGetGitleaksError).Once()
 			}
@@ -1449,6 +1518,13 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			}
+			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
+				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Once()
+			}
+			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
+				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
+			}
+
 			if c.mockIsActiveResponse != nil || c.mockIsActiveError != nil {
 				mockProject.On("IsActive", ctx, &project.IsActiveRequest{ProjectId: c.ProjectID}).Return(c.mockIsActiveResponse, c.mockIsActiveError).Once()
 			}
