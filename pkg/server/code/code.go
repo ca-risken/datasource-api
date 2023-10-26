@@ -609,5 +609,29 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			return nil, err
 		}
 	}
+	listCodeScan, err := c.repository.ListCodeScanSetting(ctx, 0)
+	if err != nil {
+		return nil, err
+	}
+	for _, codescan := range *listCodeScan {
+		if codescan.ProjectID == 0 || codescan.CodeDataSourceID == 0 {
+			continue
+		}
+		if resp, err := c.projectClient.IsActive(ctx, &project.IsActiveRequest{ProjectId: codescan.ProjectID}); err != nil {
+			c.logger.Errorf(ctx, "Failed to project.IsActive API, err=%+v", err)
+			return nil, err
+		} else if !resp.Active {
+			c.logger.Infof(ctx, "Skip deactive project, project_id=%d", codescan.ProjectID)
+			continue
+		}
+		if _, err := c.InvokeScanCodeScan(ctx, &code.InvokeScanCodeScanRequest{
+			GithubSettingId: codescan.CodeGitHubSettingID,
+			ProjectId:       codescan.ProjectID,
+			ScanOnly:        true,
+		}); err != nil {
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: code_github_setting_id=%d, err=%+v", codescan.CodeGitHubSettingID, err)
+			return nil, err
+		}
+	}
 	return &empty.Empty{}, nil
 }
