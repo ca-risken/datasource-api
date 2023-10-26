@@ -124,6 +124,27 @@ func (d *DeleteDependencySettingRequest) Validate() error {
 	)
 }
 
+// Validate PutCodeScanSettingRequest
+func (p *PutCodeScanSettingRequest) Validate() error {
+	if p.CodeScanSetting == nil {
+		return errors.New("required CodeScanSetting")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required, validation.In(p.CodeScanSetting.ProjectId)),
+	); err != nil {
+		return err
+	}
+	return p.CodeScanSetting.Validate()
+}
+
+// Validate DeleteCodeScanSettingRequest
+func (d *DeleteCodeScanSettingRequest) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.ProjectId, validation.Required),
+		validation.Field(&d.GithubSettingId, validation.Required),
+	)
+}
+
 // Validate InvokeScanRequest
 func (i *InvokeScanGitleaksRequest) Validate() error {
 	return validation.ValidateStruct(i,
@@ -134,6 +155,14 @@ func (i *InvokeScanGitleaksRequest) Validate() error {
 
 // Validate InvokeScanRequest
 func (i *InvokeScanDependencyRequest) Validate() error {
+	return validation.ValidateStruct(i,
+		validation.Field(&i.ProjectId, validation.Required),
+		validation.Field(&i.GithubSettingId, validation.Required),
+	)
+}
+
+// Validate InvokeScanCodeScanRequest
+func (i *InvokeScanCodeScanRequest) Validate() error {
 	return validation.ValidateStruct(i,
 		validation.Field(&i.ProjectId, validation.Required),
 		validation.Field(&i.GithubSettingId, validation.Required),
@@ -185,6 +214,18 @@ func (g *DependencySettingForUpsert) Validate() error {
 		validation.Field(&g.ProjectId, validation.Required),
 		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
+// Validate CodeScanSettingForUpsert
+func (c *CodeScanSettingForUpsert) Validate() error {
+	return validation.ValidateStruct(c,
+		validation.Field(&c.GithubSettingId, validation.Required),
+		validation.Field(&c.CodeDataSourceId, validation.Required),
+		validation.Field(&c.ProjectId, validation.Required),
+		validation.Field(&c.RepositoryPattern, validation.Length(0, 128), validation.By(compilableRegexp(c.RepositoryPattern))),
+		validation.Field(&c.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&c.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
 }
 

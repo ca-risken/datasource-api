@@ -31,6 +31,7 @@ message GitHubSetting {
   int64 updated_at = 10;
   GitleaksSetting gitleaks_setting = 11;
   DependencySetting dependency_setting = 12;
+  CodeScanSetting code_scan_setting = 13;
 }
 
 // GitleaksSetting
@@ -68,6 +69,22 @@ message DependencySetting {
   int64 scan_at = 6;
   int64 created_at = 7;
   int64 updated_at = 8;
+}
+
+// CodeScanSetting
+message CodeScanSetting {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
+  uint32 code_data_source_id = 3;
+  string repository_pattern = 4;
+  bool scan_public = 5;
+  bool scan_internal = 6;
+  bool scan_private = 7;
+  Status status = 8;
+  string status_detail = 9;
+  int64 scan_at = 10;
+  int64 created_at = 11;
+  int64 updated_at = 12;
 }
 
 // Type
@@ -127,4 +144,18 @@ message DependencySettingForUpsert {
   Status status = 4;
   string status_detail = 5;
   int64 scan_at = 6;
+}
+
+// CodeScanSettingForUpsert
+message CodeScanSettingForUpsert {
+  uint32 github_setting_id = 1;
+  uint32 project_id = 2;
+  uint32 code_data_source_id = 3;
+  string repository_pattern = 4;
+  bool scan_public = 5;
+  bool scan_internal = 6;
+  bool scan_private = 7;
+  Status status = 8;
+  string status_detail = 9;
+  int64 scan_at = 10;
 }

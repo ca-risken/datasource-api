@@ -68,3 +68,23 @@ type CodeDependencySetting struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
+
+type CodeCodeScanSetting struct {
+	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
+	CodeDataSourceID    uint32
+	ProjectID           uint32
+	RepositoryPattern   string
+	ScanPublic          bool
+	ScanInternal        bool
+	ScanPrivate         bool
+	Status              string
+	StatusDetail        string
+	ScanAt              time.Time
+	ErrorNotifiedAt     time.Time
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
+}
+
+func (c *CodeCodeScanSetting) TableName() string {
+	return "code_codescan_setting"
+}

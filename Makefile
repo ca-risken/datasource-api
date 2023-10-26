@@ -310,6 +310,20 @@ delete-dependency-setting:
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteDependencySetting
 
+.PHONY: put-codescan-setting
+put-codescan-setting:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "code_scan_setting": {"github_setting_id":1001, "code_data_source_id":1001, "project_id":1001, "status": "CONFIGURED"}}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.PutCodeScanSetting
+		
+.PHONY: delete-codescan-setting
+delete-codescan-setting:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.DeleteCodeScanSetting
+
 .PHONY: invoke-scan-gitleaks
 invoke-scan-gitleaks:
 	$(GRPCURL) \
@@ -323,6 +337,13 @@ invoke-scan-dependency:
 		-plaintext \
 		-d '{"project_id":1001, "github_setting_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.code.CodeService.InvokeScanDependency
+
+.PHONY: invoke-scan-codescan
+invoke-scan-codescan:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "github_setting_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.code.CodeService.InvokeScanCodeScan
 
 .PHONY: invoke-scan-all-code
 invoke-scan-all-code:

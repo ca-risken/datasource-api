@@ -38,10 +38,17 @@ type CodeRepoInterface interface {
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
+	// code_code_scan_setting
+	ListCodeScanSetting(ctx context.Context, projectID uint32) (*[]model.CodeCodeScanSetting, error)
+	GetCodeScanSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeCodeScanSetting, error)
+	UpsertCodeScanSetting(ctx context.Context, data *code.CodeScanSettingForUpsert) (*model.CodeCodeScanSetting, error)
+	DeleteCodeScanSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
+
 	// scan error
 	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
 	UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
 	UpdateCodeDependencyErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
+	UpdateCodeCodeScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
 }
 
 var _ CodeRepoInterface = (*Client)(nil) // verify interface compliance
@@ -380,6 +387,78 @@ func (c *Client) DeleteDependencySetting(ctx context.Context, projectID uint32, 
 	return nil
 }
 
+func (c *Client) ListCodeScanSetting(ctx context.Context, projectID uint32) (*[]model.CodeCodeScanSetting, error) {
+	query := `select * from code_codescan_setting`
+	var params []interface{}
+	if projectID != 0 {
+		query += " where project_id = ?"
+		params = append(params, projectID)
+	}
+	data := []model.CodeCodeScanSetting{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (c *Client) GetCodeScanSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeCodeScanSetting, error) {
+	var data model.CodeCodeScanSetting
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const upsertCodeScanSetting = `
+INSERT INTO code_codescan_setting (
+  code_github_setting_id,
+  code_data_source_id,
+  project_id,
+  repository_pattern,
+  scan_public,
+  scan_internal,
+  scan_private,
+  status,
+  status_detail,
+  scan_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	code_data_source_id=VALUES(code_data_source_id),
+	project_id=VALUES(project_id),
+	repository_pattern=VALUES(repository_pattern),
+	scan_public=VALUES(scan_public),
+	scan_internal=VALUES(scan_internal),
+	scan_private=VALUES(scan_private),
+	status=VALUES(status),
+	status_detail=VALUES(status_detail),
+	scan_at=VALUES(scan_at)
+`
+
+func (c *Client) UpsertCodeScanSetting(ctx context.Context, data *code.CodeScanSettingForUpsert) (*model.CodeCodeScanSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertCodeScanSetting,
+		data.GithubSettingId,
+		data.CodeDataSourceId,
+		data.ProjectId,
+		convertZeroValueToNull(data.RepositoryPattern),
+		fmt.Sprintf("%t", data.ScanPublic),
+		fmt.Sprintf("%t", data.ScanInternal),
+		fmt.Sprintf("%t", data.ScanPrivate),
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		time.Unix(data.ScanAt, 0)).Error; err != nil {
+		return nil, err
+	}
+	return c.GetCodeScanSetting(ctx, data.ProjectId, data.GithubSettingId)
+}
+
+func (c *Client) DeleteCodeScanSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeCodeScanSetting{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 const selectGetCodeGitHubSettingByUniqueIndex = `select * from code_github_setting where project_id=? and name=?`
 
 func (c *Client) GetGitHubSettingByUniqueIndex(ctx context.Context, projectID uint32, name string) (*model.CodeGitHubSetting, error) {
@@ -438,6 +517,15 @@ const updateCodeDependencyErrorNotifiedAt = `update code_dependency_setting set 
 
 func (c *Client) UpdateCodeDependencyErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeDependencyErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+const updateCodeCodeScanErrorNotifiedAt = `update code_codescan_setting set error_notified_at = ? where code_github_setting_id = ? and project_id = ?`
+
+func (c *Client) UpdateCodeCodeScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeCodeScanErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
 		return err
 	}
 	return nil

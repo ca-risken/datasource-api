@@ -22,6 +22,7 @@ type CodeService struct {
 	logger                 logging.Logger
 	codeGitleaksQueueURL   string
 	codeDependencyQueueURL string
+	codeCodeScanQueueURL   string
 }
 
 type CodeQueue interface {
@@ -42,5 +43,6 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		logger:                 l,
 		codeGitleaksQueueURL:   q.CodeGitleaksQueueURL,
 		codeDependencyQueueURL: q.CodeDependencyQueueURL,
+		codeCodeScanQueueURL:   q.CodeCodeScanQueueURL,
 	}, nil
 }
