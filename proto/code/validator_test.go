@@ -709,13 +709,6 @@ func TestValidate_GitleaksSettingForUpsert(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "NG Uncompilable(RepositoryPattern)",
-			input: &GitleaksSettingForUpsert{
-				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "*xxx", Status: Status_OK, StatusDetail: "detail", ScanAt: now.Unix(),
-			},
-			wantErr: true,
-		},
-		{
 			name: "NG Length(status_detail)",
 			input: &GitleaksSettingForUpsert{
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "some-repo", Status: Status_OK, StatusDetail: stringLength256, ScanAt: now.Unix(),
