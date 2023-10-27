@@ -2,8 +2,6 @@ package code
 
 import (
 	"errors"
-	"fmt"
-	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
@@ -191,7 +189,7 @@ func (g *GitleaksSettingForUpsert) Validate() error {
 		validation.Field(&g.GithubSettingId, validation.Required),
 		validation.Field(&g.CodeDataSourceId, validation.Required),
 		validation.Field(&g.ProjectId, validation.Required),
-		validation.Field(&g.RepositoryPattern, validation.Length(0, 128), validation.By(compilableRegexp(g.RepositoryPattern))),
+		validation.Field(&g.RepositoryPattern, validation.Length(0, 128)),
 		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
@@ -223,22 +221,8 @@ func (c *CodeScanSettingForUpsert) Validate() error {
 		validation.Field(&c.GithubSettingId, validation.Required),
 		validation.Field(&c.CodeDataSourceId, validation.Required),
 		validation.Field(&c.ProjectId, validation.Required),
-		validation.Field(&c.RepositoryPattern, validation.Length(0, 128), validation.By(compilableRegexp(c.RepositoryPattern))),
+		validation.Field(&c.RepositoryPattern, validation.Length(0, 128)),
 		validation.Field(&c.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&c.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
-}
-
-// Check the `ptn`(string) that is compilable regexp pattern
-func compilableRegexp(ptn string) validation.RuleFunc {
-	return func(value interface{}) error {
-		s, _ := value.(string)
-		if s != ptn {
-			return fmt.Errorf("Unexpected string, got: %+v", ptn)
-		}
-		if _, err := regexp.Compile(ptn); err != nil {
-			return fmt.Errorf("Could not regexp complie, pattern=%s, err=%+v", ptn, err)
-		}
-		return nil
-	}
 }
