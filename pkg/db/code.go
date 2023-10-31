@@ -494,6 +494,15 @@ from
 where
   dependency.status = 'ERROR'
   and dependency.error_notified_at is null 
+union 
+  select 
+  codescan.code_github_setting_id, cds.name as data_source, codescan.project_id, codescan.status_detail
+from
+  code_codescan_setting codescan
+  inner join code_data_source cds using(code_data_source_id) 
+where
+  codescan.status = 'ERROR'
+  and codescan.error_notified_at is null 
 `
 
 func (c *Client) ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error) {
