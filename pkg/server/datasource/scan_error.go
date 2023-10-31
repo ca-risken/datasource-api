@@ -100,6 +100,10 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 			if err := d.dbClient.UpdateCodeDependencyErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
 				return err
 			}
+		case github.DataSource == message.CodeScanDataSource:
+			if err := d.dbClient.UpdateCodeCodeScanErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
+				return err
+			}
 		default:
 			return fmt.Errorf("unknown data source: %s", github.DataSource)
 		}
