@@ -33,6 +33,7 @@ type SQSConfig struct {
 	// code
 	CodeGitleaksQueueURL   string
 	CodeDependencyQueueURL string
+	CodeCodeScanQueueURL   string
 
 	// osint
 	OSINTSubdomainQueueURL string
@@ -66,6 +67,7 @@ type Client struct {
 	// code
 	CodeGitleaksQueueURL   string
 	CodeDependencyQueueURL string
+	CodeCodeScanQueueURL   string
 
 	// osint
 	OSINTSubdomainQueueURL string
@@ -118,6 +120,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		GooglePortscanQueueURL:           conf.GooglePortscanQueueURL,
 		CodeGitleaksQueueURL:             conf.CodeGitleaksQueueURL,
 		CodeDependencyQueueURL:           conf.CodeDependencyQueueURL,
+		CodeCodeScanQueueURL:             conf.CodeCodeScanQueueURL,
 		OSINTSubdomainQueueURL:           conf.OSINTSubdomainQueueURL,
 		OSINTWebsiteQueueURL:             conf.OSINTWebsiteQueueURL,
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,

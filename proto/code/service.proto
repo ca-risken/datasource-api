@@ -40,10 +40,18 @@ service CodeService {
   rpc DeleteDependencySetting(DeleteDependencySettingRequest)
       returns (google.protobuf.Empty);
 
+  // CodeScanSetting
+  rpc PutCodeScanSetting(PutCodeScanSettingRequest)
+      returns (PutCodeScanSettingResponse);
+  rpc DeleteCodeScanSetting(DeleteCodeScanSettingRequest)
+      returns (google.protobuf.Empty);
+
   // Scan
   rpc InvokeScanGitleaks(InvokeScanGitleaksRequest)
       returns (google.protobuf.Empty); // For ondeamnd
   rpc InvokeScanDependency(InvokeScanDependencyRequest)
+      returns (google.protobuf.Empty); // For ondeamnd
+  rpc InvokeScanCodeScan(InvokeScanCodeScanRequest)
       returns (google.protobuf.Empty); // For ondeamnd
   rpc InvokeScanAll(google.protobuf.Empty)
       returns (google.protobuf.Empty); // For scheduled
@@ -130,6 +138,18 @@ message DeleteDependencySettingRequest {
   uint32 github_setting_id = 2;
 }
 
+message PutCodeScanSettingRequest {
+  uint32 project_id = 1;
+  CodeScanSettingForUpsert code_scan_setting = 2;
+}
+
+message PutCodeScanSettingResponse { CodeScanSetting code_scan_setting = 1; }
+
+message DeleteCodeScanSettingRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+}
+
 message InvokeScanGitleaksRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
@@ -138,6 +158,12 @@ message InvokeScanGitleaksRequest {
 }
 
 message InvokeScanDependencyRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  bool scan_only = 3;
+}
+
+message InvokeScanCodeScanRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;

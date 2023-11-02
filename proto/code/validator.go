@@ -2,8 +2,6 @@ package code
 
 import (
 	"errors"
-	"fmt"
-	"regexp"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
@@ -124,6 +122,27 @@ func (d *DeleteDependencySettingRequest) Validate() error {
 	)
 }
 
+// Validate PutCodeScanSettingRequest
+func (p *PutCodeScanSettingRequest) Validate() error {
+	if p.CodeScanSetting == nil {
+		return errors.New("required CodeScanSetting")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required, validation.In(p.CodeScanSetting.ProjectId)),
+	); err != nil {
+		return err
+	}
+	return p.CodeScanSetting.Validate()
+}
+
+// Validate DeleteCodeScanSettingRequest
+func (d *DeleteCodeScanSettingRequest) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.ProjectId, validation.Required),
+		validation.Field(&d.GithubSettingId, validation.Required),
+	)
+}
+
 // Validate InvokeScanRequest
 func (i *InvokeScanGitleaksRequest) Validate() error {
 	return validation.ValidateStruct(i,
@@ -134,6 +153,14 @@ func (i *InvokeScanGitleaksRequest) Validate() error {
 
 // Validate InvokeScanRequest
 func (i *InvokeScanDependencyRequest) Validate() error {
+	return validation.ValidateStruct(i,
+		validation.Field(&i.ProjectId, validation.Required),
+		validation.Field(&i.GithubSettingId, validation.Required),
+	)
+}
+
+// Validate InvokeScanCodeScanRequest
+func (i *InvokeScanCodeScanRequest) Validate() error {
 	return validation.ValidateStruct(i,
 		validation.Field(&i.ProjectId, validation.Required),
 		validation.Field(&i.GithubSettingId, validation.Required),
@@ -162,7 +189,7 @@ func (g *GitleaksSettingForUpsert) Validate() error {
 		validation.Field(&g.GithubSettingId, validation.Required),
 		validation.Field(&g.CodeDataSourceId, validation.Required),
 		validation.Field(&g.ProjectId, validation.Required),
-		validation.Field(&g.RepositoryPattern, validation.Length(0, 128), validation.By(compilableRegexp(g.RepositoryPattern))),
+		validation.Field(&g.RepositoryPattern, validation.Length(0, 128)),
 		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
 		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
@@ -188,16 +215,14 @@ func (g *DependencySettingForUpsert) Validate() error {
 	)
 }
 
-// Check the `ptn`(string) that is compilable regexp pattern
-func compilableRegexp(ptn string) validation.RuleFunc {
-	return func(value interface{}) error {
-		s, _ := value.(string)
-		if s != ptn {
-			return fmt.Errorf("Unexpected string, got: %+v", ptn)
-		}
-		if _, err := regexp.Compile(ptn); err != nil {
-			return fmt.Errorf("Could not regexp complie, pattern=%s, err=%+v", ptn, err)
-		}
-		return nil
-	}
+// Validate CodeScanSettingForUpsert
+func (c *CodeScanSettingForUpsert) Validate() error {
+	return validation.ValidateStruct(c,
+		validation.Field(&c.GithubSettingId, validation.Required),
+		validation.Field(&c.CodeDataSourceId, validation.Required),
+		validation.Field(&c.ProjectId, validation.Required),
+		validation.Field(&c.RepositoryPattern, validation.Length(0, 128)),
+		validation.Field(&c.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&c.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
 }

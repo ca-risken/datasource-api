@@ -97,9 +97,11 @@ func TestListGitHubSetting(t *testing.T) {
 		mockResponse           *[]model.CodeGitHubSetting
 		mockGitleaksResponse   *[]model.CodeGitleaksSetting
 		mockDependencyResponse *[]model.CodeDependencySetting
+		mockCodeScanResponse   *[]model.CodeCodeScanSetting
 		mockError              error
 		mockGitleaksError      error
 		mockDependencyError    error
+		mockCodeScanError      error
 		wantErr                bool
 	}{
 		{
@@ -109,10 +111,12 @@ func TestListGitHubSetting(t *testing.T) {
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
 				{GithubSettingId: 2, Name: "two", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo2", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
 			}},
 			mockResponse: &[]model.CodeGitHubSetting{
@@ -124,6 +128,10 @@ func TestListGitHubSetting(t *testing.T) {
 				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo2", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockCodeScanResponse: &[]model.CodeCodeScanSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
@@ -140,11 +148,15 @@ func TestListGitHubSetting(t *testing.T) {
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
 				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
 			mockGitleaksResponse: &[]model.CodeGitleaksSetting{},
 			mockDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockCodeScanResponse: &[]model.CodeCodeScanSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 		},
@@ -154,6 +166,7 @@ func TestListGitHubSetting(t *testing.T) {
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 					GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					CodeScanSetting: &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
 				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
@@ -161,6 +174,27 @@ func TestListGitHubSetting(t *testing.T) {
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockDependencyResponse: &[]model.CodeDependencySetting{},
+			mockCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+		},
+		{
+			name:  "OK code scan setting empty",
+			input: &code.ListGitHubSettingRequest{ProjectId: 1},
+			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
+				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				}}},
+			mockResponse: &[]model.CodeGitHubSetting{
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now}},
+			mockGitleaksResponse: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockCodeScanResponse: &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:    "NG invalid param",
@@ -193,6 +227,17 @@ func TestListGitHubSetting(t *testing.T) {
 			mockDependencyError:  gorm.ErrInvalidDB,
 			wantErr:              true,
 		},
+		{
+			name:  "Invalid DB error when getCodeScanSetting",
+			input: &code.ListGitHubSettingRequest{ProjectId: 1},
+			mockResponse: &[]model.CodeGitHubSetting{
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			},
+			mockGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockDependencyResponse: &[]model.CodeDependencySetting{},
+			mockCodeScanError:      gorm.ErrInvalidDB,
+			wantErr:                true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -209,6 +254,10 @@ func TestListGitHubSetting(t *testing.T) {
 			if c.mockDependencyResponse != nil || c.mockDependencyError != nil {
 				mockDB.On("ListDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockDependencyResponse, c.mockDependencyError).Once()
 			}
+			if c.mockCodeScanResponse != nil || c.mockCodeScanError != nil {
+				mockDB.On("ListCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockCodeScanResponse, c.mockCodeScanError).Once()
+			}
+
 			got, err := svc.ListGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
@@ -235,6 +284,8 @@ func TestGetGitHubSetting(t *testing.T) {
 		mockGitleaksError      error
 		mockDependencyResponse *model.CodeDependencySetting
 		mockDependencyError    error
+		mockCodeScanResponse   *model.CodeCodeScanSetting
+		mockCodeScanError      error
 		wantErr                bool
 	}{
 		{
@@ -243,6 +294,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
@@ -251,6 +303,9 @@ func TestGetGitHubSetting(t *testing.T) {
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 			mockDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockCodeScanResponse: &model.CodeCodeScanSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 		},
@@ -265,11 +320,15 @@ func TestGetGitHubSetting(t *testing.T) {
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			mockGitleaksError: gorm.ErrRecordNotFound,
 			mockDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockCodeScanResponse: &model.CodeCodeScanSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 		},
@@ -278,6 +337,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 				GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				CodeScanSetting: &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
@@ -285,6 +345,26 @@ func TestGetGitHubSetting(t *testing.T) {
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 			mockDependencyError: gorm.ErrRecordNotFound,
+			mockCodeScanResponse: &model.CodeCodeScanSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+		},
+		{
+			name:  "OK code scan setting empty",
+			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			}},
+			mockResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			mockGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockCodeScanError: gorm.ErrRecordNotFound,
 		},
 		{
 			name:    "NG invalid param",
@@ -318,6 +398,21 @@ func TestGetGitHubSetting(t *testing.T) {
 			mockDependencyError: gorm.ErrInvalidDB,
 			wantErr:             true,
 		},
+		{
+			name:  "Invalid DB error when GetCodeScanSetting",
+			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			mockResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+			},
+			mockGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockCodeScanError: gorm.ErrInvalidDB,
+			wantErr:           true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -334,6 +429,10 @@ func TestGetGitHubSetting(t *testing.T) {
 			if c.mockDependencyResponse != nil || c.mockDependencyError != nil {
 				mockDB.On("GetDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockDependencyResponse, c.mockDependencyError).Once()
 			}
+			if c.mockCodeScanResponse != nil || c.mockCodeScanError != nil {
+				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockCodeScanResponse, c.mockCodeScanError).Once()
+			}
+
 			got, err := svc.GetGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
@@ -437,6 +536,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 		callDeleteDependency     bool
 		mockDeleteDependencyResp error
 
+		callDeleteCodeScan     bool
+		mockDeleteCodeScanResp error
+
 		callDeleteGithubSetting     bool
 		mockDeleteGithubSettingResp error
 	}{
@@ -453,6 +555,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 
 			callDeleteDependency:     true,
 			mockDeleteDependencyResp: nil,
+
+			callDeleteCodeScan:     true,
+			mockDeleteCodeScanResp: nil,
 
 			callDeleteGithubSetting:     true,
 			mockDeleteGithubSettingResp: nil,
@@ -496,6 +601,23 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			mockDeleteDependencyResp: errors.New("something error"),
 		},
 		{
+			name:    "NG DB error (delete code scan setting)",
+			input:   &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr: true,
+
+			callDeleteGitleaksCache:     true,
+			mockDeleteGitleaksCacheResp: nil,
+
+			callDeleteGitleaks:     true,
+			mockDeleteGitleaksResp: nil,
+
+			callDeleteDependency:     true,
+			mockDeleteDependencyResp: nil,
+
+			callDeleteCodeScan:     true,
+			mockDeleteCodeScanResp: errors.New("something error"),
+		},
+		{
 			name:    "NG DB error (delete github setting)",
 			input:   &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			wantErr: true,
@@ -508,6 +630,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 
 			callDeleteDependency:     true,
 			mockDeleteDependencyResp: nil,
+
+			callDeleteCodeScan:     true,
+			mockDeleteCodeScanResp: nil,
 
 			callDeleteGithubSetting:     true,
 			mockDeleteGithubSettingResp: errors.New("something error"),
@@ -527,6 +652,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			}
 			if c.callDeleteDependency {
 				mockDB.On("DeleteDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteDependencyResp).Once()
+			}
+			if c.callDeleteCodeScan {
+				mockDB.On("DeleteCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteCodeScanResp).Once()
 			}
 			if c.callDeleteGithubSetting {
 				mockDB.On("DeleteGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteGithubSettingResp).Once()
@@ -1165,10 +1293,14 @@ func TestInvokeScanAll(t *testing.T) {
 		mockListGitleaksError        error
 		mockListDependencyResponse   *[]model.CodeDependencySetting
 		mockListDependencyError      error
+		mockListCodeScanResponse     *[]model.CodeCodeScanSetting
+		mockListCodeScanError        error
 		mockGetGitleaksResponse      *model.CodeGitleaksSetting
 		mockGetGitleaksError         error
 		mockGetDependencyResponse    *model.CodeDependencySetting
 		mockGetDependencyError       error
+		mockGetCodeScanResponse      *model.CodeCodeScanSetting
+		mockGetCodeScanError         error
 		mockIsActiveResponse         *project.IsActiveResponse
 		mockIsActiveError            error
 		mockQueue                    CodeQueue
@@ -1176,6 +1308,8 @@ func TestInvokeScanAll(t *testing.T) {
 		mockUpsertGitleaksError      error
 		mockUpsertDependencyResponse *model.CodeDependencySetting
 		mockUpsertDependencyError    error
+		mockUpsertCodeScanResponse   *model.CodeCodeScanSetting
+		mockUpsertCodeScanError      error
 		wantErr                      bool
 	}{
 		{
@@ -1183,6 +1317,7 @@ func TestInvokeScanAll(t *testing.T) {
 			ProjectID:                  1,
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:      "OK scan gitleaks",
@@ -1191,6 +1326,7 @@ func TestInvokeScanAll(t *testing.T) {
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
 			mockGetGitleaksResponse:    &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockQueue:                  newFakeCodeQueue("succeed", nil),
@@ -1203,6 +1339,7 @@ func TestInvokeScanAll(t *testing.T) {
 				{CodeGitHubSettingID: 0, CodeDataSourceID: 1, ProjectID: 0, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:      "OK found gitleaks setting but project isn't active",
@@ -1212,6 +1349,7 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockIsActiveResponse:       &project.IsActiveResponse{Active: false},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:                     "OK scan dependency",
@@ -1220,6 +1358,7 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
+			mockListCodeScanResponse:     &[]model.CodeCodeScanSetting{},
 			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
 			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
@@ -1232,7 +1371,7 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 0, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
-			// mockIsActiveResponse: &project.IsActiveResponse{Active: false},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{},
 		},
 		{
 			name:                     "OK found dependency setting but project isn't active",
@@ -1241,8 +1380,42 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:     &project.IsActiveResponse{Active: false},
+		},
+		{
+			name:                       "OK scan CodeScan",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:    &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockQueue:                  newFakeCodeQueue("succeed", nil),
+			mockUpsertCodeScanResponse: &model.CodeCodeScanSetting{},
+		},
+		{
+			name:                       "OK found CodeScan setting but projectID is zero",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 0, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+		},
+		{
+			name:                       "OK found CodeScan setting but project isn't active",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
 			mockIsActiveResponse: &project.IsActiveResponse{Active: false},
 		},
+
 		{
 			name:                  "NG db error when ListGitleaksSetting",
 			ProjectID:             1,
@@ -1256,6 +1429,15 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListDependencyError:  gorm.ErrRecordNotFound,
 			wantErr:                  true,
 		},
+		{
+			name:                       "NG db error when ListCodeScanSetting",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanError:      gorm.ErrRecordNotFound,
+			wantErr:                    true,
+		},
+
 		{
 			name:      "NG project client error when scanning gitleaks",
 			ProjectID: 1,
@@ -1296,6 +1478,18 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetDependencyError: gorm.ErrInvalidDB,
 			wantErr:                true,
 		},
+		{
+			name:                       "NG error GetCodeScan",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
+			mockGetCodeScanError: gorm.ErrInvalidDB,
+			wantErr:              true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -1309,6 +1503,9 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockListDependencyResponse != nil || c.mockListDependencyError != nil {
 				mockDB.On("ListDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockListDependencyResponse, c.mockListDependencyError).Once()
 			}
+			if c.mockListCodeScanResponse != nil || c.mockListCodeScanError != nil {
+				mockDB.On("ListCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockListCodeScanResponse, c.mockListCodeScanError).Once()
+			}
 			if c.mockGetGitleaksResponse != nil || c.mockGetGitleaksError != nil {
 				mockDB.On("GetGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitleaksResponse, c.mockGetGitleaksError).Once()
 			}
@@ -1321,6 +1518,13 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			}
+			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
+				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Once()
+			}
+			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
+				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
+			}
+
 			if c.mockIsActiveResponse != nil || c.mockIsActiveError != nil {
 				mockProject.On("IsActive", ctx, &project.IsActiveRequest{ProjectId: c.ProjectID}).Return(c.mockIsActiveResponse, c.mockIsActiveError).Once()
 			}
