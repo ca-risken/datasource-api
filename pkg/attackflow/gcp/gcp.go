@@ -42,7 +42,6 @@ func (g *GCP) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 	if asset == nil {
 		return nil, fmt.Errorf("asset not found: %s", req.ResourceName)
 	}
-	g.logger.Infof(ctx, "[ASSET] %+v", asset)
 	r := &datasource.Resource{
 		ResourceName: asset.Name,
 		ShortName:    asset.DisplayName,
