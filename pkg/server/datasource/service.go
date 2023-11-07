@@ -90,10 +90,6 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get initial analyzer: %s", err.Error())
 	}
-	// TODO
-	if serviceAnalyzer == nil {
-		return nil, status.Errorf(codes.Internal, "failed to get initial analyzer: no serviceAnalyzer")
-	}
 
 	resp := &datasource.AnalyzeAttackFlowResponse{}
 	nextAnalyzerList := []attackflow.CloudServiceAnalyzer{}

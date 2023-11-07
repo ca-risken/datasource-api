@@ -18,8 +18,9 @@ func (g *GcpClient) GetAsset(ctx context.Context, gcpProjectID, resourceName str
 
 func (g *GcpClient) getAsset(ctx context.Context, gcpProjectID, resourceName string) (*assetpb.ResourceSearchResult, error) {
 	req := &assetpb.SearchAllResourcesRequest{
-		Scope: fmt.Sprintf("projects/%s", gcpProjectID),
-		Query: fmt.Sprintf("name:%s", resourceName),
+		Scope:      fmt.Sprintf("projects/%s", gcpProjectID),
+		Query:      fmt.Sprintf("name:%s", resourceName),
+		AssetTypes: SupportedAssetTypes,
 	}
 	it := g.asset.SearchAllResources(ctx, req)
 	r, err := it.Next() // get only first result
@@ -31,3 +32,10 @@ func (g *GcpClient) getAsset(ctx context.Context, gcpProjectID, resourceName str
 	}
 	return r, nil
 }
+
+var (
+	// Supported AssetTypes: https://cloud.google.com/asset-inventory/docs/supported-asset-types#searchable_asset_types
+	SupportedAssetTypes = []string{
+		"compute.googleapis.com/Instance",
+	}
+)
