@@ -158,7 +158,7 @@ analyze-attack-flow:
 analyze-attack-flow-gcp:
 	$(GRPCURL) \
 		-plaintext \
-		-d '{"project_id":1001, "resource_name":"projects/project-id/zones/zone-name/instances/instance-name", "cloud_type":"gcp", "cloud_id":"ca-security-hub"}' \
+		-d '{"project_id":1001, "resource_name":"projects/project-id/zones/zone-name/instances/instance-name", "cloud_type":"gcp", "cloud_id":"project-id"}' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
 
 .PHONY: notify-scan-error

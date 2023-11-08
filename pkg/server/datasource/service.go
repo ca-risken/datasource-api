@@ -79,10 +79,7 @@ func (d *DataSourceService) AnalyzeAttackFlow(ctx context.Context, req *datasour
 		if d.gcpClient == nil {
 			return nil, status.Errorf(codes.FailedPrecondition, "gcp service is not available")
 		}
-		csp, err = gcp.NewGCP(ctx, req, d.dbClient, d.gcpClient, d.logger)
-		if err != nil {
-			return nil, status.Errorf(codes.FailedPrecondition, "failed to create gcp: %s", err.Error())
-		}
+		csp = gcp.NewGCP(req, d.dbClient, d.gcpClient, d.logger)
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid cloud type: %s", req.CloudType)
 	}

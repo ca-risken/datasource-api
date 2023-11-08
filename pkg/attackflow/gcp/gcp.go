@@ -3,6 +3,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
@@ -18,23 +19,46 @@ type GCP struct {
 }
 
 func NewGCP(
-	ctx context.Context,
 	req *datasource.AnalyzeAttackFlowRequest,
 	repo db.GoogleRepoInterface,
 	c gcp.GcpServiceClient,
 	logger logging.Logger,
-) (attackflow.CSP, error) {
-	csp := &GCP{
+) attackflow.CSP {
+	return &GCP{
 		cloudID: req.CloudId,
 		client:  c,
 		logger:  logger,
 	}
-	return csp, nil
 }
 
 func (g *GCP) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (
 	attackflow.CloudServiceAnalyzer, error,
 ) {
+	r, err := g.getResource(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// asset types: https://cloud.google.com/asset-inventory/docs/resource-name-format
+	switch r.Service {
+	case "compute.googleapis.com/Instance":
+		return newComputeAnalyzer(ctx, r, g.client, g.logger)
+	default:
+		return nil, fmt.Errorf("unsupported asset type: %s", r.Service)
+	}
+}
+
+func (g *GCP) getResource(ctx context.Context, req *datasource.AnalyzeAttackFlowRequest) (*datasource.Resource, error) {
+	var r *datasource.Resource
+	// read cache
+	cachedResource, err := attackflow.GetAttackFlowCache(req.CloudId, req.ResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if cachedResource != nil {
+		return cachedResource, nil
+	}
+
 	asset, err := g.client.GetAsset(ctx, req.CloudId, req.ResourceName)
 	if err != nil {
 		return nil, err
@@ -42,7 +66,7 @@ func (g *GCP) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 	if asset == nil {
 		return nil, fmt.Errorf("asset not found: %s", req.ResourceName)
 	}
-	r := &datasource.Resource{
+	r = &datasource.Resource{
 		ResourceName: asset.Name,
 		ShortName:    asset.DisplayName,
 		CloudId:      req.CloudId,
@@ -50,11 +74,10 @@ func (g *GCP) GetInitialServiceAnalyzer(ctx context.Context, req *datasource.Ana
 		Region:       asset.Location,
 		Service:      asset.AssetType,
 	}
-	// asset types: https://cloud.google.com/asset-inventory/docs/resource-name-format
-	switch asset.AssetType {
-	case "compute.googleapis.com/Instance":
-		return newComputeAnalyzer(ctx, r, g.client, g.logger)
-	default:
-		return nil, fmt.Errorf("unsupported asset type: %s", asset.AssetType)
-	}
+	return r, nil
+}
+
+func getShortNameFromURL(url string) string {
+	split := strings.Split(url, "/")
+	return split[len(split)-1]
 }
