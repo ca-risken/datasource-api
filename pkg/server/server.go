@@ -82,20 +82,14 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
-	googleSvc, err := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
-	if err != nil {
-		return fmt.Errorf("failed to create google service: %w", err)
-	}
+	googleSvc := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
 	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create code service: %w", err)
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
-	dsSvc, err := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, s.baseURL, s.defaultLocale, s.logger)
-	if err != nil {
-		return fmt.Errorf("failed to create datasource service: %w", err)
-	}
+	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, s.baseURL, s.defaultLocale, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(

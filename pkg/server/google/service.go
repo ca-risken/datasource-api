@@ -20,14 +20,12 @@ type GoogleService struct {
 
 func NewGoogleService(
 	ctx context.Context, g gcp.GcpServiceClient, repo db.GoogleRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger,
-) (
-	*GoogleService, error,
-) {
+) *GoogleService {
 	return &GoogleService{
 		repository:    repo,
 		sqs:           q,
 		gcpClient:     g,
 		projectClient: pj,
 		logger:        l,
-	}, nil
+	}
 }

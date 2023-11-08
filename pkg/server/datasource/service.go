@@ -36,9 +36,7 @@ type DataSourceService struct {
 
 func NewDataSourceService(
 	dbClient dsDBClient, alertClient alert.AlertServiceClient, gcpClient gcpsvc.GcpServiceClient, url, defaultLocale string, l logging.Logger,
-) (
-	*DataSourceService, error,
-) {
+) *DataSourceService {
 	local := defaultLocale
 	if local == "" {
 		local = DEFAULT_LOCALE
@@ -50,7 +48,7 @@ func NewDataSourceService(
 		defaultLocale: local,
 		gcpClient:     gcpClient,
 		logger:        l,
-	}, nil
+	}
 }
 
 func (d *DataSourceService) CleanDataSource(ctx context.Context, _ *empty.Empty) (*empty.Empty, error) {
