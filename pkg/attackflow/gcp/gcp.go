@@ -7,7 +7,6 @@ import (
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
-	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
@@ -20,7 +19,6 @@ type GCP struct {
 
 func NewGCP(
 	req *datasource.AnalyzeAttackFlowRequest,
-	repo db.GoogleRepoInterface,
 	c gcp.GcpServiceClient,
 	logger logging.Logger,
 ) attackflow.CSP {
