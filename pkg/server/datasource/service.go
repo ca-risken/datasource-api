@@ -12,6 +12,7 @@ import (
 	gcpsvc "github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/slack-go/slack"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -31,11 +32,12 @@ type DataSourceService struct {
 	baseURL       string
 	defaultLocale string
 	gcpClient     gcpsvc.GcpServiceClient
+	slackClient   *slack.Client
 	logger        logging.Logger
 }
 
 func NewDataSourceService(
-	dbClient dsDBClient, alertClient alert.AlertServiceClient, gcpClient gcpsvc.GcpServiceClient, url, defaultLocale string, l logging.Logger,
+	dbClient dsDBClient, alertClient alert.AlertServiceClient, gcpClient gcpsvc.GcpServiceClient, slackClient *slack.Client, url, defaultLocale string, l logging.Logger,
 ) *DataSourceService {
 	local := defaultLocale
 	if local == "" {
@@ -47,6 +49,7 @@ func NewDataSourceService(
 		baseURL:       url,
 		defaultLocale: local,
 		gcpClient:     gcpClient,
+		slackClient:   slackClient,
 		logger:        l,
 	}
 }

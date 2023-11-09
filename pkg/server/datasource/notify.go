@@ -31,6 +31,7 @@ There could be multiple possible reasons for the error. If you cannot determine 
 
 type slackNotifySetting struct {
 	WebhookURL string `json:"webhook_url"`
+	ChannelID  string `json:"channel_id"`
 	Locale     string `json:"locale"`
 }
 
@@ -39,21 +40,28 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 	if err := json.Unmarshal([]byte(n.NotifySetting), &setting); err != nil {
 		return err
 	}
-	if setting.WebhookURL == "" {
-		d.logger.Warnf(ctx, "webhook url is empty: project_id=%d, notification_id=%d", n.ProjectId, n.NotificationId)
+	if setting.WebhookURL == "" && setting.ChannelID == "" {
+		d.logger.Warnf(ctx, "webhook_url and channel_id are empty: project_id=%d, notification_id=%d", n.ProjectId, n.NotificationId)
 		return nil
 	}
 	locale := d.defaultLocale
 	if setting.Locale != "" {
 		locale = setting.Locale
 	}
-	if err := slack.PostWebhook(setting.WebhookURL, d.getScanErrorPayload(locale, n.ProjectId, scanErrors)); err != nil {
-		return fmt.Errorf("failed to send slack: %w", err)
+
+	if setting.WebhookURL != "" {
+		if err := slack.PostWebhook(setting.WebhookURL, d.getScanErrorWebhookMessage(locale, n.ProjectId, scanErrors)); err != nil {
+			return fmt.Errorf("failed to send slack(webhook): %w", err)
+		}
+	} else if setting.ChannelID != "" {
+		if _, _, err := d.slackClient.PostMessage(setting.ChannelID, d.getScanErrorMessageOpt(locale, n.ProjectId, scanErrors)...); err != nil {
+			return fmt.Errorf("failed to send slack(postmessage): %w", err)
+		}
 	}
 	return nil
 }
 
-func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32, scanErrors *ScanErrors) *slack.WebhookMessage {
+func (d *DataSourceService) getScanErrorWebhookMessage(locale string, projectID uint32, scanErrors *ScanErrors) *slack.WebhookMessage {
 	text := MESSAGE_EN
 	if locale == LOCALE_JA {
 		text = MESSAGE_JA
@@ -63,6 +71,17 @@ func (d *DataSourceService) getScanErrorPayload(locale string, projectID uint32,
 		Attachments: d.getSlackAttachments(projectID, scanErrors),
 	}
 	return &msg
+}
+
+func (d *DataSourceService) getScanErrorMessageOpt(locale string, projectID uint32, scanErrors *ScanErrors) []slack.MsgOption {
+	text := MESSAGE_EN
+	if locale == LOCALE_JA {
+		text = MESSAGE_JA
+	}
+	msgOpt := []slack.MsgOption{}
+	msgOpt = append(msgOpt, slack.MsgOptionText(text, false))
+	msgOpt = append(msgOpt, slack.MsgOptionAttachments(d.getSlackAttachments(projectID, scanErrors)...))
+	return msgOpt
 }
 
 func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *ScanErrors) []slack.Attachment {
