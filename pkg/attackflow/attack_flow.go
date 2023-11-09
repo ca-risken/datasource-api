@@ -14,6 +14,7 @@ const (
 
 	// cloud type
 	CLOUD_TYPE_AWS = "aws"
+	CLOUD_TYPE_GCP = "gcp"
 
 	// service layer
 	LAYER_INTERNET         = "INTERNET"

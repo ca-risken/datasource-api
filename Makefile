@@ -107,7 +107,7 @@ lint: FAKE
 	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
 
 .PHONY: generate-mock
-generate-mock: proto-mock repository-mock
+generate-mock: proto-mock repository-mock gcp-mock
 
 .PHONY: proto-mock
 proto-mock: $(MOCK_TARGETS)
@@ -117,6 +117,10 @@ proto-mock: $(MOCK_TARGETS)
 .PHONY: repository-mock
 repository-mock: FAKE
 	sh hack/generate-mock.sh pkg/db
+
+.PHONY: gcp-mock
+gcp-mock: FAKE
+	sh hack/generate-mock.sh pkg/gcp
 
 FAKE:
 
@@ -148,6 +152,13 @@ analyze-attack-flow:
 	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":1001, "resource_name":"arn:aws:cloudfront::123456789012:distribution/Exxxxxxxxxx", "cloud_type":"aws", "cloud_id":"123456789012"}' \
+		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
+
+.PHONY: analyze-attack-flow-gcp
+analyze-attack-flow-gcp:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "resource_name":"projects/project-id/zones/zone-name/instances/instance-name", "cloud_type":"gcp", "cloud_id":"project-id"}' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
 
 .PHONY: notify-scan-error
