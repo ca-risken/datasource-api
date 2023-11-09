@@ -30,6 +30,7 @@ import (
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/datasource-api/proto/osint"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/slack-go/slack"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
@@ -48,10 +49,11 @@ type Server struct {
 	queue                *queue.Client
 	baseURL              string
 	defaultLocale        string
+	slackAPIToken        string
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale string, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
@@ -62,6 +64,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		queue:                q,
 		baseURL:              url,
 		defaultLocale:        defaultLocale,
+		slackAPIToken:        slackAPIToken,
 		logger:               logger,
 	}
 }
@@ -80,6 +83,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create gcp client: %w", err)
 	}
+	slackClient := slack.New(s.slackAPIToken)
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
@@ -89,7 +93,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
-	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, s.baseURL, s.defaultLocale, s.logger)
+	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, slackClient, s.baseURL, s.defaultLocale, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(

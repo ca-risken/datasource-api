@@ -62,6 +62,7 @@ type AppConf struct {
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey          string `split_words:"true" required:"true"`                                // code
+	SlackAPIToken        string `split_words:"true"`                                                // slack
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -172,6 +173,7 @@ func main() {
 		q,
 		conf.BaseURL,
 		conf.DefaultLocale,
+		conf.SlackAPIToken,
 		logger,
 	)
 
