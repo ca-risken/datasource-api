@@ -40,8 +40,6 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 	if err := json.Unmarshal([]byte(n.NotifySetting), &setting); err != nil {
 		return err
 	}
-	// TODO delete
-	d.logger.Infof(ctx, "[slackNotifySetting]: %+v", setting)
 	if setting.WebhookURL == "" && setting.ChannelID == "" {
 		d.logger.Warnf(ctx, "webhook_url and channel_id are empty: project_id=%d, notification_id=%d", n.ProjectId, n.NotificationId)
 		return nil
@@ -56,8 +54,6 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 			return fmt.Errorf("failed to send slack(webhook): %w", err)
 		}
 	} else if setting.ChannelID != "" {
-		// TODO delete
-		d.logger.Infof(ctx, "[POST MESSAGE]: project_id=%d, notification_id=%d", n.ProjectId, n.NotificationId)
 		if _, _, err := d.slackClient.PostMessage(setting.ChannelID, d.getScanErrorMessageOpt(locale, n.ProjectId, scanErrors)...); err != nil {
 			return fmt.Errorf("failed to send slack(postmessage): %w", err)
 		}

@@ -141,8 +141,6 @@ func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to ListNotification: %s", err.Error())
 		}
-		// TODO delete
-		d.logger.Infof(ctx, "ListNotificationForInternal: project_id=%d, notification=%+v", projectID, resp.Notification)
 		if len(resp.Notification) == 0 {
 			continue
 		}
