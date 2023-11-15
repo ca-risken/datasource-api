@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/core/proto/alert"
@@ -11,6 +12,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/db"
 	gcpsvc "github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/proto/datasource"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/golang/protobuf/ptypes/empty"
 	"github.com/slack-go/slack"
 	"google.golang.org/grpc/codes"
@@ -34,6 +36,7 @@ type DataSourceService struct {
 	gcpClient     gcpsvc.GcpServiceClient
 	slackClient   *slack.Client
 	logger        logging.Logger
+	retryer       backoff.BackOff
 }
 
 func NewDataSourceService(
@@ -51,6 +54,7 @@ func NewDataSourceService(
 		gcpClient:     gcpClient,
 		slackClient:   slackClient,
 		logger:        l,
+		retryer:       backoff.WithMaxRetries(backoff.NewExponentialBackOff(), 10),
 	}
 }
 
@@ -157,4 +161,10 @@ func (d *DataSourceService) NotifyScanError(ctx context.Context, _ *empty.Empty)
 		}
 	}
 	return &empty.Empty{}, nil
+}
+
+func (d *DataSourceService) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
+	return func(err error, t time.Duration) {
+		d.logger.Warnf(ctx, "[RetryLogger] %s error: duration=%+v, err=%+v", funcName, t, err)
+	}
 }
