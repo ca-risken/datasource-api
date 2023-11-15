@@ -3,11 +3,14 @@ package datasource
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/datasource-api/pkg/message"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/slack-go/slack"
 )
 
@@ -54,7 +57,7 @@ func (d *DataSourceService) notifyScanError(ctx context.Context, n *alert.Notifi
 			return fmt.Errorf("failed to send slack(webhook): %w", err)
 		}
 	} else if setting.ChannelID != "" {
-		if _, _, err := d.slackClient.PostMessage(setting.ChannelID, d.getScanErrorMessageOpt(locale, n.ProjectId, scanErrors)...); err != nil {
+		if err := d.postMessageSlackWithRetry(ctx, setting.ChannelID, d.getScanErrorMessageOpt(locale, n.ProjectId, scanErrors)...); err != nil {
 			return fmt.Errorf("failed to send slack(postmessage): %w", err)
 		}
 	}
@@ -143,4 +146,22 @@ func getDataSourceSettingURL(baseURL, dataSource string) string {
 	default:
 		return baseURL
 	}
+}
+
+func (d *DataSourceService) postMessageSlack(channelID string, msg ...slack.MsgOption) error {
+	if _, _, err := d.slackClient.PostMessage(channelID, msg...); err != nil {
+		var rateLimitError *slack.RateLimitedError
+		if errors.As(err, &rateLimitError) {
+			time.Sleep(rateLimitError.RetryAfter)
+		}
+		return err
+	}
+	return nil
+}
+
+func (d *DataSourceService) postMessageSlackWithRetry(ctx context.Context, channelID string, msg ...slack.MsgOption) error {
+	operation := func() error {
+		return d.postMessageSlack(channelID, msg...)
+	}
+	return backoff.RetryNotify(operation, d.retryer, d.newRetryLogger(ctx, "postMessageSlack"))
 }
