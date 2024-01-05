@@ -144,7 +144,9 @@ func (d *DiagnosisService) PutPortscanTarget(ctx context.Context, req *diagnosis
 		d.logger.Errorf(ctx, "Failed to Put PortscanTarget, error: %v", err)
 		return nil, err
 	}
-	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != diagnosis.Status_ERROR.String() {
+	if registeredData.ErrorNotifiedAt != nil &&
+		!registeredData.ErrorNotifiedAt.IsZero() &&
+		registeredData.Status != diagnosis.Status_ERROR.String() {
 		if err := d.repository.UpdateDiagnosisPortscanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.PortscanTargetID, registeredData.ProjectID); err != nil {
 			return nil, err
 		}
