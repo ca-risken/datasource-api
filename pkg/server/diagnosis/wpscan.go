@@ -76,7 +76,9 @@ func (d *DiagnosisService) PutWpscanSetting(ctx context.Context, req *diagnosis.
 		d.logger.Errorf(ctx, "Failed to Put WpscanSetting, error: %v", err)
 		return nil, err
 	}
-	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != diagnosis.Status_ERROR.String() {
+	if registeredData.ErrorNotifiedAt != nil &&
+		!registeredData.ErrorNotifiedAt.IsZero() &&
+		registeredData.Status != diagnosis.Status_ERROR.String() {
 		if err := d.repository.UpdateDiagnosisWpscanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.WpscanSettingID, registeredData.ProjectID); err != nil {
 			return nil, err
 		}

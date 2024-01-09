@@ -77,7 +77,9 @@ func (d *DiagnosisService) PutApplicationScan(ctx context.Context, req *diagnosi
 		d.logger.Errorf(ctx, "Failed to Put ApplicationScan, error: %v", err)
 		return nil, err
 	}
-	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != diagnosis.Status_ERROR.String() {
+	if registeredData.ErrorNotifiedAt != nil &&
+		!registeredData.ErrorNotifiedAt.IsZero() &&
+		registeredData.Status != diagnosis.Status_ERROR.String() {
 		if err := d.repository.UpdateDiagnosisAppScanErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.ApplicationScanID, registeredData.ProjectID); err != nil {
 			return nil, err
 		}
