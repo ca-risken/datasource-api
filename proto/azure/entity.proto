@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package datasource.azure;
+option go_package = "github.com/ca-risken/datasource-api/proto/azure";
+
+/**
+ * Entity
+ **/
+
+// Empty
+message Empty {}
+
+// AzureDataSource
+message AzureDataSource {
+  uint32 azure_data_source_id = 1;
+  string name = 2;
+  string description = 3;
+  float max_score = 4;
+  int64 created_at = 5;
+  int64 updated_at = 6;
+}
+
+// Azure
+message Azure {
+  uint32 azure_id = 1;
+  string name = 2;
+  uint32 project_id = 3;
+  string subscription_id = 5;
+  string verification_code = 6;
+  int64 created_at = 7;
+  int64 updated_at = 8;
+}
+
+// RelAzureDataSource
+message RelAzureDataSource {
+  uint32 azure_id = 1;             // rel_azure_data_source.azure_id
+  uint32 azure_data_source_id = 2; // rel_azure_data_source.azure_data_source_id
+  uint32 project_id = 3;           // rel_azure_data_source.project_id
+  Status status = 4;               // rel_azure_data_source.status
+  string status_detail = 5;        // rel_azure_data_source.status_detail
+  int64 scan_at = 6;               // rel_azure_data_source.scan_at
+  int64 created_at = 7;            // rel_azure_data_source.created_at
+  int64 updated_at = 8;            // rel_azure_data_source.updated_at
+  string subscription_id = 10;     // azure.subscription_id
+  string name = 11;                // azure_data_source.name
+  string description = 12;         // azure_data_source.description
+  float max_score = 13;            // azure_data_source.max_score
+  string specific_version = 14;    // rel_azure_data_source.specific_version
+}
+
+// Status
+enum Status {
+  UNKNOWN = 0;
+  OK = 1;
+  CONFIGURED = 2;
+  IN_PROGRESS = 3;
+  ERROR = 4;
+}
+
+// AzureForUpsert
+message AzureForUpsert {
+  uint32 azure_id = 1; // Unique key for entity.
+  string name = 2;
+  uint32 project_id = 3;
+  string subscription_id = 5;
+  string verification_code = 6;
+}
+
+// RelAzureDataSourceForUpsert
+message RelAzureDataSourceForUpsert {
+  uint32 azure_id = 1;
+  uint32 azure_data_source_id = 2;
+  uint32 project_id = 3;
+  Status status = 4;
+  string status_detail = 5;
+  int64 scan_at = 6;
+}
