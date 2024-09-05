@@ -13,46 +13,21 @@ func TestValidateAzure(t *testing.T) {
 	}{
 		{
 			name:  "OK (prowler)",
-			input: &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
+			input: &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, ProjectID: 1},
 		},
 		{
 			name:    "NG Required(AzureID)",
-			input:   &AzureQueueMessage{AzureID: 0, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
+			input:   &AzureQueueMessage{AzureID: 0, AzureDataSourceID: 2, ProjectID: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(AzureDataSourceID)",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 0, DataSource: "azure:prowler", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(DataSource)",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
-			wantErr: true,
-		},
-		{
-			name:    "NG Unknown(DataSource)",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:unknown", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
+			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 0, ProjectID: 1},
 			wantErr: true,
 		},
 		{
 			name:    "NG Required(ProjectID)",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 0, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
-			wantErr: true,
-		},
-		{
-			name:    "NG Required(SubscriptionID)",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 0, SubscriptionID: "", VerificationCode: ""},
-			wantErr: true,
-		},
-		{
-			name:    "NG Invalid Length(SubscriptionID) short",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 0, SubscriptionID: "12345678901234567890123456789012345", VerificationCode: ""},
-			wantErr: true,
-		},
-		{
-			name:    "NG Invalid Length(SubscriptionID) long",
-			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, DataSource: "azure:prowler", ProjectID: 0, SubscriptionID: "1234567890123456789012345678901234567", VerificationCode: ""},
+			input:   &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 2, ProjectID: 0},
 			wantErr: true,
 		},
 	}
@@ -77,21 +52,21 @@ func TestParseMessageAzure(t *testing.T) {
 	}{
 		{
 			name:  "OK",
-			input: `{"azure_id":1, "azure_data_source_id":1, "data_source":"azure:prowler", "project_id":1, "subscription_id":"123456789012345678901234567890123456",  "verification_code":""}`,
-			want:  &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 1, DataSource: "azure:prowler", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: ""},
+			input: `{"azure_id":1, "azure_data_source_id":1, "project_id":1}`,
+			want:  &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 1, ProjectID: 1},
 		},
 		{
 			name:  "OK(scan_only)",
-			input: `{"azure_id":1, "azure_data_source_id":1, "data_source":"azure:prowler", "project_id":1, "subscription_id":"123456789012345678901234567890123456",  "verification_code":"", "scan_only":"true"}`,
-			want:  &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 1, DataSource: "azure:prowler", ProjectID: 1, SubscriptionID: "123456789012345678901234567890123456", VerificationCode: "", ScanOnly: true},
+			input: `{"azure_id":1, "azure_data_source_id":1, "project_id":1, "scan_only":"true"}`,
+			want:  &AzureQueueMessage{AzureID: 1, AzureDataSourceID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
-			name:    "NG Json parse erroro",
+			name:    "NG Json parse error",
 			input:   `{"parse...: error`,
 			wantErr: true,
 		},
 		{
-			name:    "NG Invalid mmessage(required parammeter)",
+			name:    "NG Invalid message(required parammeter)",
 			input:   `{}`,
 			wantErr: true,
 		},

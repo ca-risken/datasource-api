@@ -15,10 +15,7 @@ const (
 type AzureQueueMessage struct {
 	AzureID           uint32 `json:"azure_id"`
 	AzureDataSourceID uint32 `json:"azure_data_source_id"`
-	DataSource        string `json:"data_source"`
 	ProjectID         uint32 `json:"project_id"`
-	SubscriptionID    string `json:"account_id"`
-	VerificationCode  string `json:"verification_code"`
 	ScanOnly          bool   `json:"scan_only,string"`
 }
 
@@ -27,11 +24,7 @@ func (g *AzureQueueMessage) Validate() error {
 	return validation.ValidateStruct(g,
 		validation.Field(&g.AzureID, validation.Required),
 		validation.Field(&g.AzureDataSourceID, validation.Required),
-		validation.Field(&g.DataSource, validation.Required, validation.In(
-			AzureProwlerDataSource,
-		)),
 		validation.Field(&g.ProjectID, validation.Required),
-		validation.Field(&g.SubscriptionID, validation.Required, validation.Length(36, 36)),
 	)
 }
 
