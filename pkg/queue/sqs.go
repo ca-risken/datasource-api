@@ -43,6 +43,9 @@ type SQSConfig struct {
 	DiagnosisWpscanQueueURL          string
 	DiagnosisPortscanQueueURL        string
 	DiagnosisApplicationScanQueueURL string
+
+	// azure
+	AzureProwlerQueueURL string
 }
 
 type Client struct {
@@ -77,6 +80,9 @@ type Client struct {
 	DiagnosisWpscanQueueURL          string
 	DiagnosisPortscanQueueURL        string
 	DiagnosisApplicationScanQueueURL string
+
+	// azure
+	AzureProwlerQueueURL string
 }
 
 func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client, error) {
@@ -126,6 +132,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
+		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
 	}, nil
 }
 

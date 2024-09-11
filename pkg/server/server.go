@@ -13,16 +13,19 @@ import (
 	mimosarpc "github.com/ca-risken/common/pkg/rpc"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/project"
+	azureClient "github.com/ca-risken/datasource-api/pkg/azure"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
+	azureServer "github.com/ca-risken/datasource-api/pkg/server/azure"
 	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
 	dsServer "github.com/ca-risken/datasource-api/pkg/server/datasource"
 	diagnosisServer "github.com/ca-risken/datasource-api/pkg/server/diagnosis"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	osintServer "github.com/ca-risken/datasource-api/pkg/server/osint"
 	"github.com/ca-risken/datasource-api/proto/aws"
+	"github.com/ca-risken/datasource-api/proto/azure"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 	"github.com/ca-risken/datasource-api/proto/diagnosis"
@@ -82,6 +85,10 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create gcp client: %w", err)
 	}
+	azureClient, err := azureClient.NewAzureClient(ctx, s.logger)
+	if err != nil {
+		return fmt.Errorf("failed to create azure client: %w", err)
+	}
 	slackClient := slack.New(s.slackAPIToken)
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
@@ -92,6 +99,7 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 	osintSvc := osintServer.NewOsintService(s.db, s.queue, pjClient, s.logger)
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
+	azureSvc := azureServer.NewAzureService(ctx, azureClient, s.db, s.queue, pjClient, s.logger)
 	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, slackClient, s.baseURL, s.defaultLocale, s.logger)
 	hsvc := health.NewServer()
 
@@ -105,6 +113,7 @@ func (s *Server) Run(ctx context.Context) error {
 	code.RegisterCodeServiceServer(server, codeSvc)
 	osint.RegisterOsintServiceServer(server, osintSvc)
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
+	azure.RegisterAzureServiceServer(server, azureSvc)
 	datasource.RegisterDataSourceServiceServer(server, dsSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
