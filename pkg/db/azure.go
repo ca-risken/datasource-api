@@ -119,14 +119,14 @@ func (c *Client) UpsertAzure(ctx context.Context, azure *azure.AzureForUpsert) (
 	).Error; err != nil {
 		return nil, err
 	}
-	return c.GetAzureByUniqueIndex(ctx, azure.ProjectId, azure.SubscriptionId)
+	return c.GetAzureBySubscriptionID(ctx, azure.ProjectId, azure.SubscriptionId)
 }
 
-const selectGetAzureByUniqueIndex string = `select * from azure where project_id=? and subscription_id=?`
+const selectGetAzureBySubscriptionID string = `select * from azure where project_id=? and subscription_id=?`
 
-func (c *Client) GetAzureByUniqueIndex(ctx context.Context, projectID uint32, azureProjectID string) (*model.Azure, error) {
+func (c *Client) GetAzureBySubscriptionID(ctx context.Context, projectID uint32, subscriptionID string) (*model.Azure, error) {
 	data := model.Azure{}
-	if err := c.MasterDB.WithContext(ctx).Raw(selectGetAzureByUniqueIndex, projectID, azureProjectID).First(&data).Error; err != nil {
+	if err := c.MasterDB.WithContext(ctx).Raw(selectGetAzureBySubscriptionID, projectID, subscriptionID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -145,7 +145,6 @@ type RelAzureDataSource struct {
 	AzureID           uint32 `gorm:"primary_key column:azure_id"`
 	AzureDataSourceID uint32 `gorm:"primary_key"`
 	ProjectID         uint32
-	SpecificVersion   string
 	Status            string
 	StatusDetail      string
 	ScanAt            time.Time
@@ -158,8 +157,7 @@ type RelAzureDataSource struct {
 	ErrorNotifiedAt   time.Time
 }
 
-func (c *Client) ListRelAzureDataSource(ctx context.Context, projectID, azureID uint32) (*[]RelAzureDataSource, error) {
-	query := `
+const selectListRelAzureDataSource string = `
 select
   rads.*, azure.name, ads.max_score, ads.description, azure.subscription_id
 from
@@ -169,6 +167,9 @@ from
 where
 	1=1
 `
+
+func (c *Client) ListRelAzureDataSource(ctx context.Context, projectID, azureID uint32) (*[]RelAzureDataSource, error) {
+	query := selectListRelAzureDataSource
 	var params []interface{}
 	if !zero.IsZeroVal(projectID) {
 		query += " and rads.project_id = ?"
@@ -255,14 +256,17 @@ func (c *Client) DeleteRelAzureDataSource(ctx context.Context, projectID, azureI
 	return nil
 }
 
-func (c *Client) ListRelAzureDataSourceByDataSourceID(ctx context.Context, azureDataSourceID uint32) (*[]RelAzureDataSource, error) {
-	query := `
+const selectListRelAzureDataSourceByDataSourceID = `
 select
   rads.*, ads.name, ads.max_score, ads.description, azure.subscription_id
 from
   rel_azure_data_source rads
   inner join azure_data_source ads using(azure_data_source_id)
-  inner join azure using(azure_id, project_id)`
+  inner join azure using(azure_id, project_id)
+`
+
+func (c *Client) ListRelAzureDataSourceByDataSourceID(ctx context.Context, azureDataSourceID uint32) (*[]RelAzureDataSource, error) {
+	query := selectListRelAzureDataSourceByDataSourceID
 	var params []interface{}
 	if !zero.IsZeroVal(azureDataSourceID) {
 		query += " where azure_data_source_id = ?"
@@ -285,13 +289,13 @@ type AzureScanError struct {
 
 const selectListAzureScanError = `
 select
-  ads.azure_id, ads.azure_data_source_id, a.name as data_source, ads.project_id, ads.status_detail
+  rads.azure_id, rads.azure_data_source_id, ads.name as data_source, rads.project_id, rads.status_detail
 from
-  azure_data_source ads 
-  inner join azure_data_source a using(azure_data_source_id) 
+  rel_azure_data_source rads 
+  inner join azure_data_source ads using(azure_data_source_id) 
 where
-  ads.status = 'ERROR'
-  and ads.error_notified_at is null
+  rads.status = 'ERROR'
+  and rads.error_notified_at is null
 `
 
 func (c *Client) ListAzureScanErrorForNotify(ctx context.Context) ([]*AzureScanError, error) {
@@ -302,7 +306,7 @@ func (c *Client) ListAzureScanErrorForNotify(ctx context.Context) ([]*AzureScanE
 	return data, nil
 }
 
-const updateAzureErrorNotifiedAt = `update azure_data_source set error_notified_at = ? where azure_id = ? and azure_data_source_id = ? and project_id = ?`
+const updateAzureErrorNotifiedAt = `update rel_azure_data_source set error_notified_at = ? where azure_id = ? and azure_data_source_id = ? and project_id = ?`
 
 func (c *Client) UpdateAzureErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, azureID, azureDataSourceID, projectID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Exec(updateAzureErrorNotifiedAt, errNotifiedAt, azureID, azureDataSourceID, projectID).Error; err != nil {

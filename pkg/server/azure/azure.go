@@ -153,7 +153,6 @@ func convertRelAzureDataSource(data *db.RelAzureDataSource) *azure.RelAzureDataS
 	azure := azure.RelAzureDataSource{
 		AzureId:           data.AzureID,
 		AzureDataSourceId: data.AzureDataSourceID,
-		SpecificVersion:   data.SpecificVersion,
 		ProjectId:         data.ProjectID,
 		Status:            getStatus(data.Status),
 		StatusDetail:      data.StatusDetail,
