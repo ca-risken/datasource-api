@@ -15,6 +15,7 @@ type ScanErrors struct {
 	githubErrors    []*db.GitHubScanError
 	diagnosisErrors []*db.DiagnosisScanError
 	osintErrors     []*db.OsintScanError
+	azureErrors     []*db.AzureScanError
 }
 
 // getScanErrors returns the scan error as a map of scan error data keyed by the project ID
@@ -75,6 +76,17 @@ func (d *DataSourceService) getScanErrors(ctx context.Context) (map[uint32]*Scan
 		}
 		scanErrors[osint.ProjectID].osintErrors = append(scanErrors[osint.ProjectID].osintErrors, osint)
 	}
+	// Azure
+	azureList, err := d.dbClient.ListAzureScanErrorForNotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, azure := range azureList {
+		if _, ok := scanErrors[azure.ProjectID]; !ok {
+			scanErrors[azure.ProjectID] = &ScanErrors{}
+		}
+		scanErrors[azure.ProjectID].azureErrors = append(scanErrors[azure.ProjectID].azureErrors, azure)
+	}
 
 	return scanErrors, nil
 }
@@ -128,6 +140,11 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 	}
 	for _, o := range errs.osintErrors {
 		if err := d.dbClient.UpdateOsintErrorNotifiedAt(ctx, time.Now(), o.RelOsintDataSourceID, projectID); err != nil {
+			return err
+		}
+	}
+	for _, az := range errs.azureErrors {
+		if err := d.dbClient.UpdateAzureErrorNotifiedAt(ctx, time.Now(), az.AzureID, az.AzureDataSourceID, projectID); err != nil {
 			return err
 		}
 	}
