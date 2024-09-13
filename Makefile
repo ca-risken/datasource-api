@@ -42,7 +42,7 @@ doc: fmt
 # build without protoc-gen-validate
 .PHONY: proto-without-validation
 proto-without-validate: fmt
-	for svc in "aws" "google" "code" "diagnosis" "osint" "azure"; do \
+	for svc in "aws" "google" "code" "diagnosis" "osint"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -53,7 +53,7 @@ proto-without-validate: fmt
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource"; do \
+	for svc in "datasource" "azure"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -811,7 +811,7 @@ get-azure:
 put-azure:
 	$(GRPCURL) \
 		-plaintext \
-		-d '{"project_id":1, "azure": {"name":"azure_test", "project_id":1, "subscription_id":"2b67a238-5e9f-4fca-a78a-23cc0df79814", "verification_code":"risken-test"}}' \
+		-d '{"project_id":1, "azure": {"name":"azure_test", "project_id":1, "subscription_id":"subscription_id", "verification_code":"code"}}' \
 		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.PutAzure
 
 .PHONY: delete-azure

@@ -135,10 +135,7 @@ func (c *Client) GetAzureBySubscriptionID(ctx context.Context, projectID uint32,
 const deleteAzure string = `delete from azure where project_id=? and azure_id=?`
 
 func (c *Client) DeleteAzure(ctx context.Context, projectID, azureID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).Exec(deleteAzure, projectID, azureID).Error; err != nil {
-		return err
-	}
-	return nil
+	return c.MasterDB.WithContext(ctx).Exec(deleteAzure, projectID, azureID).Error
 }
 
 type RelAzureDataSource struct {
@@ -165,7 +162,7 @@ from
   inner join azure_data_source ads using(azure_data_source_id)
   inner join azure using(azure_id, project_id)
 where
-	1=1
+  1=1
 `
 
 func (c *Client) ListRelAzureDataSource(ctx context.Context, projectID, azureID uint32) (*[]RelAzureDataSource, error) {
@@ -194,7 +191,7 @@ from
   inner join azure_data_source ads using(azure_data_source_id)
   inner join azure using(azure_id, project_id)
 where
-	rads.project_id=? and rads.azure_id=? and rads.azure_data_source_id=?
+  rads.project_id=? and rads.azure_id=? and rads.azure_data_source_id=?
 `
 
 func (c *Client) GetRelAzureDataSource(ctx context.Context, projectID, azureID, azureDataSourceID uint32) (*RelAzureDataSource, error) {
@@ -250,10 +247,7 @@ func (c *Client) UpsertRelAzureDataSource(ctx context.Context, relAzureDataSourc
 const deleteRelAzureDataSource string = `delete from rel_azure_data_source where project_id=? and azure_id=? and azure_data_source_id=?`
 
 func (c *Client) DeleteRelAzureDataSource(ctx context.Context, projectID, azureID, azureDataSourceID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).Exec(deleteRelAzureDataSource, projectID, azureID, azureDataSourceID).Error; err != nil {
-		return err
-	}
-	return nil
+	return c.MasterDB.WithContext(ctx).Exec(deleteRelAzureDataSource, projectID, azureID, azureDataSourceID).Error
 }
 
 const selectListRelAzureDataSourceByDataSourceID = `
@@ -309,8 +303,5 @@ func (c *Client) ListAzureScanErrorForNotify(ctx context.Context) ([]*AzureScanE
 const updateAzureErrorNotifiedAt = `update rel_azure_data_source set error_notified_at = ? where azure_id = ? and azure_data_source_id = ? and project_id = ?`
 
 func (c *Client) UpdateAzureErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, azureID, azureDataSourceID, projectID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).Exec(updateAzureErrorNotifiedAt, errNotifiedAt, azureID, azureDataSourceID, projectID).Error; err != nil {
-		return err
-	}
-	return nil
+	return c.MasterDB.WithContext(ctx).Exec(updateAzureErrorNotifiedAt, errNotifiedAt, azureID, azureDataSourceID, projectID).Error
 }

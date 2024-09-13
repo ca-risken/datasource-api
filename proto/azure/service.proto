@@ -4,6 +4,7 @@ package datasource.azure;
 option go_package = "github.com/ca-risken/datasource-api/proto/azure";
 
 import "azure/entity.proto";
+import "validate/validate.proto";
 
 service AzureService {
   // Azure DataSource
@@ -32,7 +33,7 @@ service AzureService {
 
 message ListAzureDataSourceRequest {
   uint32 azure_data_source_id = 1;
-  string name = 2;
+  string name = 2 [ (validate.rules).string = {min_len : 0, max_len : 64} ];
 }
 
 message ListAzureDataSourceResponse {
@@ -40,34 +41,35 @@ message ListAzureDataSourceResponse {
 }
 
 message ListAzureRequest {
-  uint32 project_id = 1;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
   uint32 azure_id = 2;
-  string subscription_id = 3;
+  string subscription_id = 3
+      [ (validate.rules).string = {min_len : 0, max_len : 128} ];
 }
 
 message ListAzureResponse { repeated Azure azure = 1; }
 
 message GetAzureRequest {
-  uint32 project_id = 1;
-  uint32 azure_id = 2;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_id = 2 [ (validate.rules).uint32.gt = 0 ];
 }
 
 message GetAzureResponse { Azure azure = 1; }
 
 message PutAzureRequest {
-  uint32 project_id = 1;
-  AzureForUpsert azure = 2;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  AzureForUpsert azure = 2 [ (validate.rules).message.required = true ];
 }
 
 message PutAzureResponse { Azure azure = 1; }
 
 message DeleteAzureRequest {
-  uint32 project_id = 1;
-  uint32 azure_id = 2;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_id = 2 [ (validate.rules).uint32.gt = 0 ];
 }
 
 message ListRelAzureDataSourceRequest {
-  uint32 project_id = 1;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
   uint32 azure_id = 2;
 }
 
@@ -76,9 +78,9 @@ message ListRelAzureDataSourceResponse {
 }
 
 message GetRelAzureDataSourceRequest {
-  uint32 project_id = 1;
-  uint32 azure_id = 2;
-  uint32 azure_data_source_id = 3;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_id = 2 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_data_source_id = 3 [ (validate.rules).uint32.gt = 0 ];
 }
 
 message GetRelAzureDataSourceResponse {
@@ -86,8 +88,9 @@ message GetRelAzureDataSourceResponse {
 }
 
 message AttachRelAzureDataSourceRequest {
-  uint32 project_id = 1;
-  RelAzureDataSourceForUpsert rel_azure_data_source = 2;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  RelAzureDataSourceForUpsert rel_azure_data_source = 2
+      [ (validate.rules).message.required = true ];
 }
 
 message AttachRelAzureDataSourceResponse {
@@ -95,15 +98,15 @@ message AttachRelAzureDataSourceResponse {
 }
 
 message DetachRelAzureDataSourceRequest {
-  uint32 project_id = 1;
-  uint32 azure_id = 2;
-  uint32 azure_data_source_id = 3;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_id = 2 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_data_source_id = 3 [ (validate.rules).uint32.gt = 0 ];
 }
 
 message InvokeScanAzureRequest {
-  uint32 project_id = 1;
-  uint32 azure_id = 2;
-  uint32 azure_data_source_id = 3;
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_id = 2 [ (validate.rules).uint32.gt = 0 ];
+  uint32 azure_data_source_id = 3 [ (validate.rules).uint32.gt = 0 ];
   bool scan_only = 4;
 }
 

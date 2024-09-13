@@ -30,7 +30,7 @@ func (a *AzureClient) VerifyCode(ctx context.Context, subscriptionID, verificati
 	}
 	cspan.Finish(tracer.WithError(err))
 	if resp.TagsResource.Properties == nil {
-		return false, fmt.Errorf("")
+		return false, fmt.Errorf("tagsResource.Properties is nil")
 	}
 	for k, v := range resp.TagsResource.Properties.Tags {
 		if k == verificationLabelKey && *v == verificationCode {
