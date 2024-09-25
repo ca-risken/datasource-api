@@ -58,11 +58,15 @@ type AppConf struct {
 	DiagnosisWpscanQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-wpscan"`
 	DiagnosisPortscanQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-portscan"`
 	DiagnosisApplicationScanQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-applicationscan"`
+	AzureProwlerQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/azure-prowler"`
 
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey          string `split_words:"true" required:"true"`                                // code
 	SlackAPIToken        string `split_words:"true"`                                                // slack
+	AzureClientID        string `split_words:"true"`                                                // azure
+	AzureTenantID        string `split_words:"true"`                                                // azure
+	AzureClientSecret    string `split_words:"true"`                                                // azure
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -158,6 +162,7 @@ func main() {
 		DiagnosisWpscanQueueURL:          conf.DiagnosisWpscanQueueURL,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
+		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
 	}
 	q, err := queue.NewClient(ctx, queueConf, logger)
 	if err != nil {

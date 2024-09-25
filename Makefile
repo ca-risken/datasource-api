@@ -1,4 +1,4 @@
-TARGETS = aws google diagnosis osint code datasource
+TARGETS = aws google diagnosis osint code datasource azure
 MOCK_TARGETS = $(TARGETS:=.mock)
 BUILD_OPT=""
 IMAGE_TAG=latest
@@ -53,7 +53,7 @@ proto-without-validate: fmt
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource"; do \
+	for svc in "datasource" "azure"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -107,7 +107,7 @@ lint: FAKE
 	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
 
 .PHONY: generate-mock
-generate-mock: proto-mock repository-mock gcp-mock
+generate-mock: proto-mock repository-mock gcp-mock azure-mock
 
 .PHONY: proto-mock
 proto-mock: $(MOCK_TARGETS)
@@ -121,6 +121,10 @@ repository-mock: FAKE
 .PHONY: gcp-mock
 gcp-mock: FAKE
 	sh hack/generate-mock.sh pkg/gcp
+
+.PHONY: azure-mock
+azure-mock: FAKE
+	sh hack/generate-mock.sh pkg/azure
 
 FAKE:
 
@@ -775,3 +779,83 @@ invoke-osint-scan_all:
 		-plaintext \
 		$(DATASOURCE_API_ADDR) datasource.osint.OsintService.InvokeScanAll
 
+####################################################
+## Azure
+####################################################
+.PHONY: list-azure-service
+list-azure-service:
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) list datasource.azure.AzureService
+
+.PHONY: list-azure-datasource
+list-azure-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"azure_data_source_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.ListAzureDataSource
+
+.PHONY: list-azure
+list-azure:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.ListAzure
+
+.PHONY: get-azure
+get-azure:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.GetAzure
+
+.PHONY: put-azure
+put-azure:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure": {"name":"azure_test", "project_id":1, "subscription_id":"subscription_id", "verification_code":"code"}}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.PutAzure
+
+.PHONY: delete-azure
+delete-azure:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.DeleteAzure
+
+.PHONY: list-rel-azure-datasource
+list-rel-azure-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.ListRelAzureDataSource
+
+.PHONY: get-rel-azure-datasource
+get-rel-azure-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1001, "azure_data_source_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.GetRelAzureDataSource
+
+.PHONY: attach-rel-azure-datasource
+attach-rel-azure-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "rel_azure_data_source": {"azure_id":1001, "azure_data_source_id":1001, "project_id":1}}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.AttachRelAzureDataSource
+
+.PHONY: detach-rel-azure-datasource
+detach-rel-azure-datasource:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1001, "azure_data_source_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.DetachRelAzureDataSource
+
+.PHONY: invoke-scan-azure
+invoke-scan-azure:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1, "azure_id":1001, "azure_data_source_id":1001}' \
+		$(DATASOURCE_API_ADDR) datasource.azure.AzureService.InvokeScanAzure
+
+.PHONY: invoke-azure-scan-all
+invoke-azure-scan-all:
+	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) datasource.azure.AzureService.InvokeScanAll

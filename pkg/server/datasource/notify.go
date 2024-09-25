@@ -104,6 +104,9 @@ func (d *DataSourceService) getSlackAttachments(projectID uint32, scanErrors *Sc
 	for _, o := range scanErrors.osintErrors {
 		attachments = append(attachments, generateSlackAttachment(d.baseURL, o.DataSource, o.StatusDetail, projectID))
 	}
+	for _, o := range scanErrors.azureErrors {
+		attachments = append(attachments, generateSlackAttachment(d.baseURL, o.DataSource, o.StatusDetail, projectID))
+	}
 	return attachments
 }
 

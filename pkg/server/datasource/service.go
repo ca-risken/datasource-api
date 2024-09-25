@@ -26,6 +26,7 @@ type dsDBClient interface {
 	db.CodeRepoInterface
 	db.DiagnosisRepoInterface
 	db.OSINTRepoInterface
+	db.AzureRepoInterface
 }
 
 type DataSourceService struct {
