@@ -204,6 +204,9 @@ func (g *GoogleService) GetGCPDataSource(ctx context.Context, req *google.GetGCP
 }
 
 func (g *GoogleService) AttachGCPDataSource(ctx context.Context, req *google.AttachGCPDataSourceRequest) (*google.AttachGCPDataSourceResponse, error) {
+	if g.gcpClient == nil {
+		return nil, fmt.Errorf("gcp client is not enabled")
+	}
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -245,6 +248,11 @@ const (
 )
 
 func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
+	if g.gcpClient == nil {
+		if g.gcpClient == nil {
+			return nil, fmt.Errorf("gcp client is not enabled")
+		}
+	}
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}

@@ -31,10 +31,6 @@ type GcpClient struct {
 }
 
 func NewGcpClient(ctx context.Context, credentialPath string, l logging.Logger) (GcpServiceClient, error) {
-	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
-	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
-	}
 	crm, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new Cloud Resource Manager service: err=%w", err)
@@ -42,6 +38,10 @@ func NewGcpClient(ctx context.Context, credentialPath string, l logging.Logger) 
 	compute, err := compute.NewService(ctx, option.WithCredentialsFile(credentialPath))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new Compute service: err=%w", err)
+	}
+	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
 	}
 
 	// Remove credential file for Security

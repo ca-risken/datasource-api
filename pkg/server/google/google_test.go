@@ -437,6 +437,7 @@ func TestAttachGCPDataSource(t *testing.T) {
 		name         string
 		input        *google.AttachGCPDataSourceRequest
 		want         *google.AttachGCPDataSourceResponse
+		mockGCP      *gcpmock.GcpServiceClient
 		mockResponce *db.GCPDataSource
 		mockError    error
 		wantErr      bool
@@ -451,14 +452,22 @@ func TestAttachGCPDataSource(t *testing.T) {
 			want: &google.AttachGCPDataSourceResponse{GcpDataSource: &google.GCPDataSource{
 				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: google.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
+			mockGCP: gcpmock.NewGcpServiceClient(t),
 			mockResponce: &db.GCPDataSource{
 				GCPID: 1, GoogleDataSourceID: 1, ProjectID: 1, Status: google.Status_OK.String(), ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 			callGetGCP: true,
 		},
 		{
+			name:       "NG gcp client is nil",
+			input:      &google.AttachGCPDataSourceRequest{ProjectId: 1},
+			wantErr:    true,
+			callGetGCP: false,
+		},
+		{
 			name:       "NG invalid param",
 			input:      &google.AttachGCPDataSourceRequest{ProjectId: 1},
+			mockGCP:    gcpmock.NewGcpServiceClient(t),
 			wantErr:    true,
 			callGetGCP: false,
 		},
@@ -467,6 +476,7 @@ func TestAttachGCPDataSource(t *testing.T) {
 			input: &google.AttachGCPDataSourceRequest{ProjectId: 1, GcpDataSource: &google.GCPDataSourceForUpsert{
 				GcpId: 1, GoogleDataSourceId: 1, ProjectId: 1, Status: google.Status_OK, StatusDetail: "", ScanAt: now.Unix()},
 			},
+			mockGCP:    gcpmock.NewGcpServiceClient(t),
 			mockError:  gorm.ErrInvalidDB,
 			wantErr:    true,
 			callGetGCP: true,
@@ -476,12 +486,11 @@ func TestAttachGCPDataSource(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewGoogleRepoInterface(t)
-			mockGCP := gcpmock.NewGcpServiceClient(t)
-			svc := GoogleService{repository: mockDB, gcpClient: mockGCP}
+			svc := GoogleService{repository: mockDB, gcpClient: c.mockGCP}
 
 			if c.callGetGCP {
 				mockDB.On("GetGCP", test.RepeatMockAnything(3)...).Return(&model.GCP{}, nil)
-				mockGCP.On("VerifyCode", test.RepeatMockAnything(3)...).Return(true, nil)
+				c.mockGCP.On("VerifyCode", test.RepeatMockAnything(3)...).Return(true, nil)
 			}
 
 			if c.mockResponce != nil || c.mockError != nil {
