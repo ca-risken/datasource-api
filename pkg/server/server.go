@@ -85,7 +85,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if _, err := os.Stat(s.googleCredentialPath); os.IsNotExist(err) {
 		s.logger.Warnf(ctx, "Google credential file not exists at %s", s.googleCredentialPath)
 		s.logger.Warn(ctx, "Google service will not be available")
-	} else {
+	} else if err != nil {
 		gcpClient, err = gcp.NewGcpClient(ctx, s.googleCredentialPath, s.logger)
 		if err != nil {
 			return fmt.Errorf("failed to create gcp client: %w", err)

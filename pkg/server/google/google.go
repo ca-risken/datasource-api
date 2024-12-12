@@ -249,9 +249,7 @@ const (
 
 func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeScanGCPRequest) (*google.Empty, error) {
 	if g.gcpClient == nil {
-		if g.gcpClient == nil {
-			return nil, fmt.Errorf("gcp client is not enabled")
-		}
+		return nil, fmt.Errorf("gcp client is not enabled")
 	}
 	if err := req.Validate(); err != nil {
 		return nil, err
