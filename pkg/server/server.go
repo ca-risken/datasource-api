@@ -85,6 +85,10 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create gcp client: %w", err)
 	}
+	if gcpClient == nil {
+		s.logger.Warnf(ctx, "Google credential file not exists at %s", s.googleCredentialPath)
+		s.logger.Warn(ctx, "Google service will not be available")
+	}
 	azureClient, err := azureClient.NewAzureClient(ctx, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create azure client: %w", err)
