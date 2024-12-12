@@ -73,7 +73,9 @@ func (o *OsintService) PutRelOsintDataSource(ctx context.Context, req *osint.Put
 		o.logger.Errorf(ctx, "Failed to Put RelOsintDataSource. error: %v", err)
 		return nil, err
 	}
-	if !registeredData.ErrorNotifiedAt.IsZero() && registeredData.Status != aws.Status_ERROR.String() {
+	if registeredData.ErrorNotifiedAt != nil &&
+		!registeredData.ErrorNotifiedAt.IsZero() &&
+		registeredData.Status != aws.Status_ERROR.String() {
 		if err := o.repository.UpdateOsintErrorNotifiedAt(ctx, gorm.Expr("NULL"), registeredData.RelOsintDataSourceID, registeredData.ProjectID); err != nil {
 			return nil, err
 		}
