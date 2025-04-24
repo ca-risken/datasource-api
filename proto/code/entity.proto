@@ -32,6 +32,7 @@ message GitHubSetting {
   GitleaksSetting gitleaks_setting = 11;
   DependencySetting dependency_setting = 12;
   CodeScanSetting code_scan_setting = 13;
+  string repository_pattern = 14;
 }
 
 // GitleaksSetting
@@ -113,6 +114,7 @@ message GitHubSettingForUpsert {
   Type type = 6;
   string base_url = 7;
   string target_resource = 8;
+  string repository_pattern = 14;
 }
 
 // GitleaksSettingForUpsert
