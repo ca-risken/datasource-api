@@ -20,6 +20,7 @@ type CodeGitHubSetting struct {
 	Type                string
 	BaseURL             string
 	TargetResource      string
+	RepositoryPattern   string
 	GitHubUser          string `gorm:"column:github_user"`
 	PersonalAccessToken string
 	CreatedAt           time.Time

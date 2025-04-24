@@ -112,6 +112,7 @@ INSERT INTO code_github_setting (
   type,
   base_url,
   target_resource,
+  repository_pattern,
   github_user,
   personal_access_token
 )
@@ -123,6 +124,7 @@ ON DUPLICATE KEY UPDATE
 	type=VALUES(type),
 	base_url=VALUES(base_url),
 	target_resource=VALUES(target_resource),
+	repository_pattern=VALUES(repository_pattern),
 	github_user=VALUES(github_user),
 	personal_access_token=VALUES(personal_access_token)
 `
@@ -135,6 +137,7 @@ func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.Gi
 		data.Type.String(),
 		data.BaseUrl,
 		data.TargetResource,
+		convertZeroValueToNull(data.RepositoryPattern),
 		convertZeroValueToNull(data.GithubUser),
 		convertZeroValueToNull(data.PersonalAccessToken)).Error; err != nil {
 		return nil, err
@@ -150,6 +153,7 @@ INSERT INTO code_github_setting (
   type,
   base_url,
   target_resource,
+  repository_pattern,
   github_user
 )
 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -160,6 +164,7 @@ ON DUPLICATE KEY UPDATE
 	type=VALUES(type),
 	base_url=VALUES(base_url),
 	target_resource=VALUES(target_resource),
+	repository_pattern=VALUES(repository_pattern),
 	github_user=VALUES(github_user)
 `
 
@@ -171,6 +176,7 @@ func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code
 		data.Type.String(),
 		data.BaseUrl,
 		data.TargetResource,
+		convertZeroValueToNull(data.RepositoryPattern),
 		convertZeroValueToNull(data.GithubUser)).Error; err != nil {
 		return nil, err
 	}
