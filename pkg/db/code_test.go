@@ -177,35 +177,35 @@ func TestUpsertGitHubSetting(t *testing.T) {
 		{
 			name: "OK with token",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user", PersonalAccessToken: "token"},
 			},
-			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", RepositoryPattern: "repository_pattern", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubWithToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
-					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "repository_pattern", "github_user", "personal_access_token", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "repository_pattern", "user", "token", now, now))
 			},
 		},
 		{
 			name: "OK without token",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user"},
 			},
-			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", RepositoryPattern: "repository_pattern", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubSettingWithoutToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
-					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "repository_pattern", "github_user", "personal_access_token", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "repository_pattern", "user", "token", now, now))
 			},
 		},
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user", PersonalAccessToken: "token"},
 			},
 			want:    nil,
 			wantErr: true,
