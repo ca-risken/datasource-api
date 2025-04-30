@@ -70,6 +70,7 @@ func convertGitHubSetting(
 		TargetResource:      gitHubSetting.TargetResource,
 		GithubUser:          gitHubSetting.GitHubUser,
 		PersonalAccessToken: gitHubSetting.PersonalAccessToken,
+		RepositoryPattern:   gitHubSetting.RepositoryPattern,
 		CreatedAt:           gitHubSetting.CreatedAt.Unix(),
 		UpdatedAt:           gitHubSetting.UpdatedAt.Unix(),
 	}

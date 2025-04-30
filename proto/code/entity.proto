@@ -114,7 +114,7 @@ message GitHubSettingForUpsert {
   Type type = 6;
   string base_url = 7;
   string target_resource = 8;
-  string repository_pattern = 14;
+  string repository_pattern = 9;
 }
 
 // GitleaksSettingForUpsert

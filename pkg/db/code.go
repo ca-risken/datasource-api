@@ -116,7 +116,7 @@ INSERT INTO code_github_setting (
   github_user,
   personal_access_token
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	code_github_setting_id=VALUES(code_github_setting_id),
 	name=VALUES(name),
@@ -156,7 +156,7 @@ INSERT INTO code_github_setting (
   repository_pattern,
   github_user
 )
-VALUES (?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	code_github_setting_id=VALUES(code_github_setting_id),
 	name=VALUES(name),
