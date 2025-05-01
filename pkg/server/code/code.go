@@ -514,12 +514,13 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		return nil, err
 	}
 	if _, err = c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
-		GithubSettingId:  data.CodeGitHubSettingID,
-		CodeDataSourceId: data.CodeDataSourceID,
-		ProjectId:        data.ProjectID,
-		Status:           code.Status_IN_PROGRESS,
-		StatusDetail:     fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
-		ScanAt:           data.ScanAt.Unix(),
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		Status:            code.Status_IN_PROGRESS,
+		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
