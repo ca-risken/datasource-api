@@ -354,7 +354,7 @@ func (c *Client) GetDependencySetting(ctx context.Context, projectID uint32, git
 }
 
 const upsertDependencySetting = `
-INSERT INTO dependency_setting (
+INSERT INTO code_dependency_setting (
   code_github_setting_id,
   code_data_source_id,
   project_id,
