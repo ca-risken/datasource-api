@@ -177,35 +177,35 @@ func TestUpsertGitHubSetting(t *testing.T) {
 		{
 			name: "OK with token",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
 			},
-			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", RepositoryPattern: "repository_pattern", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubWithToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "name", "project_id", "type", "target_resource", "repository_pattern", "github_user", "personal_access_token", "created_at", "updated_at"}).
-					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "repository_pattern", "user", "token", now, now))
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
 			},
 		},
 		{
 			name: "OK without token",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user"},
 			},
-			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", RepositoryPattern: "repository_pattern", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubSettingWithoutToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "name", "project_id", "type", "target_resource", "repository_pattern", "github_user", "personal_access_token", "created_at", "updated_at"}).
-					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "repository_pattern", "user", "token", now, now))
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
 			},
 		},
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", RepositoryPattern: "repository_pattern", GithubUser: "user", PersonalAccessToken: "token"},
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token"},
 			},
 			want:    nil,
 			wantErr: true,
@@ -808,30 +808,30 @@ func TestListDependencySetting(t *testing.T) {
 			name: "OK",
 			args: args{ProjectID: 1},
 			want: &[]model.CodeDependencySetting{
-				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
-				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta("select * from code_dependency_setting where project_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now).
-					AddRow(uint32(2), uint32(1), uint32(1), "OK", now, now, now))
+					"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "repo", "OK", now, now, now).
+					AddRow(uint32(2), uint32(1), uint32(1), "repo", "OK", now, now, now))
 			},
 		},
 		{
 			name: "OK project_id 0 value",
 			args: args{ProjectID: 0},
 			want: &[]model.CodeDependencySetting{
-				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
-				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta("select * from code_dependency_setting")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now).
-					AddRow(uint32(2), uint32(1), uint32(1), "OK", now, now, now))
+					"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "repo", "OK", now, now, now).
+					AddRow(uint32(2), uint32(1), uint32(1), "repo", "OK", now, now, now))
 			},
 		},
 		{
@@ -883,12 +883,12 @@ func TestGetDependencySetting(t *testing.T) {
 		{
 			name:    "OK",
 			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
-			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now))
+					"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "repo", "OK", now, now, now))
 			},
 		},
 		{
@@ -937,51 +937,28 @@ func TestUpsertDependencySetting(t *testing.T) {
 		mockClosure func(mock sqlmock.Sqlmock)
 	}{
 		{
-			name: "OK update",
+			name: "OK",
 			args: args{
-				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
-			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, ErrorNotifiedAt: now, CreatedAt: now, UpdatedAt: now},
+			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now))
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta("UPDATE `code_dependency_setting` SET `code_data_source_id`=?,`code_github_setting_id`=?,`project_id`=?,`scan_at`=?,`status`=?,`status_detail`=?,`updated_at`=? WHERE (project_id = ? AND code_github_setting_id = ?) AND `code_github_setting_id` = ?")).WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now, now))
-			},
-		},
-		{
-			name: "OK insert",
-			args: args{
-				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
-			},
-			want:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "detail", ScanAt: now, ErrorNotifiedAt: now, CreatedAt: now, UpdatedAt: now},
-			wantErr: false,
-			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}))
-				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta("INSERT INTO `code_dependency_setting` (`code_data_source_id`,`project_id`,`status`,`status_detail`,`scan_at`,`created_at`,`updated_at`,`code_github_setting_id`) VALUES (?,?,?,?,?,?,?,?)")).WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnRows(sqlmock.NewRows([]string{
-					"code_github_setting_id", "code_data_source_id", "project_id", "status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at"}).
-					AddRow(uint32(1), uint32(1), uint32(1), "OK", "detail", now, now, now, now))
+				mock.ExpectExec(regexp.QuoteMeta(upsertDependencySetting)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "code_data_source_id", "project_id", "status", "scan_at", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint32(1), "OK", now, now, now))
 			},
 		},
 		{
 			name: "NG DB error",
 			args: args{
-				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+				data: &code.DependencySettingForUpsert{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
 			want:    nil,
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_dependency_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_dependency_setting`.`code_github_setting_id` LIMIT 1")).WillReturnError(errors.New("DB error"))
+				mock.ExpectExec(regexp.QuoteMeta(upsertDependencySetting)).WillReturnError(errors.New("DB error"))
 			},
 		},
 	}

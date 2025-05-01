@@ -20,7 +20,6 @@ type CodeGitHubSetting struct {
 	Type                string
 	BaseURL             string
 	TargetResource      string
-	RepositoryPattern   string
 	GitHubUser          string `gorm:"column:github_user"`
 	PersonalAccessToken string
 	CreatedAt           time.Time
@@ -62,6 +61,7 @@ type CodeDependencySetting struct {
 	CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
 	CodeDataSourceID    uint32
 	ProjectID           uint32
+	RepositoryPattern   string
 	Status              string
 	StatusDetail        string
 	ScanAt              time.Time

@@ -112,11 +112,10 @@ INSERT INTO code_github_setting (
   type,
   base_url,
   target_resource,
-  repository_pattern,
   github_user,
   personal_access_token
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	code_github_setting_id=VALUES(code_github_setting_id),
 	name=VALUES(name),
@@ -124,7 +123,6 @@ ON DUPLICATE KEY UPDATE
 	type=VALUES(type),
 	base_url=VALUES(base_url),
 	target_resource=VALUES(target_resource),
-	repository_pattern=VALUES(repository_pattern),
 	github_user=VALUES(github_user),
 	personal_access_token=VALUES(personal_access_token)
 `
@@ -137,7 +135,6 @@ func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.Gi
 		data.Type.String(),
 		data.BaseUrl,
 		data.TargetResource,
-		convertZeroValueToNull(data.RepositoryPattern),
 		convertZeroValueToNull(data.GithubUser),
 		convertZeroValueToNull(data.PersonalAccessToken)).Error; err != nil {
 		return nil, err
@@ -153,10 +150,9 @@ INSERT INTO code_github_setting (
   type,
   base_url,
   target_resource,
-  repository_pattern,
   github_user
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	code_github_setting_id=VALUES(code_github_setting_id),
 	name=VALUES(name),
@@ -164,7 +160,6 @@ ON DUPLICATE KEY UPDATE
 	type=VALUES(type),
 	base_url=VALUES(base_url),
 	target_resource=VALUES(target_resource),
-	repository_pattern=VALUES(repository_pattern),
 	github_user=VALUES(github_user)
 `
 
@@ -176,7 +171,6 @@ func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code
 		data.Type.String(),
 		data.BaseUrl,
 		data.TargetResource,
-		convertZeroValueToNull(data.RepositoryPattern),
 		convertZeroValueToNull(data.GithubUser)).Error; err != nil {
 		return nil, err
 	}
@@ -359,31 +353,38 @@ func (c *Client) GetDependencySetting(ctx context.Context, projectID uint32, git
 	return &data, nil
 }
 
+const upsertDependencySetting = `
+INSERT INTO dependency_setting (
+  code_github_setting_id,
+  code_data_source_id,
+  project_id,
+  repository_pattern,
+  status,
+  status_detail,
+  scan_at
+)
+VALUES (?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	code_data_source_id=VALUES(code_data_source_id),
+	project_id=VALUES(project_id),
+	repository_pattern=VALUES(repository_pattern),
+	status=VALUES(status),
+	status_detail=VALUES(status_detail),
+	scan_at=VALUES(scan_at)
+`
+
 func (c *Client) UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error) {
-	// exclude ErrorNotifiedAt
-	type codeDependencySetting struct {
-		CodeGitHubSettingID uint32 `gorm:"primary_key;column:code_github_setting_id"`
-		CodeDataSourceID    uint32
-		ProjectID           uint32
-		Status              string
-		StatusDetail        string
-		ScanAt              time.Time
-		CreatedAt           time.Time
-		UpdatedAt           time.Time
-	}
-	param := codeDependencySetting{
-		CodeGitHubSettingID: data.GithubSettingId,
-		CodeDataSourceID:    data.CodeDataSourceId,
-		ProjectID:           data.ProjectId,
-		Status:              data.Status.String(),
-		StatusDetail:        data.StatusDetail,
-		ScanAt:              time.Unix(data.ScanAt, 0),
-	}
-	var savedData codeDependencySetting
-	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", param.ProjectID, param.CodeGitHubSettingID).Assign(param).FirstOrCreate(&savedData).Error; err != nil {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertDependencySetting,
+		data.GithubSettingId,
+		data.CodeDataSourceId,
+		data.ProjectId,
+		convertZeroValueToNull(data.RepositoryPattern),
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		time.Unix(data.ScanAt, 0)).Error; err != nil {
 		return nil, err
 	}
-	return c.GetDependencySetting(ctx, param.ProjectID, param.CodeGitHubSettingID)
+	return c.GetDependencySetting(ctx, data.ProjectId, data.GithubSettingId)
 }
 
 func (c *Client) DeleteDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {

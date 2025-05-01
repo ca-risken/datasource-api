@@ -70,7 +70,6 @@ func convertGitHubSetting(
 		TargetResource:      gitHubSetting.TargetResource,
 		GithubUser:          gitHubSetting.GitHubUser,
 		PersonalAccessToken: gitHubSetting.PersonalAccessToken,
-		RepositoryPattern:   gitHubSetting.RepositoryPattern,
 		CreatedAt:           gitHubSetting.CreatedAt.Unix(),
 		UpdatedAt:           gitHubSetting.UpdatedAt.Unix(),
 	}
@@ -118,13 +117,14 @@ func convertDependencySetting(data *model.CodeDependencySetting) *code.Dependenc
 		return &dependencySetting
 	}
 	dependencySetting = code.DependencySetting{
-		GithubSettingId:  data.CodeGitHubSettingID,
-		CodeDataSourceId: data.CodeDataSourceID,
-		ProjectId:        data.ProjectID,
-		Status:           getStatus(data.Status),
-		StatusDetail:     data.StatusDetail,
-		CreatedAt:        data.CreatedAt.Unix(),
-		UpdatedAt:        data.UpdatedAt.Unix(),
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		Status:            getStatus(data.Status),
+		StatusDetail:      data.StatusDetail,
+		CreatedAt:         data.CreatedAt.Unix(),
+		UpdatedAt:         data.UpdatedAt.Unix(),
 	}
 	if !zero.IsZeroVal(data.ScanAt) {
 		dependencySetting.ScanAt = data.ScanAt.Unix()
