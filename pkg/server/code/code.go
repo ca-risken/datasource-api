@@ -117,13 +117,14 @@ func convertDependencySetting(data *model.CodeDependencySetting) *code.Dependenc
 		return &dependencySetting
 	}
 	dependencySetting = code.DependencySetting{
-		GithubSettingId:  data.CodeGitHubSettingID,
-		CodeDataSourceId: data.CodeDataSourceID,
-		ProjectId:        data.ProjectID,
-		Status:           getStatus(data.Status),
-		StatusDetail:     data.StatusDetail,
-		CreatedAt:        data.CreatedAt.Unix(),
-		UpdatedAt:        data.UpdatedAt.Unix(),
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		Status:            getStatus(data.Status),
+		StatusDetail:      data.StatusDetail,
+		CreatedAt:         data.CreatedAt.Unix(),
+		UpdatedAt:         data.UpdatedAt.Unix(),
 	}
 	if !zero.IsZeroVal(data.ScanAt) {
 		dependencySetting.ScanAt = data.ScanAt.Unix()
@@ -513,12 +514,13 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		return nil, err
 	}
 	if _, err = c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
-		GithubSettingId:  data.CodeGitHubSettingID,
-		CodeDataSourceId: data.CodeDataSourceID,
-		ProjectId:        data.ProjectID,
-		Status:           code.Status_IN_PROGRESS,
-		StatusDetail:     fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
-		ScanAt:           data.ScanAt.Unix(),
+		GithubSettingId:   data.CodeGitHubSettingID,
+		CodeDataSourceId:  data.CodeDataSourceID,
+		ProjectId:         data.ProjectID,
+		RepositoryPattern: data.RepositoryPattern,
+		Status:            code.Status_IN_PROGRESS,
+		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
