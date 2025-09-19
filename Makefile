@@ -103,7 +103,7 @@ test:
 	GO111MODULE=on go test ./...
 
 PHONY: go-test
-test:
+go-test:
 	GO111MODULE=on go test ./...
 
 .PHONY: lint
