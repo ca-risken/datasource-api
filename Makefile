@@ -102,6 +102,10 @@ PHONY: test
 test:
 	GO111MODULE=on go test ./...
 
+PHONY: go-test
+test:
+	GO111MODULE=on go test ./...
+
 .PHONY: lint
 lint: FAKE
 	GO111MODULE=on GOFLAGS=-buildvcs=false golangci-lint run --timeout 5m
