@@ -232,6 +232,13 @@ invoke-aws-scan:
 		-d '{"project_id":1, "aws_id":1, "aws_data_source_id":1001}' \
 		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScan
 
+.PHONY: invoke-aws-scan-accessanalyzer
+invoke-aws-scan-accessanalyzer:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":1001, "aws_id":1001, "aws_data_source_id":1002, "full_scan":true}' \
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScan
+
 .PHONY: invoke-aws-scan-all
 invoke-aws-scan-all:
 	$(GRPCURL) \

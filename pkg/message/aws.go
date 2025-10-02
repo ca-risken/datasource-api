@@ -30,6 +30,7 @@ type AWSQueueMessage struct {
 	ExternalID      string `json:"external_id"`
 	ScanOnly        bool   `json:"scan_only,string"`
 	SpecificVersion string `json:"specific_version"`
+	FullScan        bool   `json:"full_scan,omitempty"`
 }
 
 // Validate is the validation to GuardDutyMessage
