@@ -276,6 +276,7 @@ func (a *AWSService) InvokeScanAll(ctx context.Context, req *aws.InvokeScanAllRe
 			AwsId:           dataSource.AWSID,
 			AwsDataSourceId: dataSource.AWSDataSourceID,
 			ScanOnly:        true,
+			FullScan:        req.FullScan,
 		}); err != nil {
 			a.logger.Errorf(ctx, "AWS InvokeScan error: project_id=%d, aws_id=%d, aws_datasource_id=%d, err=%+v",
 				dataSource.ProjectID, dataSource.AWSID, dataSource.AWSDataSourceID, err)
