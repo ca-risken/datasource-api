@@ -245,6 +245,13 @@ invoke-aws-scan-all:
 		-plaintext \
 		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScanAll
 
+.PHONY: invoke-aws-scan-all-accessanalyzer
+invoke-aws-scan-all-accessanalyzer:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"aws_data_source_id":1002, "full_scan":true}' \
+		$(DATASOURCE_API_ADDR) datasource.aws.AWSService.InvokeScanAll
+
 ####################################################
 ## Code
 ####################################################
