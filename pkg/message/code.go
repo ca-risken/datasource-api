@@ -21,6 +21,7 @@ type CodeQueueMessage struct {
 	ProjectID       uint32 `json:"project_id"`
 	ScanOnly        bool   `json:"scan_only,string"`
 	FullScan        bool   `json:"full_scan,string"`
+	RepositoryName  string `json:"repository_name"`
 }
 
 // Validate is the validation to GuardDutyMessage
