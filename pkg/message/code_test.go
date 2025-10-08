@@ -60,6 +60,11 @@ func TestParseMessageGitHub(t *testing.T) {
 			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, ScanOnly: true},
 		},
 		{
+			name:  "OK(repository_name)",
+			input: `{"github_setting_id":1, "project_id":1, "repository_name":"test-repo"}`,
+			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, RepositoryName: "test-repo"},
+		},
+		{
 			name:    "NG Json parse erroro",
 			input:   `{"parse...: error`,
 			wantErr: true,
