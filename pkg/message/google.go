@@ -23,6 +23,7 @@ type GCPQueueMessage struct {
 	ProjectID          uint32 `json:"project_id"`
 	GoogleDataSourceID uint32 `json:"google_data_source_id"`
 	ScanOnly           bool   `json:"scan_only,string"`
+	FullScan           bool   `json:"full_scan,omitempty"`
 }
 
 // Validate is the validation to GuardDutyMessage

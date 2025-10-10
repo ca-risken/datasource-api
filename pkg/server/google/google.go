@@ -282,6 +282,7 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 		ProjectID:          data.ProjectID,
 		GoogleDataSourceID: data.GoogleDataSourceID,
 		ScanOnly:           req.ScanOnly,
+		FullScan:           req.FullScan,
 	}
 	var resp *sqs.SendMessageOutput
 	switch data.GoogleDataSourceID {
@@ -340,6 +341,7 @@ func (g *GoogleService) InvokeScanAll(ctx context.Context, req *google.InvokeSca
 			ProjectId:          gcp.ProjectID,
 			GoogleDataSourceId: gcp.GoogleDataSourceID,
 			ScanOnly:           true,
+			FullScan:           req.FullScan,
 		}); err != nil {
 			// In GCP, an error may occur during InvokeScan due to user misconfiguration(e.g. invalid verification_code).
 			// But to avoid having a single error stop the entire process, a notification log is output and other processes continue.
