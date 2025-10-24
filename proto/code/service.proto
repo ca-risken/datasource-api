@@ -155,16 +155,19 @@ message InvokeScanGitleaksRequest {
   uint32 github_setting_id = 2;
   bool scan_only = 3;
   bool full_scan = 4;
+  string repository_name = 5; // Optional: specify repository for single repo scan
 }
 
 message InvokeScanDependencyRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
+  string repository_name = 4; // Optional: specify repository for single repo scan
 }
 
 message InvokeScanCodeScanRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
+  string repository_name = 4; // Optional: specify repository for single repo scan
 }
