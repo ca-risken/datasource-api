@@ -2,8 +2,6 @@ module github.com/ca-risken/datasource-api
 
 go 1.23
 
-toolchain go1.24.2
-
 require (
 	cloud.google.com/go/asset v1.13.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
