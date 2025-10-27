@@ -1,8 +1,6 @@
 module github.com/ca-risken/datasource-api
 
-go 1.23.0
-
-toolchain go1.23.3
+go 1.23
 
 require (
 	cloud.google.com/go/asset v1.13.0
