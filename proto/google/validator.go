@@ -32,7 +32,7 @@ func (g *GetGCPRequest) Validate() error {
 // Validate for PutGCPRequest
 func (p *PutGCPRequest) Validate() error {
 	if p.Gcp == nil {
-		return errors.New("Required GCP")
+		return errors.New("required GCP")
 	}
 	if err := validation.ValidateStruct(p,
 		validation.Field(&p.ProjectId, validation.Required, validation.In(p.Gcp.ProjectId)),
@@ -69,7 +69,7 @@ func (g *GetGCPDataSourceRequest) Validate() error {
 // Validate for AttachGCPDataSourceRequest
 func (a *AttachGCPDataSourceRequest) Validate() error {
 	if a.GcpDataSource == nil {
-		return errors.New("Required GcpDataSource")
+		return errors.New("required GcpDataSource")
 	}
 	if err := validation.ValidateStruct(a,
 		validation.Field(&a.ProjectId, validation.Required, validation.In(a.GcpDataSource.ProjectId)),

@@ -26,7 +26,7 @@ func (r *GetOsintRequest) Validate() error {
 // Validate PutOsintRequest
 func (r *PutOsintRequest) Validate() error {
 	if r.Osint == nil {
-		return errors.New("Required Osint")
+		return errors.New("required Osint")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.Required, validation.In(r.Osint.ProjectId)),
@@ -64,7 +64,7 @@ func (r *GetOsintDataSourceRequest) Validate() error {
 // Validate PutOsintDataSourceRequest
 func (r *PutOsintDataSourceRequest) Validate() error {
 	if r.OsintDataSource == nil {
-		return errors.New("Required OsintDataSource")
+		return errors.New("required OsintDataSource")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.Required),
@@ -102,7 +102,7 @@ func (r *GetRelOsintDataSourceRequest) Validate() error {
 // Validate PutRelOsintDataSourceRequest
 func (r *PutRelOsintDataSourceRequest) Validate() error {
 	if r.RelOsintDataSource == nil {
-		return errors.New("Required RelOsintDataSource")
+		return errors.New("required RelOsintDataSource")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.Required, validation.In(r.RelOsintDataSource.ProjectId), validation.Required),
@@ -138,7 +138,7 @@ func (r *GetOsintDetectWordRequest) Validate() error {
 // Validate PutOsintDetectWordRequest
 func (r *PutOsintDetectWordRequest) Validate() error {
 	if r.OsintDetectWord == nil {
-		return errors.New("Required OsintDetectWord")
+		return errors.New("required OsintDetectWord")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.Required, validation.In(r.OsintDetectWord.ProjectId), validation.Required),
