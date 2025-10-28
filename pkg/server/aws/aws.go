@@ -199,21 +199,22 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 		FullScan:        req.FullScan,
 	}
 	var resp *sqs.SendMessageOutput
-	if msg.DataSource == message.AWSAccessAnalyzerDataSource {
+	switch msg.DataSource {
+	case message.AWSAccessAnalyzerDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSAccessAnalyzerQueueURL, msg)
-	} else if msg.DataSource == message.AWSAdminCheckerDataSource {
+	case message.AWSAdminCheckerDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSAdminCheckerQueueURL, msg)
-	} else if msg.DataSource == message.AWSCloudSploitDataSource {
+	case message.AWSCloudSploitDataSource:
 		if ds.SpecificVersion == "" {
 			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
 		} else {
 			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitOldQueueURL, msg)
 		}
-	} else if msg.DataSource == message.AWSGuardDutyDataSource {
+	case message.AWSGuardDutyDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSGuardDutyQueueURL, msg)
-	} else if msg.DataSource == message.AWSPortscanDataSource {
+	case message.AWSPortscanDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSPortscanQueueURL, msg)
-	} else {
+	default:
 		return nil, fmt.Errorf("unknown datasource, datasource=%s", msg.DataSource)
 	}
 	if err != nil {

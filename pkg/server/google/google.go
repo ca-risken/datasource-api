@@ -299,7 +299,7 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	case portscanDataSourceID:
 		resp, err = g.sqs.Send(ctx, g.sqs.GooglePortscanQueueURL, msg)
 	default:
-		return nil, fmt.Errorf("Unknown googleDataSourceID: %d", data.GoogleDataSourceID)
+		return nil, fmt.Errorf("unknown googleDataSourceID: %d", data.GoogleDataSourceID)
 	}
 	if err != nil {
 		return nil, err

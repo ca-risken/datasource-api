@@ -22,7 +22,7 @@ func (g *GcpClient) VerifyCode(ctx context.Context, gcpProjectID, verificationCo
 	cspan.Finish(tracer.WithError(err))
 	if err != nil {
 		g.logger.Warnf(ctx, "Failed to ResourceManager.Projects.Get API, err=%+v", err)
-		return false, fmt.Errorf("Failed to ResourceManager.Projects.Get API, err=%+v", err)
+		return false, fmt.Errorf("failed to ResourceManager.Projects.Get API, err=%+v", err)
 	}
 	if v, ok := resp.Labels[verificationLabelKey]; !ok || v != verificationCode {
 		return false, fmt.Errorf(verificationErrMsgTemplate, verificationLabelKey, verificationCode)

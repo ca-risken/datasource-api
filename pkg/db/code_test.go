@@ -975,7 +975,7 @@ func TestUpsertDependencySetting(t *testing.T) {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
 			// 自動生成されるタイムスタンプをwantで指定できないのでそれ以外の値を比較
-			if c.want != nil && !((got.CodeGitHubSettingID == c.want.CodeGitHubSettingID) && (got.CodeDataSourceID == c.want.CodeDataSourceID) && (got.ProjectID == c.want.ProjectID) && (got.Status == c.want.Status) && (got.StatusDetail == c.want.StatusDetail)) {
+			if c.want != nil && ((got.CodeGitHubSettingID != c.want.CodeGitHubSettingID) || (got.CodeDataSourceID != c.want.CodeDataSourceID) || (got.ProjectID != c.want.ProjectID) || (got.Status != c.want.Status) || (got.StatusDetail != c.want.StatusDetail)) {
 				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
 			}
 			if err := mock.ExpectationsWereMet(); err != nil {

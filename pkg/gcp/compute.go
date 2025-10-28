@@ -31,7 +31,7 @@ func (g *GcpClient) DescribeInstance(ctx context.Context, projectID, zone, insta
 		if !c.onSameVPCNetwork(fw) {
 			continue
 		}
-		if fw.TargetTags == nil || len(fw.TargetTags) == 0 {
+		if len(fw.TargetTags) == 0 {
 			// No target tags means it applies to all instances in the network
 			c.addFirewall(fw)
 			continue
@@ -87,11 +87,11 @@ func (c *Compute) isPublicVM(fw *compute.Firewall) bool {
 }
 
 func (c *Compute) hasPublicIP() bool {
-	if c.Instance.NetworkInterfaces == nil || len(c.Instance.NetworkInterfaces) == 0 {
+	if len(c.Instance.NetworkInterfaces) == 0 {
 		return false // no network interfaces
 	}
 	for _, ni := range c.Instance.NetworkInterfaces {
-		if ni.AccessConfigs == nil || len(ni.AccessConfigs) == 0 {
+		if len(ni.AccessConfigs) == 0 {
 			continue
 		}
 		for _, ac := range ni.AccessConfigs {
