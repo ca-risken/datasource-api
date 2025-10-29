@@ -41,10 +41,9 @@ type riskenGitHubClient struct {
 }
 
 func NewGithubClient(defaultToken string, logger logging.Logger) *riskenGitHubClient {
-	retry := RETRY_NUM
 	return &riskenGitHubClient{
 		defaultToken: defaultToken,
-		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), retry),
+		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), RETRY_NUM),
 		logger:       logger,
 	}
 }
