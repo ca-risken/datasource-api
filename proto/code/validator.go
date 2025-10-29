@@ -9,7 +9,7 @@ import (
 )
 
 // validateRepositoryName validates repository name format (owner/repo)
-func validateRepositoryName(value interface{}) error {
+func validateRepositoryName(value any) error {
 	s, ok := value.(string)
 	if !ok {
 		return nil // Skip validation for non-string values

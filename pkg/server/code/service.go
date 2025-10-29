@@ -38,8 +38,7 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		return nil, fmt.Errorf("failed to create cipher, err=%w", err)
 	}
 
-	// GitHub APIクライアントを初期化
-	githubClient := github.NewGithubClient("", l) // デフォルトトークンは空文字列
+	githubClient := github.NewGithubClient("", l)
 
 	return &CodeService{
 		repository:             repo,
