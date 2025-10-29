@@ -103,16 +103,16 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 		}
 	}
 	for _, github := range errs.githubErrors {
-		switch {
-		case github.DataSource == message.GitleaksDataSource:
+		switch github.DataSource {
+		case message.GitleaksDataSource:
 			if err := d.dbClient.UpdateCodeGitleaksErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
 				return err
 			}
-		case github.DataSource == message.DependencyDataSource:
+		case message.DependencyDataSource:
 			if err := d.dbClient.UpdateCodeDependencyErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
 				return err
 			}
-		case github.DataSource == message.CodeScanDataSource:
+		case message.CodeScanDataSource:
 			if err := d.dbClient.UpdateCodeCodeScanErrorNotifiedAt(ctx, time.Now(), github.CodeGithubSettingID, projectID); err != nil {
 				return err
 			}
@@ -121,16 +121,16 @@ func (d *DataSourceService) updateScanErrorNotifiedAt(ctx context.Context, proje
 		}
 	}
 	for _, diagnosis := range errs.diagnosisErrors {
-		switch {
-		case diagnosis.DataSource == message.DataSourceNameWPScan:
+		switch diagnosis.DataSource {
+		case message.DataSourceNameWPScan:
 			if err := d.dbClient.UpdateDiagnosisWpscanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
 				return err
 			}
-		case diagnosis.DataSource == message.DataSourceNamePortScan:
+		case message.DataSourceNamePortScan:
 			if err := d.dbClient.UpdateDiagnosisPortscanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
 				return err
 			}
-		case diagnosis.DataSource == message.DataSourceNameApplicationScan:
+		case message.DataSourceNameApplicationScan:
 			if err := d.dbClient.UpdateDiagnosisAppScanErrorNotifiedAt(ctx, time.Now(), diagnosis.ScanID, projectID); err != nil {
 				return err
 			}

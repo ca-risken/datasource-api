@@ -475,6 +475,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
 		FullScan:        req.FullScan,
+		RepositoryName:  req.RepositoryName,
 	})
 	if err != nil {
 		return nil, err
@@ -509,6 +510,7 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		GitHubSettingID: data.CodeGitHubSettingID,
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
+		RepositoryName:  req.RepositoryName,
 	})
 	if err != nil {
 		return nil, err
@@ -540,6 +542,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		GitHubSettingID: data.CodeGitHubSettingID,
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
+		RepositoryName:  req.RepositoryName,
 	})
 	if err != nil {
 		return nil, err

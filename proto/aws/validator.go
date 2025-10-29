@@ -18,7 +18,7 @@ func (l *ListAWSRequest) Validate() error {
 // Validate PutAWSRequest
 func (p *PutAWSRequest) Validate() error {
 	if p.Aws == nil {
-		return errors.New("Required Aws")
+		return errors.New("required Aws")
 	}
 	if err := validation.ValidateStruct(p,
 		validation.Field(&p.ProjectId, validation.Required, validation.In(p.Aws.ProjectId)),
@@ -48,7 +48,7 @@ func (l *ListDataSourceRequest) Validate() error {
 // Validate AttachDataSourceRequest
 func (a *AttachDataSourceRequest) Validate() error {
 	if a.AttachDataSource == nil {
-		return errors.New("Required AttachDataSource")
+		return errors.New("required AttachDataSource")
 	}
 	if err := validation.ValidateStruct(a,
 		validation.Field(&a.ProjectId, validation.Required, validation.In(a.AttachDataSource.ProjectId)),
@@ -61,7 +61,7 @@ func (a *AttachDataSourceRequest) Validate() error {
 // ValidateForUser AttachDataSourceRequest
 func (a *AttachDataSourceRequest) ValidateForUser() error {
 	if a.AttachDataSource == nil {
-		return errors.New("Required AttachDataSource")
+		return errors.New("required AttachDataSource")
 	}
 	if err := validation.ValidateStruct(a,
 		validation.Field(&a.ProjectId, validation.Required, validation.In(a.AttachDataSource.ProjectId)),

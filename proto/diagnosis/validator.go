@@ -27,7 +27,7 @@ func (r *GetDiagnosisDataSourceRequest) Validate() error {
 // Validate PutDiagnosisDataSourceRequest
 func (r *PutDiagnosisDataSourceRequest) Validate() error {
 	if r.DiagnosisDataSource == nil {
-		return errors.New("Required DiagnosisDataSource")
+		return errors.New("required DiagnosisDataSource")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.Required),
@@ -65,7 +65,7 @@ func (r *GetWpscanSettingRequest) Validate() error {
 // Validate PutWpscanSettingRequest
 func (r *PutWpscanSettingRequest) Validate() error {
 	if r.WpscanSetting == nil {
-		return errors.New("Required WpscanSetting")
+		return errors.New("required WpscanSetting")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.In(r.WpscanSetting.ProjectId), validation.Required),
@@ -103,7 +103,7 @@ func (r *GetPortscanSettingRequest) Validate() error {
 // Validate PutPortscanSettingRequest
 func (r *PutPortscanSettingRequest) Validate() error {
 	if r.PortscanSetting == nil {
-		return errors.New("Required PortscanSetting")
+		return errors.New("required PortscanSetting")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.In(r.PortscanSetting.ProjectId), validation.Required),
@@ -141,7 +141,7 @@ func (r *GetPortscanTargetRequest) Validate() error {
 // Validate PutPortscanTargetRequest
 func (r *PutPortscanTargetRequest) Validate() error {
 	if r.PortscanTarget == nil {
-		return errors.New("Required PortscanTarget")
+		return errors.New("required PortscanTarget")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.In(r.PortscanTarget.ProjectId), validation.Required),
@@ -179,7 +179,7 @@ func (r *GetApplicationScanRequest) Validate() error {
 // Validate PutApplicationScanRequest
 func (r *PutApplicationScanRequest) Validate() error {
 	if r.ApplicationScan == nil {
-		return errors.New("Required ApplicationScan")
+		return errors.New("required ApplicationScan")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.In(r.ApplicationScan.ProjectId), validation.Required),
@@ -217,7 +217,7 @@ func (r *GetApplicationScanBasicSettingRequest) Validate() error {
 // Validate PutApplicationScanBasicSettingRequest
 func (r *PutApplicationScanBasicSettingRequest) Validate() error {
 	if r.ApplicationScanBasicSetting == nil {
-		return errors.New("Required ApplicationScanBasicSetting")
+		return errors.New("required ApplicationScanBasicSetting")
 	}
 	if err := validation.ValidateStruct(r,
 		validation.Field(&r.ProjectId, validation.In(r.ApplicationScanBasicSetting.ProjectId), validation.Required),

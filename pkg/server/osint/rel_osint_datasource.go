@@ -169,11 +169,12 @@ func (o *OsintService) InvokeScan(ctx context.Context, req *osint.InvokeScanRequ
 	}
 
 	var resp *sqs.SendMessageOutput
-	if msg.DataSource == message.SubdomainDataSource {
+	switch msg.DataSource {
+	case message.SubdomainDataSource:
 		resp, err = o.sqs.Send(ctx, o.sqs.OSINTSubdomainQueueURL, msg)
-	} else if msg.DataSource == message.WebsiteDataSource {
+	case message.WebsiteDataSource:
 		resp, err = o.sqs.Send(ctx, o.sqs.OSINTWebsiteQueueURL, msg)
-	} else {
+	default:
 		return nil, fmt.Errorf("unknown datasource, datasource=%s", msg.DataSource)
 	}
 	if err != nil {
