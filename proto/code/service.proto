@@ -55,6 +55,14 @@ service CodeService {
       returns (google.protobuf.Empty); // For ondeamnd
   rpc InvokeScanAll(google.protobuf.Empty)
       returns (google.protobuf.Empty); // For scheduled
+
+  // Repository-level status update
+  rpc PutCodeScanRepositoryStatus(PutCodeScanRepositoryStatusRequest)
+      returns (google.protobuf.Empty);
+  rpc PutGitleaksRepositoryStatus(PutGitleaksRepositoryStatusRequest)
+      returns (google.protobuf.Empty);
+  rpc PutDependencyRepositoryStatus(PutDependencyRepositoryStatusRequest)
+      returns (google.protobuf.Empty);
 }
 
 message ListDataSourceRequest {
@@ -162,12 +170,39 @@ message InvokeScanDependencyRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
-  string repository_name = 4; 
+  string repository_name = 4;
 }
 
 message InvokeScanCodeScanRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
-  string repository_name = 4; 
+  string repository_name = 4;
+}
+
+message PutCodeScanRepositoryStatusRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string repository_full_name = 3;
+  Status status = 4;
+  string status_detail = 5;
+  int64 scan_at = 6;
+}
+
+message PutGitleaksRepositoryStatusRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string repository_full_name = 3;
+  Status status = 4;
+  string status_detail = 5;
+  int64 scan_at = 6;
+}
+
+message PutDependencyRepositoryStatusRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+  string repository_full_name = 3;
+  Status status = 4;
+  string status_detail = 5;
+  int64 scan_at = 6;
 }
