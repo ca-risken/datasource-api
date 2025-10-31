@@ -89,3 +89,48 @@ type CodeCodeScanSetting struct {
 func (c *CodeCodeScanSetting) TableName() string {
 	return "code_codescan_setting"
 }
+
+// CodeGitleaksRepositoryStatus entity
+type CodeGitleaksRepositoryStatus struct {
+	CodeGitHubSettingID uint32    `gorm:"primary_key;column:code_github_setting_id"`
+	RepositoryFullName  string    `gorm:"primary_key;column:repository_full_name"`
+	Status              string    `gorm:"column:status"`
+	StatusDetail        string    `gorm:"column:status_detail"`
+	ScanAt              time.Time `gorm:"column:scan_at"`
+	CreatedAt           time.Time `gorm:"column:created_at"`
+	UpdatedAt           time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeGitleaksRepositoryStatus) TableName() string {
+	return "code_gitleaks_repository"
+}
+
+// CodeDependencyRepositoryStatus entity
+type CodeDependencyRepositoryStatus struct {
+	CodeGitHubSettingID uint32    `gorm:"primary_key;column:code_github_setting_id"`
+	RepositoryFullName  string    `gorm:"primary_key;column:repository_full_name"`
+	Status              string    `gorm:"column:status"`
+	StatusDetail        string    `gorm:"column:status_detail"`
+	ScanAt              time.Time `gorm:"column:scan_at"`
+	CreatedAt           time.Time `gorm:"column:created_at"`
+	UpdatedAt           time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeDependencyRepositoryStatus) TableName() string {
+	return "code_dependency_repository"
+}
+
+// CodeCodeScanRepositoryStatus entity
+type CodeCodeScanRepositoryStatus struct {
+	CodeGitHubSettingID uint32    `gorm:"primary_key;column:code_github_setting_id"`
+	RepositoryFullName  string    `gorm:"primary_key;column:repository_full_name"`
+	Status              string    `gorm:"column:status"`
+	StatusDetail        string    `gorm:"column:status_detail"`
+	ScanAt              time.Time `gorm:"column:scan_at"`
+	CreatedAt           time.Time `gorm:"column:created_at"`
+	UpdatedAt           time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeCodeScanRepositoryStatus) TableName() string {
+	return "code_codescan_repository"
+}
