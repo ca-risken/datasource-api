@@ -45,9 +45,9 @@ type CodeRepoInterface interface {
 	DeleteCodeScanSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_codescan_repository
+	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
-	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error
 
 	// scan error
