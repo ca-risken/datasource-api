@@ -47,13 +47,61 @@ type CodeGitleaksSetting struct {
 	UpdatedAt           time.Time
 }
 
-// CodeGitleaksCashe entity
+// CodeGitleaksCache entity
 type CodeGitleaksCache struct {
 	CodeGitHubSettingID uint32 `gorm:"column:code_github_setting_id"`
 	RepositoryFullName  string
 	ScanAt              time.Time
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+// CodeGitleaksRepository entity
+type CodeGitleaksRepository struct {
+	CodeGitleaksRepositoryID uint32    `gorm:"primary_key;column:code_gitleaks_repository_id"`
+	CodeGitHubSettingID      uint32    `gorm:"column:code_github_setting_id"`
+	RepositoryFullName       string    `gorm:"column:repository_full_name"`
+	Status                   string    `gorm:"column:status"`
+	StatusDetail             string    `gorm:"column:status_detail"`
+	ScanAt                   time.Time `gorm:"column:scan_at"`
+	CreatedAt                time.Time `gorm:"column:created_at"`
+	UpdatedAt                time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeGitleaksRepository) TableName() string {
+	return "code_gitleaks_repository"
+}
+
+// CodeDependencyRepository entity
+type CodeDependencyRepository struct {
+	CodeDependencyRepositoryID uint32    `gorm:"primary_key;column:code_dependency_repository_id"`
+	CodeGitHubSettingID        uint32    `gorm:"column:code_github_setting_id"`
+	RepositoryFullName         string    `gorm:"column:repository_full_name"`
+	Status                     string    `gorm:"column:status"`
+	StatusDetail               string    `gorm:"column:status_detail"`
+	ScanAt                     time.Time `gorm:"column:scan_at"`
+	CreatedAt                  time.Time `gorm:"column:created_at"`
+	UpdatedAt                  time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeDependencyRepository) TableName() string {
+	return "code_dependency_repository"
+}
+
+// CodeCodeScanRepository entity
+type CodeCodeScanRepository struct {
+	CodeCodeScanRepositoryID uint32    `gorm:"primary_key;column:code_codescan_repository_id"`
+	CodeGitHubSettingID      uint32    `gorm:"column:code_github_setting_id"`
+	RepositoryFullName       string    `gorm:"column:repository_full_name"`
+	Status                   string    `gorm:"column:status"`
+	StatusDetail             string    `gorm:"column:status_detail"`
+	ScanAt                   time.Time `gorm:"column:scan_at"`
+	CreatedAt                time.Time `gorm:"column:created_at"`
+	UpdatedAt                time.Time `gorm:"column:updated_at"`
+}
+
+func (CodeCodeScanRepository) TableName() string {
+	return "code_codescan_repository"
 }
 
 // CodeDependencySetting entity
