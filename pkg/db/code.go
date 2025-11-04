@@ -44,6 +44,12 @@ type CodeRepoInterface interface {
 	UpsertCodeScanSetting(ctx context.Context, data *code.CodeScanSettingForUpsert) (*model.CodeCodeScanSetting, error)
 	DeleteCodeScanSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
+	// code_codescan_repository
+	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error)
+	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
+	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
+	DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error
+
 	// scan error
 	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
 	UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
@@ -542,6 +548,88 @@ const updateCodeCodeScanErrorNotifiedAt = `update code_codescan_setting set erro
 
 func (c *Client) UpdateCodeCodeScanErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Exec(updateCodeCodeScanErrorNotifiedAt, errNotifiedAt, codeGithubSettingID, projectID).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// code_codescan_repository
+const selectListCodeScanRepository = `
+select
+  repo.*
+from 
+  code_codescan_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ?
+`
+
+func (c *Client) ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error) {
+	var data []model.CodeCodeScanRepository
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListCodeScanRepository, projectID, githubSettingID).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const selectGetCodeScanRepository = `
+select
+  repo.*
+from 
+  code_codescan_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ? 
+  and repo.repository_full_name = ?
+`
+
+func (c *Client) GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error) {
+	db := c.SlaveDB
+	if immediately {
+		db = c.MasterDB
+	}
+	var data model.CodeCodeScanRepository
+	if err := db.WithContext(ctx).Raw(selectGetCodeScanRepository, projectID, githubSettingID, repositoryFullName).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const upsertCodeScanRepository = `
+INSERT INTO code_codescan_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+VALUES (?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	status=VALUES(status),
+	status_detail=VALUES(status_detail),
+	scan_at=VALUES(scan_at)
+`
+
+func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(
+		upsertCodeScanRepository,
+		data.GithubSettingId,
+		data.RepositoryFullName,
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		time.Unix(data.ScanAt, 0)).Error; err != nil {
+		return nil, err
+	}
+	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func (c *Client) DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).
+		Where("code_github_setting_id = ?", githubSettingID).
+		Delete(&model.CodeCodeScanRepository{}).
+		Error; err != nil {
 		return err
 	}
 	return nil

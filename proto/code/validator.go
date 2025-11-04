@@ -249,3 +249,49 @@ func (c *CodeScanSettingForUpsert) Validate() error {
 		validation.Field(&c.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
 	)
 }
+
+// Validate CodeScanRepositoryStatusForUpsert
+func (c *CodeScanRepositoryStatusForUpsert) Validate() error {
+	return validation.ValidateStruct(c,
+		validation.Field(&c.GithubSettingId, validation.Required),
+		validation.Field(&c.RepositoryFullName, validation.Required, validation.Length(0, 255)),
+		validation.Field(&c.Status, validation.Required),
+		validation.Field(&c.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&c.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
+// Validate PutCodeScanRepositoryStatusRequest
+func (p *PutCodeScanRepositoryStatusRequest) Validate() error {
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required),
+		validation.Field(&p.GithubSettingId, validation.Required),
+		validation.Field(&p.RepositoryFullName, validation.Required),
+		validation.Field(&p.Status, validation.Required),
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Validate GitleaksRepositoryStatusForUpsert
+func (g *GitleaksRepositoryStatusForUpsert) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.GithubSettingId, validation.Required),
+		validation.Field(&g.RepositoryFullName, validation.Required, validation.Length(0, 255)),
+		validation.Field(&g.Status, validation.Required),
+		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
+// Validate DependencyRepositoryStatusForUpsert
+func (d *DependencyRepositoryStatusForUpsert) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.GithubSettingId, validation.Required),
+		validation.Field(&d.RepositoryFullName, validation.Required, validation.Length(0, 255)),
+		validation.Field(&d.Status, validation.Required),
+		validation.Field(&d.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&d.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}

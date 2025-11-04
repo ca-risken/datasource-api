@@ -640,3 +640,28 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 	}
 	return &empty.Empty{}, nil
 }
+
+func (c *CodeService) PutCodeScanRepositoryStatus(ctx context.Context, req *code.PutCodeScanRepositoryStatusRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// Verify that the code scan setting exists
+	_, err := c.repository.GetCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	// Upsert repository status
+	_, err = c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryStatusForUpsert{
+		GithubSettingId:    req.GithubSettingId,
+		RepositoryFullName: req.RepositoryFullName,
+		Status:             req.Status,
+		StatusDetail:       req.StatusDetail,
+		ScanAt:             req.ScanAt,
+	})
+	if err != nil {
+		return nil, err
+	}
+	c.logger.Infof(ctx, "PutCodeScanRepositoryStatus: project_id=%d, github_setting_id=%d, repository=%s, status=%s, status_detail=%s",
+		req.ProjectId, req.GithubSettingId, req.RepositoryFullName, req.Status.String(), req.StatusDetail)
+	return &empty.Empty{}, nil
+}
