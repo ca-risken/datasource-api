@@ -161,3 +161,30 @@ message CodeScanSettingForUpsert {
   string status_detail = 9;
   int64 scan_at = 10;
 }
+
+// GitleaksRepositoryStatusForUpsert
+message GitleaksRepositoryStatusForUpsert {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  Status status = 3;
+  string status_detail = 4;
+  int64 scan_at = 5;
+}
+
+// DependencyRepositoryStatusForUpsert
+message DependencyRepositoryStatusForUpsert {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  Status status = 3;
+  string status_detail = 4;
+  int64 scan_at = 5;
+}
+
+// CodeScanRepositoryStatusForUpsert
+message CodeScanRepositoryStatusForUpsert {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  Status status = 3;
+  string status_detail = 4;
+  int64 scan_at = 5;
+}
