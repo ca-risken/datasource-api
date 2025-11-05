@@ -41,7 +41,7 @@ func TestEncryptDecrypt(t *testing.T) {
 				t.Fatalf("Unexpected error occured, err=%+v", err)
 			}
 
-			decrypted, err := TestdecryptWithBase64(&block, encrypted)
+			decrypted, err := decryptWithBase64(&block, encrypted)
 			if c.wantDecError && err == nil {
 				t.Fatal("Unexpected no error")
 			}
@@ -55,12 +55,12 @@ func TestEncryptDecrypt(t *testing.T) {
 		})
 	}
 }
-func TestdecryptWithBase64(block *cipher.Block, encrypted string) (string, error) {
+func decryptWithBase64(block *cipher.Block, encrypted string) (string, error) {
 	decoded, err := base64.RawStdEncoding.DecodeString(encrypted)
 	if err != nil {
 		return "", err
 	}
-	decrypted := Testdecrypt(block, decoded)
+	decrypted := decrypt(block, decoded)
 	if len(decrypted) < 1 {
 		return "", nil
 	}
@@ -70,7 +70,7 @@ func TestdecryptWithBase64(block *cipher.Block, encrypted string) (string, error
 	return string(decrypted[:len(decrypted)-padSize]), nil
 }
 
-func Testdecrypt(block *cipher.Block, encrypted []byte) []byte {
+func decrypt(block *cipher.Block, encrypted []byte) []byte {
 	if len(encrypted) < aes.BlockSize {
 		return []byte("")
 	}
