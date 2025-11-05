@@ -261,8 +261,8 @@ func (c *CodeScanRepositoryForUpsert) Validate() error {
 	)
 }
 
-// Validate PutCodeScanRepositoryStatusRequest
-func (p *PutCodeScanRepositoryStatusRequest) Validate() error {
+// Validate PutCodeScanRepositoryRequest
+func (p *PutCodeScanRepositoryRequest) Validate() error {
 	if err := validation.ValidateStruct(p,
 		validation.Field(&p.ProjectId, validation.Required),
 		validation.Field(&p.GithubSettingId, validation.Required),

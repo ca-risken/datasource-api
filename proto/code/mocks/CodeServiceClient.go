@@ -500,8 +500,8 @@ func (_m *CodeServiceClient) ListGitleaksCache(ctx context.Context, in *code.Lis
 	return r0, r1
 }
 
-// PutCodeScanRepositoryStatus provides a mock function with given fields: ctx, in, opts
-func (_m *CodeServiceClient) PutCodeScanRepositoryStatus(ctx context.Context, in *code.PutCodeScanRepositoryStatusRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+// PutCodeScanRepository provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) PutCodeScanRepository(ctx context.Context, in *code.PutCodeScanRepositoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -512,15 +512,15 @@ func (_m *CodeServiceClient) PutCodeScanRepositoryStatus(ctx context.Context, in
 	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
-		panic("no return value specified for PutCodeScanRepositoryStatus")
+		panic("no return value specified for PutCodeScanRepository")
 	}
 
 	var r0 *emptypb.Empty
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest, ...grpc.CallOption) (*emptypb.Empty, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryRequest, ...grpc.CallOption) (*emptypb.Empty, error)); ok {
 		return rf(ctx, in, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest, ...grpc.CallOption) *emptypb.Empty); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryRequest, ...grpc.CallOption) *emptypb.Empty); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -528,7 +528,7 @@ func (_m *CodeServiceClient) PutCodeScanRepositoryStatus(ctx context.Context, in
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutCodeScanRepositoryRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

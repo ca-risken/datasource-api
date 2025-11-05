@@ -641,7 +641,7 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 	return &empty.Empty{}, nil
 }
 
-func (c *CodeService) PutCodeScanRepositoryStatus(ctx context.Context, req *code.PutCodeScanRepositoryStatusRequest) (*empty.Empty, error) {
+func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCodeScanRepositoryRequest) (*empty.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -656,8 +656,8 @@ func (c *CodeService) PutCodeScanRepositoryStatus(ctx context.Context, req *code
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "PutCodeScanRepositoryStatus: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
+	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
 		req.ProjectId, req.GithubSettingId, req.RepositoryFullName, req.Status.String())
-	c.logger.Debugf(ctx, "PutCodeScanRepositoryStatus: status_detail=%s", req.StatusDetail)
+	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.StatusDetail)
 	return &empty.Empty{}, nil
 }

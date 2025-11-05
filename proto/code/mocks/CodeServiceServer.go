@@ -407,20 +407,20 @@ func (_m *CodeServiceServer) ListGitleaksCache(_a0 context.Context, _a1 *code.Li
 	return r0, r1
 }
 
-// PutCodeScanRepositoryStatus provides a mock function with given fields: _a0, _a1
-func (_m *CodeServiceServer) PutCodeScanRepositoryStatus(_a0 context.Context, _a1 *code.PutCodeScanRepositoryStatusRequest) (*emptypb.Empty, error) {
+// PutCodeScanRepository provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) PutCodeScanRepository(_a0 context.Context, _a1 *code.PutCodeScanRepositoryRequest) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
 
 	if len(ret) == 0 {
-		panic("no return value specified for PutCodeScanRepositoryStatus")
+		panic("no return value specified for PutCodeScanRepository")
 	}
 
 	var r0 *emptypb.Empty
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest) (*emptypb.Empty, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryRequest) (*emptypb.Empty, error)); ok {
 		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest) *emptypb.Empty); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutCodeScanRepositoryRequest) *emptypb.Empty); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
@@ -428,7 +428,7 @@ func (_m *CodeServiceServer) PutCodeScanRepositoryStatus(_a0 context.Context, _a
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *code.PutCodeScanRepositoryStatusRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutCodeScanRepositoryRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
