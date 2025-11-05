@@ -162,8 +162,8 @@ message CodeScanSettingForUpsert {
   int64 scan_at = 10;
 }
 
-// GitleaksRepositoryStatusForUpsert
-message GitleaksRepositoryStatusForUpsert {
+// GitleaksRepositoryForUpsert
+message GitleaksRepositoryForUpsert {
   uint32 github_setting_id = 1;
   string repository_full_name = 2;
   Status status = 3;
@@ -171,8 +171,8 @@ message GitleaksRepositoryStatusForUpsert {
   int64 scan_at = 5;
 }
 
-// DependencyRepositoryStatusForUpsert
-message DependencyRepositoryStatusForUpsert {
+// DependencyRepositoryForUpsert
+message DependencyRepositoryForUpsert {
   uint32 github_setting_id = 1;
   string repository_full_name = 2;
   Status status = 3;
@@ -180,11 +180,39 @@ message DependencyRepositoryStatusForUpsert {
   int64 scan_at = 5;
 }
 
-// CodeScanRepositoryStatusForUpsert
-message CodeScanRepositoryStatusForUpsert {
+// CodeScanRepositoryForUpsert
+message CodeScanRepositoryForUpsert {
   uint32 github_setting_id = 1;
   string repository_full_name = 2;
   Status status = 3;
   string status_detail = 4;
   int64 scan_at = 5;
+}
+
+// GitHubUser
+message GitHubUser {
+  int64 id = 1;
+  string login = 2;
+  string avatar_url = 3;
+  string html_url = 4;
+  string type = 5;
+}
+
+// GitHubRepository
+message GitHubRepository {
+  int64 id = 1;
+  string name = 2;
+  string full_name = 3;
+  string description = 4;
+  string clone_url = 5;
+  string html_url = 6;
+  string ssh_url = 7;
+  bool private = 8;
+  bool archived = 9;
+  bool disabled = 10;
+  string default_branch = 11;
+  GitHubUser owner = 12;
+  int64 created_at = 13;
+  int64 updated_at = 14;
+  int64 pushed_at = 15;
 }
