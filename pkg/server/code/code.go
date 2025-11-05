@@ -645,13 +645,8 @@ func (c *CodeService) PutCodeScanRepositoryStatus(ctx context.Context, req *code
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	// Verify that the code scan setting exists
-	_, err := c.repository.GetCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
-		return nil, err
-	}
 	// Upsert repository status
-	_, err = c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryStatusForUpsert{
+	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
 		GithubSettingId:    req.GithubSettingId,
 		RepositoryFullName: req.RepositoryFullName,
 		Status:             req.Status,
@@ -661,7 +656,8 @@ func (c *CodeService) PutCodeScanRepositoryStatus(ctx context.Context, req *code
 	if err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "PutCodeScanRepositoryStatus: project_id=%d, github_setting_id=%d, repository=%s, status=%s, status_detail=%s",
-		req.ProjectId, req.GithubSettingId, req.RepositoryFullName, req.Status.String(), req.StatusDetail)
+	c.logger.Infof(ctx, "PutCodeScanRepositoryStatus: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
+		req.ProjectId, req.GithubSettingId, req.RepositoryFullName, req.Status.String())
+	c.logger.Debugf(ctx, "PutCodeScanRepositoryStatus: status_detail=%s", req.StatusDetail)
 	return &empty.Empty{}, nil
 }
