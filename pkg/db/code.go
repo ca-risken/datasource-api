@@ -47,7 +47,7 @@ type CodeRepoInterface interface {
 	// code_codescan_repository
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
-	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error)
+	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
 	DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error
 
 	// scan error
@@ -612,7 +612,7 @@ ON DUPLICATE KEY UPDATE
 	scan_at=VALUES(scan_at)
 `
 
-func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error) {
+func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error) {
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertCodeScanRepository,
 		data.GithubSettingId,

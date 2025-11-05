@@ -602,7 +602,7 @@ func (_m *CodeRepoInterface) UpdateCodeGitleaksErrorNotifiedAt(ctx context.Conte
 }
 
 // UpsertCodeScanRepository provides a mock function with given fields: ctx, projectID, data
-func (_m *CodeRepoInterface) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error) {
+func (_m *CodeRepoInterface) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error) {
 	ret := _m.Called(ctx, projectID, data)
 
 	if len(ret) == 0 {
@@ -611,10 +611,10 @@ func (_m *CodeRepoInterface) UpsertCodeScanRepository(ctx context.Context, proje
 
 	var r0 *model.CodeCodeScanRepository
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.CodeScanRepositoryStatusForUpsert) (*model.CodeCodeScanRepository, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)); ok {
 		return rf(ctx, projectID, data)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.CodeScanRepositoryStatusForUpsert) *model.CodeCodeScanRepository); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.CodeScanRepositoryForUpsert) *model.CodeCodeScanRepository); ok {
 		r0 = rf(ctx, projectID, data)
 	} else {
 		if ret.Get(0) != nil {
@@ -622,7 +622,7 @@ func (_m *CodeRepoInterface) UpsertCodeScanRepository(ctx context.Context, proje
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint32, *code.CodeScanRepositoryStatusForUpsert) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, *code.CodeScanRepositoryForUpsert) error); ok {
 		r1 = rf(ctx, projectID, data)
 	} else {
 		r1 = ret.Error(1)
