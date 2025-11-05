@@ -274,15 +274,6 @@ func (p *PutCodeScanRepositoryStatusRequest) Validate() error {
 	return nil
 }
 
-// Validate ListRepositoryRequest
-func (l *ListRepositoryRequest) Validate() error {
-	return validation.ValidateStruct(l,
-		validation.Field(&l.ProjectId, validation.Required),
-		validation.Field(&l.GithubSettingId, validation.Required),
-		validation.Field(&l.RepositoryName, validation.Length(0, 255), validation.By(validateRepositoryName)),
-	)
-}
-
 // Validate GitleaksRepositoryForUpsert
 func (g *GitleaksRepositoryForUpsert) Validate() error {
 	return validation.ValidateStruct(g,
