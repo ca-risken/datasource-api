@@ -250,8 +250,8 @@ func (c *CodeScanSettingForUpsert) Validate() error {
 	)
 }
 
-// Validate CodeScanRepositoryStatusForUpsert
-func (c *CodeScanRepositoryStatusForUpsert) Validate() error {
+// Validate CodeScanRepositoryForUpsert
+func (c *CodeScanRepositoryForUpsert) Validate() error {
 	return validation.ValidateStruct(c,
 		validation.Field(&c.GithubSettingId, validation.Required),
 		validation.Field(&c.RepositoryFullName, validation.Required, validation.Length(0, 255)),
@@ -274,8 +274,17 @@ func (p *PutCodeScanRepositoryStatusRequest) Validate() error {
 	return nil
 }
 
-// Validate GitleaksRepositoryStatusForUpsert
-func (g *GitleaksRepositoryStatusForUpsert) Validate() error {
+// Validate ListRepositoryRequest
+func (l *ListRepositoryRequest) Validate() error {
+	return validation.ValidateStruct(l,
+		validation.Field(&l.ProjectId, validation.Required),
+		validation.Field(&l.GithubSettingId, validation.Required),
+		validation.Field(&l.RepositoryName, validation.Length(0, 255), validation.By(validateRepositoryName)),
+	)
+}
+
+// Validate GitleaksRepositoryForUpsert
+func (g *GitleaksRepositoryForUpsert) Validate() error {
 	return validation.ValidateStruct(g,
 		validation.Field(&g.GithubSettingId, validation.Required),
 		validation.Field(&g.RepositoryFullName, validation.Required, validation.Length(0, 255)),
@@ -285,8 +294,8 @@ func (g *GitleaksRepositoryStatusForUpsert) Validate() error {
 	)
 }
 
-// Validate DependencyRepositoryStatusForUpsert
-func (d *DependencyRepositoryStatusForUpsert) Validate() error {
+// Validate DependencyRepositoryForUpsert
+func (d *DependencyRepositoryForUpsert) Validate() error {
 	return validation.ValidateStruct(d,
 		validation.Field(&d.GithubSettingId, validation.Required),
 		validation.Field(&d.RepositoryFullName, validation.Required, validation.Length(0, 255)),
