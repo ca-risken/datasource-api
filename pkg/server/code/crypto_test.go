@@ -55,6 +55,7 @@ func TestEncryptDecrypt(t *testing.T) {
 		})
 	}
 }
+
 func decryptWithBase64(block *cipher.Block, encrypted string) (string, error) {
 	decoded, err := base64.RawStdEncoding.DecodeString(encrypted)
 	if err != nil {
