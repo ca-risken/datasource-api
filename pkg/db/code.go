@@ -628,11 +628,11 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 const deleteCodeScanRepository = `
 DELETE repo FROM code_codescan_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
-WHERE github.project_id = ? AND repo.code_github_setting_id = ? AND repo.repository_full_name = ?
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 `
 
 func (c *Client) DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error {
-	if err := c.MasterDB.WithContext(ctx).Exec(deleteCodeScanRepository, projectID, githubSettingID, repositoryFullName).Error; err != nil {
+	if err := c.MasterDB.WithContext(ctx).Exec(deleteCodeScanRepository, projectID, githubSettingID).Error; err != nil {
 		return err
 	}
 	return nil
