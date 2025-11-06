@@ -646,18 +646,12 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 		return nil, err
 	}
 	// Upsert repository status
-	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
-		GithubSettingId:    req.GithubSettingId,
-		RepositoryFullName: req.RepositoryFullName,
-		Status:             req.Status,
-		StatusDetail:       req.StatusDetail,
-		ScanAt:             req.ScanAt,
-	})
+	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository)
 	if err != nil {
 		return nil, err
 	}
 	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
-		req.ProjectId, req.GithubSettingId, req.RepositoryFullName, req.Status.String())
-	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.StatusDetail)
+		req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, req.CodeScanRepository.Status.String())
+	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.CodeScanRepository.StatusDetail)
 	return &empty.Empty{}, nil
 }

@@ -263,15 +263,15 @@ func (c *CodeScanRepositoryForUpsert) Validate() error {
 
 // Validate PutCodeScanRepositoryRequest
 func (p *PutCodeScanRepositoryRequest) Validate() error {
+	if p.CodeScanRepository == nil {
+		return errors.New("required CodeScanRepository")
+	}
 	if err := validation.ValidateStruct(p,
 		validation.Field(&p.ProjectId, validation.Required),
-		validation.Field(&p.GithubSettingId, validation.Required),
-		validation.Field(&p.RepositoryFullName, validation.Required),
-		validation.Field(&p.Status, validation.Required),
 	); err != nil {
 		return err
 	}
-	return nil
+	return p.CodeScanRepository.Validate()
 }
 
 // Validate GitleaksRepositoryForUpsert

@@ -178,9 +178,5 @@ message InvokeScanCodeScanRequest {
 
 message PutCodeScanRepositoryRequest {
   uint32 project_id = 1;
-  uint32 github_setting_id = 2;
-  string repository_full_name = 3;
-  Status status = 4;
-  string status_detail = 5;
-  int64 scan_at = 6;
+  CodeScanRepositoryForUpsert code_scan_repository = 2;
 }
