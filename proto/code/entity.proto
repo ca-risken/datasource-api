@@ -193,20 +193,12 @@ message CodeScanRepositoryForUpsert {
 message GitHubUser {
   int64 id = 1;
   string login = 2;
-  string avatar_url = 3;
-  string html_url = 4;
-  string type = 5;
 }
 
 // GitHubRepository
 message GitHubRepository {
   int64 id = 1;
   string full_name = 2;
-  string description = 3;
-  string clone_url = 4;
-  string html_url = 5;
-  bool private = 6;
-  bool archived = 7;
-  string default_branch = 8;
-  int64 pushed_at = 9;
+  string clone_url = 3;
+  bool private = 4;
 }
