@@ -421,7 +421,19 @@ func (c *CodeService) DeleteCodeScanSetting(ctx context.Context, req *code.Delet
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	// Get list of associated repositories
+	repositories, err := c.repository.ListCodeScanRepository(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	// Delete each repository
+	for _, repo := range *repositories {
+		if err := c.repository.DeleteCodeScanRepository(ctx, req.ProjectId, req.GithubSettingId, repo.RepositoryFullName); err != nil {
+			return nil, err
+		}
+	}
+	// Delete CodeScanSetting
+	err = c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
