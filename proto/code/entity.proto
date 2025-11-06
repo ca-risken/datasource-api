@@ -189,12 +189,6 @@ message CodeScanRepositoryForUpsert {
   int64 scan_at = 5;
 }
 
-// GitHubUser
-message GitHubUser {
-  int64 id = 1;
-  string login = 2;
-}
-
 // GitHubRepository
 message GitHubRepository {
   int64 id = 1;
