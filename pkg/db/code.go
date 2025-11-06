@@ -48,8 +48,7 @@ type CodeRepoInterface interface {
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
-	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error
-
+	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
 	// scan error
 	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
 	UpdateCodeGitleaksErrorNotifiedAt(ctx context.Context, errNotifiedAt interface{}, codeGithubSettingID, projectID uint32) error
@@ -631,7 +630,7 @@ INNER JOIN code_github_setting github USING(code_github_setting_id)
 WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 `
 
-func (c *Client) DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error {
+func (c *Client) DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Exec(deleteCodeScanRepository, projectID, githubSettingID).Error; err != nil {
 		return err
 	}
