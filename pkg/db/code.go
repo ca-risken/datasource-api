@@ -48,7 +48,7 @@ type CodeRepoInterface interface {
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
-	DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error
+	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error
 
 	// scan error
 	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
@@ -625,11 +625,14 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 }
 
-func (c *Client) DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).
-		Where("code_github_setting_id = ?", githubSettingID).
-		Delete(&model.CodeCodeScanRepository{}).
-		Error; err != nil {
+const deleteCodeScanRepository = `
+DELETE repo FROM code_codescan_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ? AND repo.repository_full_name = ?
+`
+
+func (c *Client) DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(deleteCodeScanRepository, projectID, githubSettingID, repositoryFullName).Error; err != nil {
 		return err
 	}
 	return nil

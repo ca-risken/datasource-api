@@ -201,18 +201,12 @@ message GitHubUser {
 // GitHubRepository
 message GitHubRepository {
   int64 id = 1;
-  string name = 2;
-  string full_name = 3;
-  string description = 4;
-  string clone_url = 5;
-  string html_url = 6;
-  string ssh_url = 7;
-  bool private = 8;
-  bool archived = 9;
-  bool disabled = 10;
-  string default_branch = 11;
-  GitHubUser owner = 12;
-  int64 created_at = 13;
-  int64 updated_at = 14;
-  int64 pushed_at = 15;
+  string full_name = 2;
+  string description = 3;
+  string clone_url = 4;
+  string html_url = 5;
+  bool private = 6;
+  bool archived = 7;
+  string default_branch = 8;
+  int64 pushed_at = 9;
 }

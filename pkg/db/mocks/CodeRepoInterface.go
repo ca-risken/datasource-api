@@ -19,17 +19,17 @@ type CodeRepoInterface struct {
 	mock.Mock
 }
 
-// DeleteCodeScanRepository provides a mock function with given fields: ctx, githubSettingID
-func (_m *CodeRepoInterface) DeleteCodeScanRepository(ctx context.Context, githubSettingID uint32) error {
-	ret := _m.Called(ctx, githubSettingID)
+// DeleteCodeScanRepository provides a mock function with given fields: ctx, projectID, githubSettingID, repositoryFullName
+func (_m *CodeRepoInterface) DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string) error {
+	ret := _m.Called(ctx, projectID, githubSettingID, repositoryFullName)
 
 	if len(ret) == 0 {
 		panic("no return value specified for DeleteCodeScanRepository")
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
-		r0 = rf(ctx, githubSettingID)
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, string) error); ok {
+		r0 = rf(ctx, projectID, githubSettingID, repositoryFullName)
 	} else {
 		r0 = ret.Error(0)
 	}
