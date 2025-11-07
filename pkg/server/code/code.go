@@ -421,6 +421,11 @@ func (c *CodeService) DeleteCodeScanSetting(ctx context.Context, req *code.Delet
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	// Delete all associated repositories (bulk delete)
+	if err := c.repository.DeleteCodeScanRepository(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
+	}
+	// Delete CodeScanSetting
 	err := c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
@@ -638,5 +643,20 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			return nil, err
 		}
 	}
+	return &empty.Empty{}, nil
+}
+
+func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCodeScanRepositoryRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// Upsert repository status
+	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository)
+	if err != nil {
+		return nil, err
+	}
+	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
+		req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, req.CodeScanRepository.Status.String())
+	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.CodeScanRepository.StatusDetail)
 	return &empty.Empty{}, nil
 }

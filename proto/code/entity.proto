@@ -161,3 +161,20 @@ message CodeScanSettingForUpsert {
   string status_detail = 9;
   int64 scan_at = 10;
 }
+
+// CodeScanRepositoryForUpsert
+message CodeScanRepositoryForUpsert {
+  uint32 github_setting_id = 1;
+  string repository_full_name = 2;
+  Status status = 3;
+  string status_detail = 4;
+  int64 scan_at = 5;
+}
+
+// GitHubRepository
+message GitHubRepository {
+  int64 id = 1;
+  string full_name = 2;
+  string clone_url = 3;
+  bool private = 4;
+}

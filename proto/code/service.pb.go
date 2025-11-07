@@ -1282,7 +1282,7 @@ type InvokeScanGitleaksRequest struct {
 	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 	ScanOnly        bool   `protobuf:"varint,3,opt,name=scan_only,json=scanOnly,proto3" json:"scan_only,omitempty"`
 	FullScan        bool   `protobuf:"varint,4,opt,name=full_scan,json=fullScan,proto3" json:"full_scan,omitempty"`
-	RepositoryName  string `protobuf:"bytes,5,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"` // Optional: specify repository for single repo scan
+	RepositoryName  string `protobuf:"bytes,5,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
 }
 
 func (x *InvokeScanGitleaksRequest) Reset() {
@@ -1360,7 +1360,7 @@ type InvokeScanDependencyRequest struct {
 	ProjectId       uint32 `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 	ScanOnly        bool   `protobuf:"varint,3,opt,name=scan_only,json=scanOnly,proto3" json:"scan_only,omitempty"`
-	RepositoryName  string `protobuf:"bytes,4,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"` // Optional: specify repository for single repo scan
+	RepositoryName  string `protobuf:"bytes,4,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
 }
 
 func (x *InvokeScanDependencyRequest) Reset() {
@@ -1431,7 +1431,7 @@ type InvokeScanCodeScanRequest struct {
 	ProjectId       uint32 `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 	ScanOnly        bool   `protobuf:"varint,3,opt,name=scan_only,json=scanOnly,proto3" json:"scan_only,omitempty"`
-	RepositoryName  string `protobuf:"bytes,4,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"` // Optional: specify repository for single repo scan
+	RepositoryName  string `protobuf:"bytes,4,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
 }
 
 func (x *InvokeScanCodeScanRequest) Reset() {
@@ -1492,6 +1492,61 @@ func (x *InvokeScanCodeScanRequest) GetRepositoryName() string {
 		return x.RepositoryName
 	}
 	return ""
+}
+
+type PutCodeScanRepositoryRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	ProjectId          uint32                       `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	CodeScanRepository *CodeScanRepositoryForUpsert `protobuf:"bytes,2,opt,name=code_scan_repository,json=codeScanRepository,proto3" json:"code_scan_repository,omitempty"`
+}
+
+func (x *PutCodeScanRepositoryRequest) Reset() {
+	*x = PutCodeScanRepositoryRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_code_service_proto_msgTypes[27]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PutCodeScanRepositoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PutCodeScanRepositoryRequest) ProtoMessage() {}
+
+func (x *PutCodeScanRepositoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_code_service_proto_msgTypes[27]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PutCodeScanRepositoryRequest.ProtoReflect.Descriptor instead.
+func (*PutCodeScanRepositoryRequest) Descriptor() ([]byte, []int) {
+	return file_code_service_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *PutCodeScanRepositoryRequest) GetProjectId() uint32 {
+	if x != nil {
+		return x.ProjectId
+	}
+	return 0
+}
+
+func (x *PutCodeScanRepositoryRequest) GetCodeScanRepository() *CodeScanRepositoryForUpsert {
+	if x != nil {
+		return x.CodeScanRepository
+	}
+	return nil
 }
 
 var File_code_service_proto protoreflect.FileDescriptor
@@ -1708,7 +1763,17 @@ var file_code_service_proto_rawDesc = []byte{
 	0x73, 0x63, 0x61, 0x6e, 0x4f, 0x6e, 0x6c, 0x79, 0x12, 0x27, 0x0a, 0x0f, 0x72, 0x65, 0x70, 0x6f,
 	0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28,
 	0x09, 0x52, 0x0e, 0x72, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x4e, 0x61, 0x6d,
-	0x65, 0x32, 0x92, 0x0e, 0x0a, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x22, 0x9d, 0x01, 0x0a, 0x1c, 0x50, 0x75, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x53, 0x63, 0x61,
+	0x6e, 0x52, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x69, 0x64,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x49,
+	0x64, 0x12, 0x5e, 0x0a, 0x14, 0x63, 0x6f, 0x64, 0x65, 0x5f, 0x73, 0x63, 0x61, 0x6e, 0x5f, 0x72,
+	0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x2c, 0x2e, 0x64, 0x61, 0x74, 0x61, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x2e, 0x63, 0x6f, 0x64,
+	0x65, 0x2e, 0x43, 0x6f, 0x64, 0x65, 0x53, 0x63, 0x61, 0x6e, 0x52, 0x65, 0x70, 0x6f, 0x73, 0x69,
+	0x74, 0x6f, 0x72, 0x79, 0x46, 0x6f, 0x72, 0x55, 0x70, 0x73, 0x65, 0x72, 0x74, 0x52, 0x12, 0x63,
+	0x6f, 0x64, 0x65, 0x53, 0x63, 0x61, 0x6e, 0x52, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72,
+	0x79, 0x32, 0xf2, 0x0e, 0x0a, 0x0b, 0x43, 0x6f, 0x64, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
 	0x65, 0x12, 0x61, 0x0a, 0x0e, 0x4c, 0x69, 0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f, 0x75,
 	0x72, 0x63, 0x65, 0x12, 0x26, 0x2e, 0x64, 0x61, 0x74, 0x61, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
 	0x2e, 0x63, 0x6f, 0x64, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x44, 0x61, 0x74, 0x61, 0x53, 0x6f,
@@ -1821,6 +1886,12 @@ var file_code_service_proto_rawDesc = []byte{
 	0x63, 0x61, 0x6e, 0x41, 0x6c, 0x6c, 0x12, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
 	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x1a, 0x16,
 	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
+	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x12, 0x5e, 0x0a, 0x15, 0x50, 0x75, 0x74, 0x43, 0x6f, 0x64,
+	0x65, 0x53, 0x63, 0x61, 0x6e, 0x52, 0x65, 0x70, 0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x12,
+	0x2d, 0x2e, 0x64, 0x61, 0x74, 0x61, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x2e, 0x63, 0x6f, 0x64,
+	0x65, 0x2e, 0x50, 0x75, 0x74, 0x43, 0x6f, 0x64, 0x65, 0x53, 0x63, 0x61, 0x6e, 0x52, 0x65, 0x70,
+	0x6f, 0x73, 0x69, 0x74, 0x6f, 0x72, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16,
+	0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66,
 	0x2e, 0x45, 0x6d, 0x70, 0x74, 0x79, 0x42, 0x30, 0x5a, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62,
 	0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x63, 0x61, 0x2d, 0x72, 0x69, 0x73, 0x6b, 0x65, 0x6e, 0x2f, 0x64,
 	0x61, 0x74, 0x61, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x2d, 0x61, 0x70, 0x69, 0x2f, 0x70, 0x72,
@@ -1839,7 +1910,7 @@ func file_code_service_proto_rawDescGZIP() []byte {
 	return file_code_service_proto_rawDescData
 }
 
-var file_code_service_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_code_service_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_code_service_proto_goTypes = []interface{}{
 	(*ListDataSourceRequest)(nil),          // 0: datasource.code.ListDataSourceRequest
 	(*ListDataSourceResponse)(nil),         // 1: datasource.code.ListDataSourceResponse
@@ -1868,76 +1939,81 @@ var file_code_service_proto_goTypes = []interface{}{
 	(*InvokeScanGitleaksRequest)(nil),      // 24: datasource.code.InvokeScanGitleaksRequest
 	(*InvokeScanDependencyRequest)(nil),    // 25: datasource.code.InvokeScanDependencyRequest
 	(*InvokeScanCodeScanRequest)(nil),      // 26: datasource.code.InvokeScanCodeScanRequest
-	(*CodeDataSource)(nil),                 // 27: datasource.code.CodeDataSource
-	(*GitHubSetting)(nil),                  // 28: datasource.code.GitHubSetting
-	(*GitHubSettingForUpsert)(nil),         // 29: datasource.code.GitHubSettingForUpsert
-	(*GitleaksSettingForUpsert)(nil),       // 30: datasource.code.GitleaksSettingForUpsert
-	(*GitleaksSetting)(nil),                // 31: datasource.code.GitleaksSetting
-	(*GitleaksCache)(nil),                  // 32: datasource.code.GitleaksCache
-	(*GitleaksCacheForUpsert)(nil),         // 33: datasource.code.GitleaksCacheForUpsert
-	(*DependencySettingForUpsert)(nil),     // 34: datasource.code.DependencySettingForUpsert
-	(*DependencySetting)(nil),              // 35: datasource.code.DependencySetting
-	(*CodeScanSettingForUpsert)(nil),       // 36: datasource.code.CodeScanSettingForUpsert
-	(*CodeScanSetting)(nil),                // 37: datasource.code.CodeScanSetting
-	(*emptypb.Empty)(nil),                  // 38: google.protobuf.Empty
+	(*PutCodeScanRepositoryRequest)(nil),   // 27: datasource.code.PutCodeScanRepositoryRequest
+	(*CodeDataSource)(nil),                 // 28: datasource.code.CodeDataSource
+	(*GitHubSetting)(nil),                  // 29: datasource.code.GitHubSetting
+	(*GitHubSettingForUpsert)(nil),         // 30: datasource.code.GitHubSettingForUpsert
+	(*GitleaksSettingForUpsert)(nil),       // 31: datasource.code.GitleaksSettingForUpsert
+	(*GitleaksSetting)(nil),                // 32: datasource.code.GitleaksSetting
+	(*GitleaksCache)(nil),                  // 33: datasource.code.GitleaksCache
+	(*GitleaksCacheForUpsert)(nil),         // 34: datasource.code.GitleaksCacheForUpsert
+	(*DependencySettingForUpsert)(nil),     // 35: datasource.code.DependencySettingForUpsert
+	(*DependencySetting)(nil),              // 36: datasource.code.DependencySetting
+	(*CodeScanSettingForUpsert)(nil),       // 37: datasource.code.CodeScanSettingForUpsert
+	(*CodeScanSetting)(nil),                // 38: datasource.code.CodeScanSetting
+	(*CodeScanRepositoryForUpsert)(nil),    // 39: datasource.code.CodeScanRepositoryForUpsert
+	(*emptypb.Empty)(nil),                  // 40: google.protobuf.Empty
 }
 var file_code_service_proto_depIdxs = []int32{
-	27, // 0: datasource.code.ListDataSourceResponse.code_data_source:type_name -> datasource.code.CodeDataSource
-	28, // 1: datasource.code.ListGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	28, // 2: datasource.code.GetGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	29, // 3: datasource.code.PutGitHubSettingRequest.github_setting:type_name -> datasource.code.GitHubSettingForUpsert
-	28, // 4: datasource.code.PutGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	30, // 5: datasource.code.PutGitleaksSettingRequest.gitleaks_setting:type_name -> datasource.code.GitleaksSettingForUpsert
-	31, // 6: datasource.code.PutGitleaksSettingResponse.gitleaks_setting:type_name -> datasource.code.GitleaksSetting
-	32, // 7: datasource.code.ListGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	32, // 8: datasource.code.GetGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	33, // 9: datasource.code.PutGitleaksCacheRequest.gitleaks_cache:type_name -> datasource.code.GitleaksCacheForUpsert
-	32, // 10: datasource.code.PutGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	34, // 11: datasource.code.PutDependencySettingRequest.dependency_setting:type_name -> datasource.code.DependencySettingForUpsert
-	35, // 12: datasource.code.PutDependencySettingResponse.dependency_setting:type_name -> datasource.code.DependencySetting
-	36, // 13: datasource.code.PutCodeScanSettingRequest.code_scan_setting:type_name -> datasource.code.CodeScanSettingForUpsert
-	37, // 14: datasource.code.PutCodeScanSettingResponse.code_scan_setting:type_name -> datasource.code.CodeScanSetting
-	0,  // 15: datasource.code.CodeService.ListDataSource:input_type -> datasource.code.ListDataSourceRequest
-	2,  // 16: datasource.code.CodeService.ListGitHubSetting:input_type -> datasource.code.ListGitHubSettingRequest
-	4,  // 17: datasource.code.CodeService.GetGitHubSetting:input_type -> datasource.code.GetGitHubSettingRequest
-	6,  // 18: datasource.code.CodeService.PutGitHubSetting:input_type -> datasource.code.PutGitHubSettingRequest
-	8,  // 19: datasource.code.CodeService.DeleteGitHubSetting:input_type -> datasource.code.DeleteGitHubSettingRequest
-	9,  // 20: datasource.code.CodeService.PutGitleaksSetting:input_type -> datasource.code.PutGitleaksSettingRequest
-	11, // 21: datasource.code.CodeService.DeleteGitleaksSetting:input_type -> datasource.code.DeleteGitleaksSettingRequest
-	12, // 22: datasource.code.CodeService.ListGitleaksCache:input_type -> datasource.code.ListGitleaksCacheRequest
-	14, // 23: datasource.code.CodeService.GetGitleaksCache:input_type -> datasource.code.GetGitleaksCacheRequest
-	16, // 24: datasource.code.CodeService.PutGitleaksCache:input_type -> datasource.code.PutGitleaksCacheRequest
-	18, // 25: datasource.code.CodeService.PutDependencySetting:input_type -> datasource.code.PutDependencySettingRequest
-	20, // 26: datasource.code.CodeService.DeleteDependencySetting:input_type -> datasource.code.DeleteDependencySettingRequest
-	21, // 27: datasource.code.CodeService.PutCodeScanSetting:input_type -> datasource.code.PutCodeScanSettingRequest
-	23, // 28: datasource.code.CodeService.DeleteCodeScanSetting:input_type -> datasource.code.DeleteCodeScanSettingRequest
-	24, // 29: datasource.code.CodeService.InvokeScanGitleaks:input_type -> datasource.code.InvokeScanGitleaksRequest
-	25, // 30: datasource.code.CodeService.InvokeScanDependency:input_type -> datasource.code.InvokeScanDependencyRequest
-	26, // 31: datasource.code.CodeService.InvokeScanCodeScan:input_type -> datasource.code.InvokeScanCodeScanRequest
-	38, // 32: datasource.code.CodeService.InvokeScanAll:input_type -> google.protobuf.Empty
-	1,  // 33: datasource.code.CodeService.ListDataSource:output_type -> datasource.code.ListDataSourceResponse
-	3,  // 34: datasource.code.CodeService.ListGitHubSetting:output_type -> datasource.code.ListGitHubSettingResponse
-	5,  // 35: datasource.code.CodeService.GetGitHubSetting:output_type -> datasource.code.GetGitHubSettingResponse
-	7,  // 36: datasource.code.CodeService.PutGitHubSetting:output_type -> datasource.code.PutGitHubSettingResponse
-	38, // 37: datasource.code.CodeService.DeleteGitHubSetting:output_type -> google.protobuf.Empty
-	10, // 38: datasource.code.CodeService.PutGitleaksSetting:output_type -> datasource.code.PutGitleaksSettingResponse
-	38, // 39: datasource.code.CodeService.DeleteGitleaksSetting:output_type -> google.protobuf.Empty
-	13, // 40: datasource.code.CodeService.ListGitleaksCache:output_type -> datasource.code.ListGitleaksCacheResponse
-	15, // 41: datasource.code.CodeService.GetGitleaksCache:output_type -> datasource.code.GetGitleaksCacheResponse
-	17, // 42: datasource.code.CodeService.PutGitleaksCache:output_type -> datasource.code.PutGitleaksCacheResponse
-	19, // 43: datasource.code.CodeService.PutDependencySetting:output_type -> datasource.code.PutDependencySettingResponse
-	38, // 44: datasource.code.CodeService.DeleteDependencySetting:output_type -> google.protobuf.Empty
-	22, // 45: datasource.code.CodeService.PutCodeScanSetting:output_type -> datasource.code.PutCodeScanSettingResponse
-	38, // 46: datasource.code.CodeService.DeleteCodeScanSetting:output_type -> google.protobuf.Empty
-	38, // 47: datasource.code.CodeService.InvokeScanGitleaks:output_type -> google.protobuf.Empty
-	38, // 48: datasource.code.CodeService.InvokeScanDependency:output_type -> google.protobuf.Empty
-	38, // 49: datasource.code.CodeService.InvokeScanCodeScan:output_type -> google.protobuf.Empty
-	38, // 50: datasource.code.CodeService.InvokeScanAll:output_type -> google.protobuf.Empty
-	33, // [33:51] is the sub-list for method output_type
-	15, // [15:33] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	28, // 0: datasource.code.ListDataSourceResponse.code_data_source:type_name -> datasource.code.CodeDataSource
+	29, // 1: datasource.code.ListGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
+	29, // 2: datasource.code.GetGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
+	30, // 3: datasource.code.PutGitHubSettingRequest.github_setting:type_name -> datasource.code.GitHubSettingForUpsert
+	29, // 4: datasource.code.PutGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
+	31, // 5: datasource.code.PutGitleaksSettingRequest.gitleaks_setting:type_name -> datasource.code.GitleaksSettingForUpsert
+	32, // 6: datasource.code.PutGitleaksSettingResponse.gitleaks_setting:type_name -> datasource.code.GitleaksSetting
+	33, // 7: datasource.code.ListGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	33, // 8: datasource.code.GetGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	34, // 9: datasource.code.PutGitleaksCacheRequest.gitleaks_cache:type_name -> datasource.code.GitleaksCacheForUpsert
+	33, // 10: datasource.code.PutGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	35, // 11: datasource.code.PutDependencySettingRequest.dependency_setting:type_name -> datasource.code.DependencySettingForUpsert
+	36, // 12: datasource.code.PutDependencySettingResponse.dependency_setting:type_name -> datasource.code.DependencySetting
+	37, // 13: datasource.code.PutCodeScanSettingRequest.code_scan_setting:type_name -> datasource.code.CodeScanSettingForUpsert
+	38, // 14: datasource.code.PutCodeScanSettingResponse.code_scan_setting:type_name -> datasource.code.CodeScanSetting
+	39, // 15: datasource.code.PutCodeScanRepositoryRequest.code_scan_repository:type_name -> datasource.code.CodeScanRepositoryForUpsert
+	0,  // 16: datasource.code.CodeService.ListDataSource:input_type -> datasource.code.ListDataSourceRequest
+	2,  // 17: datasource.code.CodeService.ListGitHubSetting:input_type -> datasource.code.ListGitHubSettingRequest
+	4,  // 18: datasource.code.CodeService.GetGitHubSetting:input_type -> datasource.code.GetGitHubSettingRequest
+	6,  // 19: datasource.code.CodeService.PutGitHubSetting:input_type -> datasource.code.PutGitHubSettingRequest
+	8,  // 20: datasource.code.CodeService.DeleteGitHubSetting:input_type -> datasource.code.DeleteGitHubSettingRequest
+	9,  // 21: datasource.code.CodeService.PutGitleaksSetting:input_type -> datasource.code.PutGitleaksSettingRequest
+	11, // 22: datasource.code.CodeService.DeleteGitleaksSetting:input_type -> datasource.code.DeleteGitleaksSettingRequest
+	12, // 23: datasource.code.CodeService.ListGitleaksCache:input_type -> datasource.code.ListGitleaksCacheRequest
+	14, // 24: datasource.code.CodeService.GetGitleaksCache:input_type -> datasource.code.GetGitleaksCacheRequest
+	16, // 25: datasource.code.CodeService.PutGitleaksCache:input_type -> datasource.code.PutGitleaksCacheRequest
+	18, // 26: datasource.code.CodeService.PutDependencySetting:input_type -> datasource.code.PutDependencySettingRequest
+	20, // 27: datasource.code.CodeService.DeleteDependencySetting:input_type -> datasource.code.DeleteDependencySettingRequest
+	21, // 28: datasource.code.CodeService.PutCodeScanSetting:input_type -> datasource.code.PutCodeScanSettingRequest
+	23, // 29: datasource.code.CodeService.DeleteCodeScanSetting:input_type -> datasource.code.DeleteCodeScanSettingRequest
+	24, // 30: datasource.code.CodeService.InvokeScanGitleaks:input_type -> datasource.code.InvokeScanGitleaksRequest
+	25, // 31: datasource.code.CodeService.InvokeScanDependency:input_type -> datasource.code.InvokeScanDependencyRequest
+	26, // 32: datasource.code.CodeService.InvokeScanCodeScan:input_type -> datasource.code.InvokeScanCodeScanRequest
+	40, // 33: datasource.code.CodeService.InvokeScanAll:input_type -> google.protobuf.Empty
+	27, // 34: datasource.code.CodeService.PutCodeScanRepository:input_type -> datasource.code.PutCodeScanRepositoryRequest
+	1,  // 35: datasource.code.CodeService.ListDataSource:output_type -> datasource.code.ListDataSourceResponse
+	3,  // 36: datasource.code.CodeService.ListGitHubSetting:output_type -> datasource.code.ListGitHubSettingResponse
+	5,  // 37: datasource.code.CodeService.GetGitHubSetting:output_type -> datasource.code.GetGitHubSettingResponse
+	7,  // 38: datasource.code.CodeService.PutGitHubSetting:output_type -> datasource.code.PutGitHubSettingResponse
+	40, // 39: datasource.code.CodeService.DeleteGitHubSetting:output_type -> google.protobuf.Empty
+	10, // 40: datasource.code.CodeService.PutGitleaksSetting:output_type -> datasource.code.PutGitleaksSettingResponse
+	40, // 41: datasource.code.CodeService.DeleteGitleaksSetting:output_type -> google.protobuf.Empty
+	13, // 42: datasource.code.CodeService.ListGitleaksCache:output_type -> datasource.code.ListGitleaksCacheResponse
+	15, // 43: datasource.code.CodeService.GetGitleaksCache:output_type -> datasource.code.GetGitleaksCacheResponse
+	17, // 44: datasource.code.CodeService.PutGitleaksCache:output_type -> datasource.code.PutGitleaksCacheResponse
+	19, // 45: datasource.code.CodeService.PutDependencySetting:output_type -> datasource.code.PutDependencySettingResponse
+	40, // 46: datasource.code.CodeService.DeleteDependencySetting:output_type -> google.protobuf.Empty
+	22, // 47: datasource.code.CodeService.PutCodeScanSetting:output_type -> datasource.code.PutCodeScanSettingResponse
+	40, // 48: datasource.code.CodeService.DeleteCodeScanSetting:output_type -> google.protobuf.Empty
+	40, // 49: datasource.code.CodeService.InvokeScanGitleaks:output_type -> google.protobuf.Empty
+	40, // 50: datasource.code.CodeService.InvokeScanDependency:output_type -> google.protobuf.Empty
+	40, // 51: datasource.code.CodeService.InvokeScanCodeScan:output_type -> google.protobuf.Empty
+	40, // 52: datasource.code.CodeService.InvokeScanAll:output_type -> google.protobuf.Empty
+	40, // 53: datasource.code.CodeService.PutCodeScanRepository:output_type -> google.protobuf.Empty
+	35, // [35:54] is the sub-list for method output_type
+	16, // [16:35] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_code_service_proto_init() }
@@ -2271,6 +2347,18 @@ func file_code_service_proto_init() {
 				return nil
 			}
 		}
+		file_code_service_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PutCodeScanRepositoryRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2278,7 +2366,7 @@ func file_code_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_code_service_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
@@ -2329,6 +2417,8 @@ type CodeServiceClient interface {
 	InvokeScanDependency(ctx context.Context, in *InvokeScanDependencyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	InvokeScanCodeScan(ctx context.Context, in *InvokeScanCodeScanRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	InvokeScanAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Repository-level status update
+	PutCodeScanRepository(ctx context.Context, in *PutCodeScanRepositoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type codeServiceClient struct {
@@ -2501,6 +2591,15 @@ func (c *codeServiceClient) InvokeScanAll(ctx context.Context, in *emptypb.Empty
 	return out, nil
 }
 
+func (c *codeServiceClient) PutCodeScanRepository(ctx context.Context, in *PutCodeScanRepositoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/datasource.code.CodeService/PutCodeScanRepository", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CodeServiceServer is the server API for CodeService service.
 type CodeServiceServer interface {
 	// Code DataSource
@@ -2528,6 +2627,8 @@ type CodeServiceServer interface {
 	InvokeScanDependency(context.Context, *InvokeScanDependencyRequest) (*emptypb.Empty, error)
 	InvokeScanCodeScan(context.Context, *InvokeScanCodeScanRequest) (*emptypb.Empty, error)
 	InvokeScanAll(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Repository-level status update
+	PutCodeScanRepository(context.Context, *PutCodeScanRepositoryRequest) (*emptypb.Empty, error)
 }
 
 // UnimplementedCodeServiceServer can be embedded to have forward compatible implementations.
@@ -2587,6 +2688,9 @@ func (*UnimplementedCodeServiceServer) InvokeScanCodeScan(context.Context, *Invo
 }
 func (*UnimplementedCodeServiceServer) InvokeScanAll(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeScanAll not implemented")
+}
+func (*UnimplementedCodeServiceServer) PutCodeScanRepository(context.Context, *PutCodeScanRepositoryRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PutCodeScanRepository not implemented")
 }
 
 func RegisterCodeServiceServer(s *grpc.Server, srv CodeServiceServer) {
@@ -2917,6 +3021,24 @@ func _CodeService_InvokeScanAll_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CodeService_PutCodeScanRepository_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PutCodeScanRepositoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CodeServiceServer).PutCodeScanRepository(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/datasource.code.CodeService/PutCodeScanRepository",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CodeServiceServer).PutCodeScanRepository(ctx, req.(*PutCodeScanRepositoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _CodeService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "datasource.code.CodeService",
 	HandlerType: (*CodeServiceServer)(nil),
@@ -2992,6 +3114,10 @@ var _CodeService_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InvokeScanAll",
 			Handler:    _CodeService_InvokeScanAll_Handler,
+		},
+		{
+			MethodName: "PutCodeScanRepository",
+			Handler:    _CodeService_PutCodeScanRepository_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
