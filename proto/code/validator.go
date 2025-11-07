@@ -274,24 +274,10 @@ func (p *PutCodeScanRepositoryRequest) Validate() error {
 	return p.CodeScanRepository.Validate()
 }
 
-// Validate GitleaksRepositoryForUpsert
-func (g *GitleaksRepositoryForUpsert) Validate() error {
-	return validation.ValidateStruct(g,
-		validation.Field(&g.GithubSettingId, validation.Required),
-		validation.Field(&g.RepositoryFullName, validation.Required, validation.Length(0, 255)),
-		validation.Field(&g.Status, validation.Required),
-		validation.Field(&g.StatusDetail, validation.Length(0, 255)),
-		validation.Field(&g.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
-	)
-}
-
-// Validate DependencyRepositoryForUpsert
-func (d *DependencyRepositoryForUpsert) Validate() error {
-	return validation.ValidateStruct(d,
-		validation.Field(&d.GithubSettingId, validation.Required),
-		validation.Field(&d.RepositoryFullName, validation.Required, validation.Length(0, 255)),
-		validation.Field(&d.Status, validation.Required),
-		validation.Field(&d.StatusDetail, validation.Length(0, 255)),
-		validation.Field(&d.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+// Validate ListRepositoryRequest
+func (l *ListRepositoryRequest) Validate() error {
+	return validation.ValidateStruct(l,
+		validation.Field(&l.ProjectId, validation.Required),
+		validation.Field(&l.GithubSettingId, validation.Required),
 	)
 }
