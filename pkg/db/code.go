@@ -606,9 +606,9 @@ INSERT INTO code_codescan_repository (
 )
 VALUES (?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
-	status=VALUES(status),
-	status_detail=VALUES(status_detail),
-	scan_at=VALUES(scan_at)
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
 `
 
 func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error) {
