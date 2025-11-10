@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/ca-risken/core/proto/project"
+	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/go-github/v44/github"
+	ghub "github.com/google/go-github/v44/github"
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
@@ -676,8 +677,15 @@ func (c *CodeService) ListRepository(ctx context.Context, req *code.ListReposito
 	}
 	// Convert model to proto for GitHub API call
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Call GitHub API to list repositories
-	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	// Create filter options from request parameters
+	filterOpts := &github.FilterOptions{
+		RepositoryPattern: req.RepositoryPattern,
+		ScanPublic:        req.ScanPublic,
+		ScanInternal:      req.ScanInternal,
+		ScanPrivate:       req.ScanPrivate,
+	}
+	// Call GitHub API to list repositories with filter options
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "", filterOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -689,7 +697,7 @@ func (c *CodeService) ListRepository(ctx context.Context, req *code.ListReposito
 	return &repositoryList, nil
 }
 
-func convertGitHubRepository(repo *github.Repository) *code.GitHubRepository {
+func convertGitHubRepository(repo *ghub.Repository) *code.GitHubRepository {
 	if repo == nil {
 		return &code.GitHubRepository{}
 	}
