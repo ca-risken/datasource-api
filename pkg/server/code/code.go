@@ -12,6 +12,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/golang/protobuf/ptypes/empty"
+	"github.com/google/go-github/v44/github"
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
@@ -659,4 +660,53 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 		req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, req.CodeScanRepository.Status.String())
 	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.CodeScanRepository.StatusDetail)
 	return &empty.Empty{}, nil
+}
+
+func (c *CodeService) ListRepository(ctx context.Context, req *code.ListRepositoryRequest) (*code.ListRepositoryResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	// Get GitHub setting to use for API call
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &code.ListRepositoryResponse{}, nil
+		}
+		return nil, err
+	}
+	// Convert model to proto for GitHub API call
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	// Call GitHub API to list repositories
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		return nil, err
+	}
+	// Convert GitHub repositories to response format
+	repositoryList := code.ListRepositoryResponse{}
+	for _, repo := range repos {
+		repositoryList.Repository = append(repositoryList.Repository, convertGitHubRepository(repo))
+	}
+	return &repositoryList, nil
+}
+
+func convertGitHubRepository(repo *github.Repository) *code.GitHubRepository {
+	if repo == nil {
+		return &code.GitHubRepository{}
+	}
+	converted := code.GitHubRepository{
+		Private: false,
+	}
+	if repo.ID != nil {
+		converted.Id = *repo.ID
+	}
+	if repo.FullName != nil {
+		converted.FullName = *repo.FullName
+	}
+	if repo.CloneURL != nil {
+		converted.CloneUrl = *repo.CloneURL
+	}
+	if repo.Private != nil {
+		converted.Private = *repo.Private
+	}
+	return &converted
 }
