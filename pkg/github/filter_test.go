@@ -237,17 +237,40 @@ func TestFilterByVisibility(t *testing.T) {
 			},
 		},
 		{
-			name: "Return empty when no visibility matches",
+			name: "Return all repositories when all flags are false (default)",
 			args: args{
 				repos: []*github.Repository{
 					{
 						Name:       github.String("public-repo"),
 						Visibility: &visibilityPublic,
 					},
+					{
+						Name:       github.String("internal-repo"),
+						Visibility: &visibilityInternal,
+					},
+					{
+						Name:       github.String("private-repo"),
+						Visibility: &visibilityPrivate,
+					},
 				},
-				scanPublic: false,
+				scanPublic:   false,
+				scanInternal: false,
+				scanPrivate:  false,
 			},
-			want: []*github.Repository{},
+			want: []*github.Repository{
+				{
+					Name:       github.String("public-repo"),
+					Visibility: &visibilityPublic,
+				},
+				{
+					Name:       github.String("internal-repo"),
+					Visibility: &visibilityInternal,
+				},
+				{
+					Name:       github.String("private-repo"),
+					Visibility: &visibilityPrivate,
+				},
+			},
 		},
 		{
 			name: "Handle nil visibility",
@@ -398,6 +421,43 @@ func TestApplyFilters(t *testing.T) {
 				{
 					Name:       github.String("risken-core"),
 					Visibility: &visibilityPublic,
+				},
+			},
+		},
+		{
+			name: "Return all repositories when all flags are false and pattern is empty (default)",
+			args: args{
+				repos: []*github.Repository{
+					{
+						Name:       github.String("public-repo"),
+						Visibility: &visibilityPublic,
+					},
+					{
+						Name:       github.String("private-repo"),
+						Visibility: &visibilityPrivate,
+					},
+					{
+						Name: github.String("other-repo"),
+					},
+				},
+				opts: &FilterOptions{
+					RepositoryPattern: "",
+					ScanPublic:        false,
+					ScanInternal:      false,
+					ScanPrivate:       false,
+				},
+			},
+			want: []*github.Repository{
+				{
+					Name:       github.String("public-repo"),
+					Visibility: &visibilityPublic,
+				},
+				{
+					Name:       github.String("private-repo"),
+					Visibility: &visibilityPrivate,
+				},
+				{
+					Name: github.String("other-repo"),
 				},
 			},
 		},
