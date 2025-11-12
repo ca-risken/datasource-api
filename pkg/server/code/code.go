@@ -545,15 +545,66 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
-		GitHubSettingID: data.CodeGitHubSettingID,
-		ProjectID:       data.ProjectID,
-		ScanOnly:        req.ScanOnly,
-		RepositoryName:  req.RepositoryName,
-	})
+
+	// If RepositoryName is specified, send a single message for that repository
+	if req.RepositoryName != "" {
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			RepositoryName:  req.RepositoryName,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			ScanPublic:        data.ScanPublic,
+			ScanInternal:      data.ScanInternal,
+			ScanPrivate:       data.ScanPrivate,
+			Status:            code.Status_IN_PROGRESS,
+			StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+			ScanAt:            data.ScanAt.Unix(),
+		}); err != nil {
+			return nil, err
+		}
+		c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+		return &empty.Empty{}, nil
+	}
+
+	// If RepositoryName is empty, get filtered repositories and send a message for each
+	repos, err := c.listCodeScanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
+	if len(repos) == 0 {
+		c.logger.Infof(ctx, "No repositories found matching filter criteria")
+		return &empty.Empty{}, nil
+	}
+
+	// Send a message for each repository
+	for _, repo := range repos {
+		if repo.FullName == nil {
+			continue
+		}
+		repoName := *repo.FullName
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			RepositoryName:  repoName,
+		})
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to send message for repository %s: %+v", repoName, err)
+			return nil, err
+		}
+		c.logger.Debugf(ctx, "Invoke scanned for repository %s, messageId: %v", repoName, resp.MessageId)
+	}
+
+	// Update CodeScanSetting status
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
@@ -563,12 +614,12 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		StatusDetail:      fmt.Sprintf("Start scan for %d repositories at %+v", len(repos), time.Now().Format(time.RFC3339)),
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+	c.logger.Infof(ctx, "Invoke scanned for %d repositories", len(repos))
 	return &empty.Empty{}, nil
 }
 
@@ -663,20 +714,35 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	return &empty.Empty{}, nil
 }
 
-func (c *CodeService) ListRepository(ctx context.Context, req *code.ListRepositoryRequest) (*code.ListRepositoryResponse, error) {
+// ListCodeScanTargetRepository lists repositories filtered by CodeScanSetting (RPC handler)
+func (c *CodeService) ListCodeScanTargetRepository(ctx context.Context, req *code.ListCodeScanTargetRepositoryRequest) (*code.ListRepositoryResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	repos, err := c.listCodeScanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	// Convert GitHub repositories to response format
+	repositoryList := code.ListRepositoryResponse{}
+	for _, repo := range repos {
+		repositoryList.Repository = append(repositoryList.Repository, convertGitHubRepository(repo))
+	}
+	return &repositoryList, nil
+}
+
+// listCodeScanTargetRepository lists repositories filtered by CodeScanSetting (internal function)
+func (c *CodeService) listCodeScanTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
 	// Get GitHub setting to use for API call
-	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, projectID, githubSettingID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &code.ListRepositoryResponse{}, nil
+			return []*ghub.Repository{}, nil
 		}
 		return nil, err
 	}
 	// Get CodeScanSetting from database to use saved filter options
-	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, projectID, githubSettingID)
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
@@ -684,7 +750,13 @@ func (c *CodeService) ListRepository(ctx context.Context, req *code.ListReposito
 	// Convert model to proto for GitHub API call
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
 
-	// Create filter options from database settings only
+	// Call GitHub API to list repositories without filter options
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Create filter options from database settings and apply filters
 	filterOpts := &github.FilterOptions{}
 	if codeScanSetting != nil {
 		// Use saved filter options from database
@@ -695,17 +767,10 @@ func (c *CodeService) ListRepository(ctx context.Context, req *code.ListReposito
 	}
 	// If no CodeScanSetting exists, filter options will be empty (default values)
 
-	// Call GitHub API to list repositories with filter options
-	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "", filterOpts)
-	if err != nil {
-		return nil, err
-	}
-	// Convert GitHub repositories to response format
-	repositoryList := code.ListRepositoryResponse{}
-	for _, repo := range repos {
-		repositoryList.Repository = append(repositoryList.Repository, convertGitHubRepository(repo))
-	}
-	return &repositoryList, nil
+	// Apply filters to the repository list
+	repos = github.ApplyFilters(repos, filterOpts)
+
+	return repos, nil
 }
 
 func convertGitHubRepository(repo *ghub.Repository) *code.GitHubRepository {

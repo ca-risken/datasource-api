@@ -19,7 +19,7 @@ import (
 const RETRY_NUM uint64 = 3
 
 type GithubServiceClient interface {
-	ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string, filterOpts *FilterOptions) ([]*github.Repository, error)
+	ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*github.Repository, error)
 	Clone(ctx context.Context, token string, cloneURL string, dstDir string) error
 }
 
@@ -92,7 +92,7 @@ func (g *riskenGitHubClient) Clone(ctx context.Context, token string, cloneURL s
 	return nil
 }
 
-func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string, filterOpts *FilterOptions) ([]*github.Repository, error) {
+func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*github.Repository, error) {
 	client, err := g.newV3Client(ctx, config.PersonalAccessToken, config.BaseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("create github-v3 client: %w", err)
@@ -104,9 +104,7 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 		if err != nil {
 			return nil, err
 		}
-		repos := []*github.Repository{repository}
-		// Apply filters even for single repository
-		return ApplyFilters(repos, filterOpts), nil
+		return []*github.Repository{repository}, nil
 	}
 
 	// Handle bulk repository scan based on config.Type
@@ -134,9 +132,6 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 	default:
 		return nil, fmt.Errorf("unknown github type: type=%s", config.Type.String())
 	}
-
-	// Apply filters to the repository list
-	repos = ApplyFilters(repos, filterOpts)
 
 	return repos, nil
 }
