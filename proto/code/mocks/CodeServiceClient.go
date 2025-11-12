@@ -389,8 +389,8 @@ func (_m *CodeServiceClient) InvokeScanGitleaks(ctx context.Context, in *code.In
 	return r0, r1
 }
 
-// ListCodeScanTargetRepository provides a mock function with given fields: ctx, in, opts
-func (_m *CodeServiceClient) ListCodeScanTargetRepository(ctx context.Context, in *code.ListCodeScanTargetRepositoryRequest, opts ...grpc.CallOption) (*code.ListRepositoryResponse, error) {
+// ListCodescanTargetRepository provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) ListCodescanTargetRepository(ctx context.Context, in *code.ListCodescanTargetRepositoryRequest, opts ...grpc.CallOption) (*code.ListCodescanTargetRepositoryResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -401,23 +401,23 @@ func (_m *CodeServiceClient) ListCodeScanTargetRepository(ctx context.Context, i
 	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
-		panic("no return value specified for ListCodeScanTargetRepository")
+		panic("no return value specified for ListCodescanTargetRepository")
 	}
 
-	var r0 *code.ListRepositoryResponse
+	var r0 *code.ListCodescanTargetRepositoryResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *code.ListCodeScanTargetRepositoryRequest, ...grpc.CallOption) (*code.ListRepositoryResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.ListCodescanTargetRepositoryRequest, ...grpc.CallOption) (*code.ListCodescanTargetRepositoryResponse, error)); ok {
 		return rf(ctx, in, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *code.ListCodeScanTargetRepositoryRequest, ...grpc.CallOption) *code.ListRepositoryResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *code.ListCodescanTargetRepositoryRequest, ...grpc.CallOption) *code.ListCodescanTargetRepositoryResponse); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*code.ListRepositoryResponse)
+			r0 = ret.Get(0).(*code.ListCodescanTargetRepositoryResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *code.ListCodeScanTargetRepositoryRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *code.ListCodescanTargetRepositoryRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

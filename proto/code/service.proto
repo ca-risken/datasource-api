@@ -59,8 +59,8 @@ service CodeService {
   // Repository-level status update
   rpc PutCodeScanRepository(PutCodeScanRepositoryRequest)
       returns (google.protobuf.Empty);
-  rpc ListCodeScanTargetRepository(ListCodeScanTargetRepositoryRequest)
-      returns (ListRepositoryResponse);
+  rpc ListCodescanTargetRepository(ListCodescanTargetRepositoryRequest)
+      returns (ListCodescanTargetRepositoryResponse);
 }
 
 message ListDataSourceRequest {
@@ -183,9 +183,11 @@ message PutCodeScanRepositoryRequest {
   CodeScanRepositoryForUpsert code_scan_repository = 2;
 }
 
-message ListRepositoryResponse { repeated GitHubRepository repository = 1; }
-
-message ListCodeScanTargetRepositoryRequest {
+message ListCodescanTargetRepositoryRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
+}
+
+message ListCodescanTargetRepositoryResponse {
+  repeated GitHubRepository repository = 1;
 }

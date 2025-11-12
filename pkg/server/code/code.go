@@ -663,25 +663,25 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	return &empty.Empty{}, nil
 }
 
-// ListCodeScanTargetRepository lists repositories filtered by CodeScanSetting (RPC handler)
-func (c *CodeService) ListCodeScanTargetRepository(ctx context.Context, req *code.ListCodeScanTargetRepositoryRequest) (*code.ListRepositoryResponse, error) {
+// ListCodescanTargetRepository lists repositories filtered by CodeScanSetting (RPC handler)
+func (c *CodeService) ListCodescanTargetRepository(ctx context.Context, req *code.ListCodescanTargetRepositoryRequest) (*code.ListCodescanTargetRepositoryResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	repos, err := c.listCodeScanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
+	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
 	// Convert GitHub repositories to response format
-	repositoryList := code.ListRepositoryResponse{}
+	repositoryList := code.ListCodescanTargetRepositoryResponse{}
 	for _, repo := range repos {
 		repositoryList.Repository = append(repositoryList.Repository, convertGitHubRepository(repo))
 	}
 	return &repositoryList, nil
 }
 
-// listCodeScanTargetRepository lists repositories filtered by CodeScanSetting (internal function)
-func (c *CodeService) listCodeScanTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
+// listCodescanTargetRepository lists repositories filtered by CodeScanSetting (internal function)
+func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
 	// Get GitHub setting to use for API call
 	githubSetting, err := c.repository.GetGitHubSetting(ctx, projectID, githubSettingID)
 	if err != nil {
