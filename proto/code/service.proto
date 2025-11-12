@@ -185,10 +185,6 @@ message PutCodeScanRepositoryRequest {
 message ListRepositoryRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
-  string repository_pattern = 3; // Optional: filter by repository name pattern
-  bool scan_public = 4;          // Optional: include public repositories
-  bool scan_internal = 5;        // Optional: include internal repositories
-  bool scan_private = 6;         // Optional: include private repositories
 }
 
 message ListRepositoryResponse { repeated GitHubRepository repository = 1; }

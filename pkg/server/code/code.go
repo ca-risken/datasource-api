@@ -675,15 +675,26 @@ func (c *CodeService) ListRepository(ctx context.Context, req *code.ListReposito
 		}
 		return nil, err
 	}
+	// Get CodeScanSetting from database to use saved filter options
+	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
 	// Convert model to proto for GitHub API call
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Create filter options from request parameters
-	filterOpts := &github.FilterOptions{
-		RepositoryPattern: req.RepositoryPattern,
-		ScanPublic:        req.ScanPublic,
-		ScanInternal:      req.ScanInternal,
-		ScanPrivate:       req.ScanPrivate,
+
+	// Create filter options from database settings only
+	filterOpts := &github.FilterOptions{}
+	if codeScanSetting != nil {
+		// Use saved filter options from database
+		filterOpts.RepositoryPattern = codeScanSetting.RepositoryPattern
+		filterOpts.ScanPublic = codeScanSetting.ScanPublic
+		filterOpts.ScanInternal = codeScanSetting.ScanInternal
+		filterOpts.ScanPrivate = codeScanSetting.ScanPrivate
 	}
+	// If no CodeScanSetting exists, filter options will be empty (default values)
+
 	// Call GitHub API to list repositories with filter options
 	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "", filterOpts)
 	if err != nil {
