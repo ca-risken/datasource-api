@@ -42,13 +42,7 @@ func FilterByNamePattern(repos []*github.Repository, pattern string) []*github.R
 }
 
 // FilterByVisibility filters repositories by visibility
-// If all flags are false (default), returns all repositories without filtering
 func FilterByVisibility(repos []*github.Repository, scanPublic, scanInternal, scanPrivate bool) []*github.Repository {
-	// If no visibility filter is specified (all flags are false), return all repositories
-	if !scanPublic && !scanInternal && !scanPrivate {
-		return repos
-	}
-
 	filteredRepos := make([]*github.Repository, 0)
 	for _, repo := range repos {
 		if repo.Visibility == nil {
