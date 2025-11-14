@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/ca-risken/core/proto/project"
+	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/message"
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/google/go-github/v44/github"
+	ghub "github.com/google/go-github/v44/github"
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
@@ -662,34 +663,63 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	return &empty.Empty{}, nil
 }
 
-func (c *CodeService) ListRepository(ctx context.Context, req *code.ListRepositoryRequest) (*code.ListRepositoryResponse, error) {
+// ListCodescanTargetRepository lists repositories filtered by CodeScanSetting (RPC handler)
+func (c *CodeService) ListCodescanTargetRepository(ctx context.Context, req *code.ListCodescanTargetRepositoryRequest) (*code.ListCodescanTargetRepositoryResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	// Get GitHub setting to use for API call
-	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &code.ListRepositoryResponse{}, nil
-		}
-		return nil, err
-	}
-	// Convert model to proto for GitHub API call
-	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Call GitHub API to list repositories
-	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
 	// Convert GitHub repositories to response format
-	repositoryList := code.ListRepositoryResponse{}
+	repositoryList := code.ListCodescanTargetRepositoryResponse{}
 	for _, repo := range repos {
 		repositoryList.Repository = append(repositoryList.Repository, convertGitHubRepository(repo))
 	}
 	return &repositoryList, nil
 }
 
-func convertGitHubRepository(repo *github.Repository) *code.GitHubRepository {
+// listCodescanTargetRepository lists repositories filtered by CodeScanSetting (internal function)
+func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
+	// Get GitHub setting to use for API call
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, projectID, githubSettingID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []*ghub.Repository{}, nil
+		}
+		return nil, err
+	}
+	// Get CodeScanSetting from database to use saved filter options
+	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, projectID, githubSettingID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	// Convert model to proto for GitHub API call
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+
+	// Call GitHub API to list repositories without filter options
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply filters only if CodeScanSetting exists
+	if codeScanSetting != nil {
+		filterOpts := &github.FilterOptions{
+			RepositoryPattern: codeScanSetting.RepositoryPattern,
+			ScanPublic:        codeScanSetting.ScanPublic,
+			ScanInternal:      codeScanSetting.ScanInternal,
+			ScanPrivate:       codeScanSetting.ScanPrivate,
+		}
+		repos = github.ApplyFilters(repos, filterOpts)
+	}
+
+	return repos, nil
+}
+
+func convertGitHubRepository(repo *ghub.Repository) *code.GitHubRepository {
 	if repo == nil {
 		return &code.GitHubRepository{}
 	}

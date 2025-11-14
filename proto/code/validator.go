@@ -274,8 +274,8 @@ func (p *PutCodeScanRepositoryRequest) Validate() error {
 	return p.CodeScanRepository.Validate()
 }
 
-// Validate ListRepositoryRequest
-func (l *ListRepositoryRequest) Validate() error {
+// Validate ListCodescanTargetRepositoryRequest
+func (l *ListCodescanTargetRepositoryRequest) Validate() error {
 	return validation.ValidateStruct(l,
 		validation.Field(&l.ProjectId, validation.Required),
 		validation.Field(&l.GithubSettingId, validation.Required),
