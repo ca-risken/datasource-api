@@ -705,19 +705,16 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
-	// Create filter options from database settings and apply filters
-	filterOpts := &github.FilterOptions{}
+	// Apply filters only if CodeScanSetting exists
 	if codeScanSetting != nil {
-		// Use saved filter options from database
-		filterOpts.RepositoryPattern = codeScanSetting.RepositoryPattern
-		filterOpts.ScanPublic = codeScanSetting.ScanPublic
-		filterOpts.ScanInternal = codeScanSetting.ScanInternal
-		filterOpts.ScanPrivate = codeScanSetting.ScanPrivate
+		filterOpts := &github.FilterOptions{
+			RepositoryPattern: codeScanSetting.RepositoryPattern,
+			ScanPublic:        codeScanSetting.ScanPublic,
+			ScanInternal:      codeScanSetting.ScanInternal,
+			ScanPrivate:       codeScanSetting.ScanPrivate,
+		}
+		repos = github.ApplyFilters(repos, filterOpts)
 	}
-	// If no CodeScanSetting exists, filter options will be empty (default values)
-
-	// Apply filters to the repository list
-	repos = github.ApplyFilters(repos, filterOpts)
 
 	return repos, nil
 }
