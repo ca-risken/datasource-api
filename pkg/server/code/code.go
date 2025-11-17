@@ -705,15 +705,15 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
-	// Apply filters only if CodeScanSetting exists
 	if codeScanSetting != nil {
+		repos = github.FilterExcludedRepositories(repos, c.limitRepositorySizeKb)
 		filterOpts := &github.FilterOptions{
 			RepositoryPattern: codeScanSetting.RepositoryPattern,
 			ScanPublic:        codeScanSetting.ScanPublic,
 			ScanInternal:      codeScanSetting.ScanInternal,
 			ScanPrivate:       codeScanSetting.ScanPrivate,
 		}
-		repos = github.ApplyFilters(repos, filterOpts, c.limitRepositorySizeKb)
+		repos = github.ApplyFilters(repos, filterOpts)
 	}
 
 	return repos, nil

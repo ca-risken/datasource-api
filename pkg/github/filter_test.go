@@ -289,7 +289,6 @@ func TestFilterByVisibility(t *testing.T) {
 func TestApplyFilters(t *testing.T) {
 	visibilityPublic := "public"
 	visibilityPrivate := "private"
-	const testLimitRepositorySizeKb = 100000
 	type args struct {
 		repos []*github.Repository
 		opts  *FilterOptions
@@ -405,7 +404,7 @@ func TestApplyFilters(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ApplyFilters(tt.args.repos, tt.args.opts, testLimitRepositorySizeKb); !reflect.DeepEqual(got, tt.want) {
+			if got := ApplyFilters(tt.args.repos, tt.args.opts); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ApplyFilters() = %v, want %v", got, tt.want)
 			}
 		})
