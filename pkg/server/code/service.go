@@ -25,13 +25,14 @@ type CodeService struct {
 	codeDependencyQueueURL string
 	codeCodeScanQueueURL   string
 	githubClient           github.GithubServiceClient
+	limitRepositorySizeKb  int
 }
 
 type CodeQueue interface {
 	Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error)
 }
 
-func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, l logging.Logger) (code.CodeServiceServer, error) {
+func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, limitRepositorySizeKb int, l logging.Logger) (code.CodeServiceServer, error) {
 	key := []byte(dataKey)
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -50,5 +51,6 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		codeDependencyQueueURL: q.CodeDependencyQueueURL,
 		codeCodeScanQueueURL:   q.CodeCodeScanQueueURL,
 		githubClient:           githubClient,
+		limitRepositorySizeKb: limitRepositorySizeKb,
 	}, nil
 }

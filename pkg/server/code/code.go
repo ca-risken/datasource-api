@@ -713,7 +713,7 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 			ScanInternal:      codeScanSetting.ScanInternal,
 			ScanPrivate:       codeScanSetting.ScanPrivate,
 		}
-		repos = github.ApplyFilters(repos, filterOpts)
+		repos = github.ApplyFilters(repos, filterOpts, c.limitRepositorySizeKb)
 	}
 
 	return repos, nil
