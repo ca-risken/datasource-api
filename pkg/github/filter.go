@@ -41,6 +41,36 @@ func FilterByNamePattern(repos []*github.Repository, pattern string) []*github.R
 	return filteredRepos
 }
 
+// FilterExcludedRepositories filters out repositories that should be excluded from scanning
+// Excludes: Archived, Fork, Disabled, empty (Size == 0), and oversized repositories
+func FilterExcludedRepositories(repos []*github.Repository, limitRepositorySizeKb int) []*github.Repository {
+	filteredRepos := make([]*github.Repository, 0)
+	for _, repo := range repos {
+		// Exclude archived repositories
+		if repo.Archived != nil && *repo.Archived {
+			continue
+		}
+		// Exclude fork repositories
+		if repo.Fork != nil && *repo.Fork {
+			continue
+		}
+		// Exclude disabled repositories
+		if repo.Disabled != nil && *repo.Disabled {
+			continue
+		}
+		// Exclude empty repositories (Size == 0)
+		if repo.Size != nil && *repo.Size == 0 {
+			continue
+		}
+		// Exclude repositories exceeding size limit
+		if repo.Size != nil && *repo.Size > limitRepositorySizeKb {
+			continue
+		}
+		filteredRepos = append(filteredRepos, repo)
+	}
+	return filteredRepos
+}
+
 // FilterByVisibility filters repositories by visibility
 func FilterByVisibility(repos []*github.Repository, scanPublic, scanInternal, scanPrivate bool) []*github.Repository {
 	filteredRepos := make([]*github.Repository, 0)
@@ -62,13 +92,13 @@ func FilterByVisibility(repos []*github.Repository, scanPublic, scanInternal, sc
 	return filteredRepos
 }
 
-// ApplyFilters applies all filters specified in FilterOptions to the repository list
+// ApplyFilters applies visibility and name pattern filters specified in FilterOptions
 func ApplyFilters(repos []*github.Repository, opts *FilterOptions) []*github.Repository {
 	if opts == nil {
 		return repos
 	}
 
-	// Apply visibility filter first
+	// Apply visibility filter
 	repos = FilterByVisibility(repos, opts.ScanPublic, opts.ScanInternal, opts.ScanPrivate)
 
 	// Then apply name pattern filter

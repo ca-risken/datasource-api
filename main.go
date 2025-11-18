@@ -79,6 +79,9 @@ type AppConf struct {
 	DBPort           int    `required:"true"    default:"3306"`
 	DBLogMode        bool   `split_words:"true" default:"false"`
 	DBMaxConnection  int    `split_words:"true" default:"10"`
+
+	// scan settings
+	LimitRepositorySizeKb int `split_words:"true" default:"500000"` // 500MB
 }
 
 func main() {
@@ -179,6 +182,7 @@ func main() {
 		conf.BaseURL,
 		conf.DefaultLocale,
 		conf.SlackAPIToken,
+		conf.LimitRepositorySizeKb,
 		logger,
 	)
 

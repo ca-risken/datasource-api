@@ -52,10 +52,11 @@ type Server struct {
 	baseURL              string
 	defaultLocale        string
 	slackAPIToken        string
+	limitRepositorySizeKb int
 	logger               logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, limitRepositorySizeKb int, logger logging.Logger) *Server {
 	return &Server{
 		port:                 port,
 		coreSvcAddr:          coreSvcAddr,
@@ -67,6 +68,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		baseURL:              url,
 		defaultLocale:        defaultLocale,
 		slackAPIToken:        slackAPIToken,
+		limitRepositorySizeKb: limitRepositorySizeKb,
 		logger:               logger,
 	}
 }
@@ -97,7 +99,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
-	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.logger)
+	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.limitRepositorySizeKb, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create code service: %w", err)
 	}
