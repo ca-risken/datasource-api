@@ -705,8 +705,8 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
+	repos = github.FilterExcludedRepositories(repos, c.limitRepositorySizeKb)
 	if codeScanSetting != nil {
-		repos = github.FilterExcludedRepositories(repos, c.limitRepositorySizeKb)
 		filterOpts := &github.FilterOptions{
 			RepositoryPattern: codeScanSetting.RepositoryPattern,
 			ScanPublic:        codeScanSetting.ScanPublic,
