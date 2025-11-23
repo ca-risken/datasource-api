@@ -706,9 +706,8 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		}
 		decryptedPAT = decrypted
 		if decryptedPAT == "" {
-			err := fmt.Errorf("decrypted PAT is empty")
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v, github_setting_id=%d", err, githubSettingID)
-			return nil, err
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("decrypted PAT is empty")
 		}
 	} else {
 		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
