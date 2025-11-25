@@ -696,16 +696,38 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
+	// Decrypt PAT before using it for GitHub API call
+	decryptedPAT := ""
+	if githubSetting.PersonalAccessToken != "" {
+		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
+			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
+		}
+		decryptedPAT = decrypted
+		if decryptedPAT == "" {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("decrypted PAT is empty")
+		}
+	} else {
+		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	}
+
 	// Convert model to proto for GitHub API call
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	// Override with decrypted PAT
+	protoGitHubSetting.PersonalAccessToken = decryptedPAT
 
-	// Call GitHub API to list repositories without filter options
+	// Call GitHub API to list repositories
 	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
 	if err != nil {
 		return nil, err
 	}
 
+	// Apply size-based filtering
 	repos = github.FilterExcludedRepositories(repos, c.limitRepositorySizeKb)
+
+	// Apply filter options based on CodeScanSetting
 	if codeScanSetting != nil {
 		filterOpts := &github.FilterOptions{
 			RepositoryPattern: codeScanSetting.RepositoryPattern,
