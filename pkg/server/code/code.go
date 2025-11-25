@@ -581,7 +581,14 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 
+	// If no repositories found, return error
+	if len(repos) == 0 {
+		c.logger.Warnf(ctx, "No repositories found for scanning: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+		return nil, fmt.Errorf("no repositories found for scanning")
+	}
+
 	var messageIDs []string
+	var failedRepos []string
 	for _, repo := range repos {
 		if repo.FullName == nil {
 			continue
@@ -594,11 +601,25 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		})
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: err=%+v", *repo.FullName, err)
+			failedRepos = append(failedRepos, *repo.FullName)
 			continue
 		}
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
 		}
+	}
+
+	// If all SQS sends failed, return error
+	if len(messageIDs) == 0 && len(repos) > 0 {
+		c.logger.Errorf(ctx, "All SQS sends failed: project_id=%d, github_setting_id=%d, attempted=%d, failed_repos=%v", req.ProjectId, req.GithubSettingId, len(repos), failedRepos)
+		return nil, fmt.Errorf("failed to send messages for all repositories: attempted=%d", len(repos))
+	}
+
+	// Update status with success count and attempt count
+	statusDetail := fmt.Sprintf("Start scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
+	if len(failedRepos) > 0 {
+		statusDetail = fmt.Sprintf("%s, failed=%d", statusDetail, len(failedRepos))
+		c.logger.Warnf(ctx, "Partial SQS send failures: project_id=%d, github_setting_id=%d, succeeded=%d, failed=%d", req.ProjectId, req.GithubSettingId, len(messageIDs), len(failedRepos))
 	}
 
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
@@ -610,12 +631,12 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      fmt.Sprintf("Start scan at %+v, repositories=%d", time.Now().Format(time.RFC3339), len(repos)),
+		StatusDetail:      statusDetail,
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "Invoke scanned for %d repositories, messageIds: %v", len(messageIDs), messageIDs)
+	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs)
 	return &empty.Empty{}, nil
 }
 
