@@ -177,4 +177,5 @@ message GitHubRepository {
   string full_name = 2;
   string clone_url = 3;
   bool private = 4;
+  string default_branch = 5;
 }
