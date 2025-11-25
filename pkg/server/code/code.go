@@ -545,15 +545,62 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
-		GitHubSettingID: data.CodeGitHubSettingID,
-		ProjectID:       data.ProjectID,
-		ScanOnly:        req.ScanOnly,
-		RepositoryName:  req.RepositoryName,
-	})
+
+	// If RepositoryName is specified, send message for that repository only
+	if req.RepositoryName != "" {
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			RepositoryName:  req.RepositoryName,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			ScanPublic:        data.ScanPublic,
+			ScanInternal:      data.ScanInternal,
+			ScanPrivate:       data.ScanPrivate,
+			Status:            code.Status_IN_PROGRESS,
+			StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+			ScanAt:            data.ScanAt.Unix(),
+		}); err != nil {
+			return nil, err
+		}
+		c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+		return &empty.Empty{}, nil
+	}
+
+	// Get list of repositories and send message for each repository
+	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
+
+	var messageIDs []string
+	for _, repo := range repos {
+		if repo.FullName == nil {
+			continue
+		}
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			RepositoryName:  *repo.FullName,
+		})
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to send message for repository %s: err=%+v", *repo.FullName, err)
+			continue
+		}
+		if resp.MessageId != nil {
+			messageIDs = append(messageIDs, *resp.MessageId)
+		}
+	}
+
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
@@ -563,12 +610,12 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		StatusDetail:      fmt.Sprintf("Start scan at %+v, repositories=%d", time.Now().Format(time.RFC3339), len(repos)),
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+	c.logger.Infof(ctx, "Invoke scanned for %d repositories, messageIds: %v", len(messageIDs), messageIDs)
 	return &empty.Empty{}, nil
 }
 
