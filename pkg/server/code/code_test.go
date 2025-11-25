@@ -1393,12 +1393,11 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
 			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
-				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
 			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
-			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
-			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
 			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
 		},
@@ -1504,7 +1503,13 @@ func TestInvokeScanAll(t *testing.T) {
 			mockProject := projectmock.NewProjectServiceClient(t)
 			githubClient := c.mockGithubClient
 			if githubClient == nil {
-				githubClient = newFakeGithubClient([]*ghub.Repository{}, nil)
+				githubClient = newFakeGithubClient([]*ghub.Repository{
+					{
+						Name:       ghub.String("sample"),
+						FullName:   ghub.String("ca-risken/sample"),
+						Visibility: ghub.String("public"),
+					},
+				}, nil)
 			}
 			block, _ := aes.NewCipher([]byte("1234567890123456"))
 			svc := CodeService{repository: mockDB, sqs: c.mockQueue, projectClient: mockProject, logger: logging.NewLogger(), githubClient: githubClient, cipherBlock: block}
@@ -1530,13 +1535,13 @@ func TestInvokeScanAll(t *testing.T) {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
-				// GetCodeScanSetting is called twice: once in InvokeScanCodeScan and once in listCodescanTargetRepository
-				// For error cases, it may only be called once if the first call fails
-				if c.mockGetCodeScanError != nil && c.name == "NG error GetCodeScan" {
-					mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Once()
-				} else {
-					mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Twice()
+				// GetCodeScanSetting is called twice: once in InvokeScanCodeScan and once in listCodescanTargetRepository.
+				// If the first call returns an error, the second call never happens.
+				callCount := 2
+				if c.mockGetCodeScanError != nil {
+					callCount = 1
 				}
+				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Times(callCount)
 			}
 			if c.mockGetGitHubSettingResponse != nil || c.mockGetGitHubSettingError != nil {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Once()
