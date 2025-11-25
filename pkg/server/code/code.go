@@ -760,5 +760,8 @@ func convertGitHubRepository(repo *ghub.Repository) *code.GitHubRepository {
 	if repo.Private != nil {
 		converted.Private = *repo.Private
 	}
+	if repo.DefaultBranch != nil {
+		converted.DefaultBranch = *repo.DefaultBranch
+	}
 	return &converted
 }
