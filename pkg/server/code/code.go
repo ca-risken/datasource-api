@@ -586,12 +586,14 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		return nil, fmt.Errorf("failed to send messages for all repositories: attempted=%d", len(repos))
 	}
 
+	// If partial failures occurred, return error with details
+	if len(failedRepos) > 0 {
+		c.logger.Errorf(ctx, "Partial SQS send failures: project_id=%d, github_setting_id=%d, succeeded=%d, failed=%d, failed_repos=%v", req.ProjectId, req.GithubSettingId, len(messageIDs), len(failedRepos), failedRepos)
+		return nil, fmt.Errorf("partial failure: succeeded=%d, failed=%d, failed_repos=%v", len(messageIDs), len(failedRepos), failedRepos)
+	}
+
 	// Update status with success count and attempt count
 	statusDetail := fmt.Sprintf("Start scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
-	if len(failedRepos) > 0 {
-		statusDetail = fmt.Sprintf("%s, failed=%d", statusDetail, len(failedRepos))
-		c.logger.Warnf(ctx, "Partial SQS send failures: project_id=%d, github_setting_id=%d, succeeded=%d, failed=%d", req.ProjectId, req.GithubSettingId, len(messageIDs), len(failedRepos))
-	}
 
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
