@@ -559,7 +559,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	}
 
 	var messageIDs []string
-	var failedRepos []string
+	var failedRepo string
 	for _, repo := range repos {
 		if repo.FullName == nil {
 			continue
@@ -572,27 +572,21 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		})
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: err=%+v", *repo.FullName, err)
-			failedRepos = append(failedRepos, *repo.FullName)
-			continue
+			failedRepo = *repo.FullName
+			// Stop processing on first failure
+			break
 		}
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
 		}
 	}
 
-	// If all SQS sends failed, return error
-	if len(messageIDs) == 0 && len(repos) > 0 {
-		c.logger.Errorf(ctx, "All SQS sends failed: project_id=%d, github_setting_id=%d, attempted=%d, failed_repos=%v", req.ProjectId, req.GithubSettingId, len(repos), failedRepos)
-		return nil, fmt.Errorf("failed to send messages for all repositories: attempted=%d", len(repos))
+	if failedRepo != "" {
+		c.logger.Errorf(ctx, "SQS send failure stopped processing: project_id=%d, github_setting_id=%d, succeeded=%d before failure, failed_repo=%s", req.ProjectId, req.GithubSettingId, len(messageIDs), failedRepo)
+		return nil, fmt.Errorf("failed to send message for repository %s", failedRepo)
 	}
 
-	// If partial failures occurred, return error with details
-	if len(failedRepos) > 0 {
-		c.logger.Errorf(ctx, "Partial SQS send failures: project_id=%d, github_setting_id=%d, succeeded=%d, failed=%d, failed_repos=%v", req.ProjectId, req.GithubSettingId, len(messageIDs), len(failedRepos), failedRepos)
-		return nil, fmt.Errorf("partial failure: succeeded=%d, failed=%d, failed_repos=%v", len(messageIDs), len(failedRepos), failedRepos)
-	}
-
-	// Update status with success count and attempt count
+	// Update status only if all messages were sent successfully
 	statusDetail := fmt.Sprintf("Start scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
 
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
@@ -609,6 +603,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	}); err != nil {
 		return nil, err
 	}
+
 	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs)
 	return &empty.Empty{}, nil
 }
