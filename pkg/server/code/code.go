@@ -554,8 +554,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 
 	// If no repositories found, return error
 	if len(repos) == 0 {
-		c.logger.Warnf(ctx, "No repositories found for scanning: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
-		return nil, fmt.Errorf("no repositories found for scanning")
+		c.logger.Warnf(ctx, "No repositories found for scanning: project_id=%d, github_setting_id=%d (this may be expected if filter criteria exclude all repositories)",
+			req.ProjectId, req.GithubSettingId)
+		return &empty.Empty{}, nil
 	}
 
 	var messageIDs []string
