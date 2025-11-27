@@ -8,6 +8,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/vikyd/zero"
+	"gorm.io/gorm"
 )
 
 type CodeRepoInterface interface {
@@ -611,17 +612,112 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
+const selectCodeScanRepositoryStatusSummary = `
+SELECT
+  COUNT(*) AS total,
+  COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
+FROM code_codescan_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
+`
+
+const updateCodeScanSettingStatusByRepo = `
+UPDATE code_codescan_setting
+SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+WHERE project_id = ? AND code_github_setting_id = ?
+`
+
+type codeScanRepoStatusSummary struct {
+	Total           int64 `gorm:"column:total"`
+	OkCount         int64 `gorm:"column:ok_count"`
+	ConfiguredCount int64 `gorm:"column:configured_count"`
+	InProgressCount int64 `gorm:"column:in_progress_count"`
+	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
 func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(
-		upsertCodeScanRepository,
-		data.GithubSettingId,
-		data.RepositoryFullName,
-		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
-		time.Unix(data.ScanAt, 0)).Error; err != nil {
+	var repository model.CodeCodeScanRepository
+	err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		scanAt := time.Unix(data.ScanAt, 0)
+		if data.ScanAt == 0 {
+			scanAt = time.Now()
+		}
+		if err := tx.Exec(
+			upsertCodeScanRepository,
+			data.GithubSettingId,
+			data.RepositoryFullName,
+			data.Status.String(),
+			convertZeroValueToNull(data.StatusDetail),
+			scanAt,
+		).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Raw(selectGetCodeScanRepository, projectID, data.GithubSettingId, data.RepositoryFullName).
+			First(&repository).Error; err != nil {
+			return err
+		}
+
+		var summary codeScanRepoStatusSummary
+		if err := tx.Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
+			Scan(&summary).Error; err != nil {
+			return err
+		}
+
+		status := determineCodeScanSettingStatus(&summary)
+		statusDetail := buildCodeScanStatusDetail(&summary)
+
+		if err := tx.Exec(
+			updateCodeScanSettingStatusByRepo,
+			status.String(),
+			convertZeroValueToNull(statusDetail),
+			scanAt,
+			projectID,
+			data.GithubSettingId,
+		).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	return &repository, nil
+}
+
+func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
+	if summary == nil || summary.Total == 0 {
+		return code.Status_UNKNOWN
+	}
+	switch {
+	case summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary.ConfiguredCount == summary.Total:
+		return code.Status_CONFIGURED
+	default:
+		return code.Status_OK
+	}
+}
+
+func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary) string {
+	if summary == nil {
+		return ""
+	}
+	return fmt.Sprintf(
+		"Repository summary at %s: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+		time.Now().Format(time.RFC3339),
+		summary.Total,
+		summary.OkCount,
+		summary.InProgressCount,
+		summary.ConfiguredCount,
+		summary.ErrorCount,
+	)
 }
 
 const deleteCodeScanRepository = `
