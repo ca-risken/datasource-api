@@ -552,7 +552,6 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 
-	// If no repositories found, return error
 	if len(repos) == 0 {
 		c.logger.Warnf(ctx, "No repositories found for scanning: project_id=%d, github_setting_id=%d (this may be expected if filter criteria exclude all repositories)",
 			req.ProjectId, req.GithubSettingId)
