@@ -559,7 +559,6 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	}
 
 	var messageIDs []string
-	var failedRepo string
 	for _, repo := range repos {
 		if repo.FullName == nil {
 			continue
@@ -571,19 +570,13 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 			RepositoryName:  *repo.FullName,
 		})
 		if err != nil {
-			c.logger.Errorf(ctx, "Failed to send message for repository %s: err=%+v", *repo.FullName, err)
-			failedRepo = *repo.FullName
-			// Stop processing on first failure
-			break
+			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
 		}
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
 		}
-	}
-
-	if failedRepo != "" {
-		c.logger.Errorf(ctx, "SQS send failure stopped processing: project_id=%d, github_setting_id=%d, succeeded=%d before failure, failed_repo=%s", req.ProjectId, req.GithubSettingId, len(messageIDs), failedRepo)
-		return nil, fmt.Errorf("failed to send message for repository %s", failedRepo)
 	}
 
 	// Update status only if all messages were sent successfully
