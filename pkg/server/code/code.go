@@ -726,8 +726,8 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, projectID, githubSettingID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.logger.Errorf(ctx, "CodeScanSetting not found, skip listing repositories: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-			return []*ghub.Repository{}, nil
+			c.logger.Errorf(ctx, "CodeScanSetting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("code scan setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 		}
 		return nil, err
 	}
