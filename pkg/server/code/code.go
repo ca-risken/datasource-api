@@ -561,7 +561,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	var messageIDs []string
 	for _, repo := range repos {
 		if repo.FullName == nil {
-			continue
+			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
+				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
+			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
 		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
 			GitHubSettingID: data.CodeGitHubSettingID,
