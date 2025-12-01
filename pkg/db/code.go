@@ -670,15 +670,19 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		status := determineCodeScanSettingStatus(&summary)
 		statusDetail := buildCodeScanStatusDetail(&summary)
 
-		if err := tx.Exec(
+		result := tx.Exec(
 			updateCodeScanSettingStatusByRepo,
 			status.String(),
 			convertZeroValueToNull(statusDetail),
 			scanAt,
 			projectID,
 			data.GithubSettingId,
-		).Error; err != nil {
-			return err
+		)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("code_codescan_setting record not found: project_id=%d, code_github_setting_id=%d", projectID, data.GithubSettingId)
 		}
 
 		return nil
