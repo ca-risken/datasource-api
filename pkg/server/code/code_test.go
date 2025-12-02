@@ -17,6 +17,7 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/test"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/golang/protobuf/ptypes/empty"
+	ghub "github.com/google/go-github/v44/github"
 	"github.com/stretchr/testify/assert"
 	"gorm.io/gorm"
 )
@@ -1301,6 +1302,9 @@ func TestInvokeScanAll(t *testing.T) {
 		mockGetDependencyError       error
 		mockGetCodeScanResponse      *model.CodeCodeScanSetting
 		mockGetCodeScanError         error
+		mockGetGitHubSettingResponse *model.CodeGitHubSetting
+		mockGetGitHubSettingError    error
+		mockGithubClient             *FakeGithubClient
 		mockIsActiveResponse         *project.IsActiveResponse
 		mockIsActiveError            error
 		mockQueue                    CodeQueue
@@ -1389,12 +1393,13 @@ func TestInvokeScanAll(t *testing.T) {
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
 			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
-				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
-			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
-			mockGetCodeScanResponse:    &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
-			mockQueue:                  newFakeCodeQueue("succeed", nil),
-			mockUpsertCodeScanResponse: &model.CodeCodeScanSetting{},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockQueue:                    newFakeCodeQueue("succeed", nil),
+			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
 		},
 		{
 			name:                       "OK found CodeScan setting but projectID is zero",
@@ -1496,7 +1501,18 @@ func TestInvokeScanAll(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
 			mockProject := projectmock.NewProjectServiceClient(t)
-			svc := CodeService{repository: mockDB, sqs: c.mockQueue, projectClient: mockProject, logger: logging.NewLogger()}
+			githubClient := c.mockGithubClient
+			if githubClient == nil {
+				githubClient = newFakeGithubClient([]*ghub.Repository{
+					{
+						Name:       ghub.String("sample"),
+						FullName:   ghub.String("ca-risken/sample"),
+						Visibility: ghub.String("public"),
+					},
+				}, nil)
+			}
+			block, _ := aes.NewCipher([]byte("1234567890123456"))
+			svc := CodeService{repository: mockDB, sqs: c.mockQueue, projectClient: mockProject, logger: logging.NewLogger(), githubClient: githubClient, cipherBlock: block}
 			if c.mockListGitleaksResponse != nil || c.mockListGitleaksError != nil {
 				mockDB.On("ListGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockListGitleaksResponse, c.mockListGitleaksError).Once()
 			}
@@ -1519,7 +1535,16 @@ func TestInvokeScanAll(t *testing.T) {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
-				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Once()
+				// GetCodeScanSetting is called twice: once in InvokeScanCodeScan and once in listCodescanTargetRepository.
+				// If the first call returns an error, the second call never happens.
+				callCount := 2
+				if c.mockGetCodeScanError != nil {
+					callCount = 1
+				}
+				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockGetCodeScanResponse, c.mockGetCodeScanError).Times(callCount)
+			}
+			if c.mockGetGitHubSettingResponse != nil || c.mockGetGitHubSettingError != nil {
+				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Once()
 			}
 			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
 				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
@@ -1553,4 +1578,24 @@ func newFakeCodeQueue(msg string, err error) *FakeCodeQueue {
 
 func (c *FakeCodeQueue) Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error) {
 	return c.resp, c.err
+}
+
+type FakeGithubClient struct {
+	repos []*ghub.Repository
+	err   error
+}
+
+func newFakeGithubClient(repos []*ghub.Repository, err error) *FakeGithubClient {
+	return &FakeGithubClient{
+		repos: repos,
+		err:   err,
+	}
+}
+
+func (g *FakeGithubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*ghub.Repository, error) {
+	return g.repos, g.err
+}
+
+func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL string, dstDir string) error {
+	return g.err
 }
