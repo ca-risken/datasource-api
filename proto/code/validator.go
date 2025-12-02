@@ -186,6 +186,7 @@ func (i *InvokeScanCodeScanRequest) Validate() error {
 	return validation.ValidateStruct(i,
 		validation.Field(&i.ProjectId, validation.Required),
 		validation.Field(&i.GithubSettingId, validation.Required),
+		validation.Field(&i.RepositoryName, validation.Length(0, 255), validation.By(validateRepositoryName)),
 	)
 }
 

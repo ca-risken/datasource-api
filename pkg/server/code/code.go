@@ -545,45 +545,15 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	if err != nil {
 		return nil, err
 	}
-
-	// Get list of repositories filtered by CodeScanSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
-	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
+	resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
+		GitHubSettingID: data.CodeGitHubSettingID,
+		ProjectID:       data.ProjectID,
+		ScanOnly:        req.ScanOnly,
+		RepositoryName:  req.RepositoryName,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	if len(repos) == 0 {
-		c.logger.Warnf(ctx, "No repositories found for scanning: project_id=%d, github_setting_id=%d (this may be expected if filter criteria exclude all repositories)",
-			req.ProjectId, req.GithubSettingId)
-		return &empty.Empty{}, nil
-	}
-
-	var messageIDs []string
-	for _, repo := range repos {
-		if repo.FullName == nil {
-			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
-				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
-			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
-		}
-		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			RepositoryName:  *repo.FullName,
-		})
-		if err != nil {
-			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
-			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
-		}
-		if resp.MessageId != nil {
-			messageIDs = append(messageIDs, *resp.MessageId)
-		}
-	}
-
-	// Update status only if all messages were sent successfully
-	statusDetail := fmt.Sprintf("Start scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
-
 	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
@@ -593,13 +563,12 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      statusDetail,
+		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-
-	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs)
+	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
 	return &empty.Empty{}, nil
 }
 
@@ -723,11 +692,7 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 	}
 	// Get CodeScanSetting from database to use saved filter options
 	codeScanSetting, err := c.repository.GetCodeScanSetting(ctx, projectID, githubSettingID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.logger.Errorf(ctx, "CodeScanSetting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-			return nil, fmt.Errorf("code scan setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-		}
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
