@@ -175,6 +175,7 @@ message InvokeScanCodeScanRequest {
   uint32 project_id = 1;
   uint32 github_setting_id = 2;
   bool scan_only = 3;
+  string repository_name = 4;
 }
 
 message PutCodeScanRepositoryRequest {
