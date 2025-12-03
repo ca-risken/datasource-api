@@ -549,6 +549,30 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	// Get list of repositories filtered by CodeScanSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
 	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
+		errMsg := strings.ToLower(err.Error())
+		// Check if error is authentication error (bad credentials, unauthorized)
+		if strings.Contains(errMsg, "bad credentials") || strings.Contains(errMsg, "unauthorized") || strings.Contains(errMsg, "401") {
+			c.logger.Errorf(ctx, "GitHub API authentication error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v (PAT may be expired or invalid)", req.ProjectId, req.GithubSettingId, err)
+			// Update status to ERROR
+			if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+				GithubSettingId:   data.CodeGitHubSettingID,
+				CodeDataSourceId:  data.CodeDataSourceID,
+				ProjectId:         data.ProjectID,
+				RepositoryPattern: data.RepositoryPattern,
+				ScanPublic:        data.ScanPublic,
+				ScanInternal:      data.ScanInternal,
+				ScanPrivate:       data.ScanPrivate,
+				Status:            code.Status_ERROR,
+				StatusDetail:      fmt.Sprintf("Authentication error: %v", err),
+				ScanAt:            data.ScanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+				return nil, fmt.Errorf("failed to update status: %w", updateErr)
+			}
+			// Return nil to allow InvokeScanAll to continue with other settings
+			return &empty.Empty{}, nil
+		}
+		// For other errors, return error as before
 		return nil, err
 	}
 
@@ -672,8 +696,14 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       codescan.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: code_github_setting_id=%d, err=%+v", codescan.CodeGitHubSettingID, err)
-			return nil, err
+			errMsg := strings.ToLower(err.Error())
+			// Check if error is from GetCodeScanSetting (database error - should return error)
+			if strings.Contains(errMsg, "code scan setting not found") || strings.Contains(errMsg, "invalid db") || strings.Contains(errMsg, "record not found") {
+				c.logger.Errorf(ctx, "InvokeScanCodeScan database error: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+				return nil, err
+			}
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+			continue
 		}
 	}
 	return &empty.Empty{}, nil
