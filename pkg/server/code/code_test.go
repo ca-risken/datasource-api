@@ -1493,7 +1493,7 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
 			mockGetCodeScanError: gorm.ErrInvalidDB,
-			wantErr:              true,
+			wantErr:              true, // GetCodeScanSettingでエラーが発生した場合、InvokeScanCodeScanがエラーを返すため
 		},
 	}
 	for _, c := range cases {
