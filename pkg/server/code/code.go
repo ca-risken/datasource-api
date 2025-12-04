@@ -596,8 +596,8 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
 				return nil, fmt.Errorf("failed to update status: %w", updateErr)
 			}
-			// Return nil to allow InvokeScanAll to continue with other settings
-			return &empty.Empty{}, nil
+			// Return authentication error to allow InvokeScanAll to handle it appropriately
+			return nil, fmt.Errorf("GitHub authentication error: %w", err)
 		}
 		// For other errors, return error as before
 		return nil, err
@@ -723,20 +723,14 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       codescan.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			// Check if error is database error using sentinel errors
-			if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, gorm.ErrInvalidDB) {
-				c.logger.Errorf(ctx, "InvokeScanCodeScan database error: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-				return nil, err
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanCodeScan authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+				continue
 			}
-			// Check if error is from status update failure
-			if strings.Contains(strings.ToLower(err.Error()), "failed to update status") {
-				c.logger.Errorf(ctx, "InvokeScanCodeScan status update error: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-				return nil, err
-			}
-			// For other errors (like authentication errors already handled in InvokeScanCodeScan),
-			// log and continue with next setting
-			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-			continue
+			// For all other errors, return error to stop processing
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+			return nil, err
 		}
 	}
 	return &empty.Empty{}, nil
