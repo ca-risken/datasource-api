@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -18,19 +17,6 @@ import (
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
-
-// isGitHubAuthError checks if the error is a GitHub authentication error
-// by checking for ErrorResponse with 401 status code
-func isGitHubAuthError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var errResp *ghub.ErrorResponse
-	if errors.As(err, &errResp) {
-		return errResp.Response != nil && errResp.Response.StatusCode == http.StatusUnauthorized
-	}
-	return false
-}
 
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
 	if data == nil {
