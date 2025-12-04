@@ -577,30 +577,31 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	// Get list of repositories filtered by CodeScanSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
 	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
-		// Check if error is authentication error using error type
-		if isGitHubAuthError(err) {
-			c.logger.Errorf(ctx, "GitHub API authentication error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v (PAT may be expired or invalid)", req.ProjectId, req.GithubSettingId, err)
-			// Update status to ERROR with sanitized error message
-			if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
-				GithubSettingId:   data.CodeGitHubSettingID,
-				CodeDataSourceId:  data.CodeDataSourceID,
-				ProjectId:         data.ProjectID,
-				RepositoryPattern: data.RepositoryPattern,
-				ScanPublic:        data.ScanPublic,
-				ScanInternal:      data.ScanInternal,
-				ScanPrivate:       data.ScanPrivate,
-				Status:            code.Status_ERROR,
-				StatusDetail:      sanitizeErrorMessage(err),
-				ScanAt:            data.ScanAt.Unix(),
-			}); updateErr != nil {
-				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
-				return nil, fmt.Errorf("failed to update status: %w", updateErr)
-			}
-			// Return authentication error to allow InvokeScanAll to handle it appropriately
-			return nil, fmt.Errorf("GitHub authentication error: %w", err)
+		// Check if error is database error - don't try to update status, return error immediately
+		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, gorm.ErrInvalidDB) {
+			c.logger.Errorf(ctx, "Database error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+			return nil, err
 		}
-		// For other errors, return error as before
-		return nil, err
+		// For all other errors (authentication, network, rate limit, etc.), update status to ERROR
+		c.logger.Errorf(ctx, "Error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		// Update status to ERROR with sanitized error message
+		if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			ScanPublic:        data.ScanPublic,
+			ScanInternal:      data.ScanInternal,
+			ScanPrivate:       data.ScanPrivate,
+			Status:            code.Status_ERROR,
+			StatusDetail:      sanitizeErrorMessage(err),
+			ScanAt:            data.ScanAt.Unix(),
+		}); updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+			return nil, fmt.Errorf("failed to update status: %w", updateErr)
+		}
+		// Return error to allow InvokeScanAll to handle it appropriately
+		return nil, fmt.Errorf("error listing repositories: %w", err)
 	}
 
 	if len(repos) == 0 {
