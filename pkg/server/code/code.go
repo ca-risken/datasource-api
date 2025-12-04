@@ -723,14 +723,14 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       codescan.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			// Check if error is authentication error - continue with other settings
-			if isGitHubAuthError(err) {
-				c.logger.Errorf(ctx, "InvokeScanCodeScan authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-				continue
+			// Check if error is database error using sentinel errors - stop processing
+			// This includes errors from status update failure (which are also DB errors)
+			if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, gorm.ErrInvalidDB) {
+				c.logger.Errorf(ctx, "InvokeScanCodeScan database error: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+				return nil, err
 			}
-			// For all other errors, return error to stop processing
-			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-			return nil, err
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+			continue
 		}
 	}
 	return &empty.Empty{}, nil
