@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/aes"
 	"errors"
+	"fmt"
+	"net/http"
 	"reflect"
 	"testing"
 	"time"
@@ -1493,7 +1495,7 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
 			mockGetCodeScanError: gorm.ErrInvalidDB,
-			wantErr:              true, // GetCodeScanSettingでエラーが発生した場合、InvokeScanCodeScanがエラーを返すため
+			wantErr:              true, // If GetCodeScanSetting returns an error, InvokeScanCodeScan returns an error
 		},
 	}
 	for _, c := range cases {
@@ -1598,4 +1600,110 @@ func (g *FakeGithubClient) ListRepository(ctx context.Context, config *code.GitH
 
 func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL string, dstDir string) error {
 	return g.err
+}
+
+func TestIsGitHubAuthError(t *testing.T) {
+	cases := []struct {
+		name     string
+		err      error
+		expected bool
+	}{
+		{
+			name:     "nil error",
+			err:      nil,
+			expected: false,
+		},
+		{
+			name:     "non-GitHub error",
+			err:      errors.New("some other error"),
+			expected: false,
+		},
+		{
+			name: "GitHub authentication error (401)",
+			err: &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusUnauthorized,
+				},
+				Message: "Bad credentials",
+			},
+			expected: true,
+		},
+		{
+			name: "GitHub error with 404 status",
+			err: &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusNotFound,
+				},
+				Message: "Not Found",
+			},
+			expected: false,
+		},
+		{
+			name: "GitHub error with 403 status",
+			err: &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusForbidden,
+				},
+				Message: "Forbidden",
+			},
+			expected: false,
+		},
+		{
+			name: "GitHub error with 500 status",
+			err: &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusInternalServerError,
+				},
+				Message: "Internal Server Error",
+			},
+			expected: false,
+		},
+		{
+			name: "GitHub ErrorResponse with nil Response",
+			err: &ghub.ErrorResponse{
+				Response: nil,
+				Message:  "Some error",
+			},
+			expected: false,
+		},
+		{
+			name: "wrapped GitHub authentication error",
+			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusUnauthorized,
+				},
+				Message: "Bad credentials",
+			}),
+			expected: true,
+		},
+		{
+			name: "wrapped GitHub error with 404 status",
+			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusNotFound,
+				},
+				Message: "Not Found",
+			}),
+			expected: false,
+		},
+		{
+			name: "double wrapped GitHub authentication error",
+			err: fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", &ghub.ErrorResponse{
+				Response: &http.Response{
+					StatusCode: http.StatusUnauthorized,
+				},
+				Message: "Bad credentials",
+			})),
+			expected: true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := isGitHubAuthError(c.err)
+			if got != c.expected {
+				t.Errorf("isGitHubAuthError(%v) = %v, want %v", c.err, got, c.expected)
+			}
+		})
+	}
 }
