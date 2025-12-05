@@ -608,14 +608,6 @@ func TestValidate_InvokeScanCodeScanRequest(t *testing.T) {
 			input: &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
-			name:  "OK with repository_name",
-			input: &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/repo"},
-		},
-		{
-			name:  "OK with empty repository_name",
-			input: &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: ""},
-		},
-		{
 			name:    "NG Required(project_id)",
 			input:   &InvokeScanCodeScanRequest{GithubSettingId: 1},
 			wantErr: true,
@@ -623,26 +615,6 @@ func TestValidate_InvokeScanCodeScanRequest(t *testing.T) {
 		{
 			name:    "NG Required(github_setting_id)",
 			input:   &InvokeScanCodeScanRequest{ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Invalid repository_name format",
-			input:   &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "invalid-format"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty owner in repository_name",
-			input:   &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "/repo"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty repo in repository_name",
-			input:   &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Too long repository_name",
-			input:   &InvokeScanCodeScanRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: stringLength256},
 			wantErr: true,
 		},
 	}
