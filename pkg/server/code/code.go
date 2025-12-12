@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -17,6 +18,33 @@ import (
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
+
+// isGitHubAuthError checks if the error is a GitHub authentication error
+// by checking for ErrorResponse with 401 status code
+func isGitHubAuthError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var errResp *ghub.ErrorResponse
+	if errors.As(err, &errResp) {
+		return errResp.Response != nil && errResp.Response.StatusCode == http.StatusUnauthorized
+	}
+	return false
+}
+
+// sanitizeErrorMessage removes potentially sensitive information from error messages
+// Returns a user-friendly message without internal details
+func sanitizeErrorMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	// Check if it's a GitHub authentication error
+	if isGitHubAuthError(err) {
+		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
+	}
+	// For other errors, return a generic message without internal details
+	return "An error occurred during the operation"
+}
 
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
 	if data == nil {
@@ -549,6 +577,29 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	// Get list of repositories filtered by CodeScanSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
 	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
+		// Check if error is authentication error using error type
+		if isGitHubAuthError(err) {
+			c.logger.Errorf(ctx, "GitHub API authentication error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v (PAT may be expired or invalid)", req.ProjectId, req.GithubSettingId, err)
+			// Update status to ERROR with sanitized error message
+			if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+				GithubSettingId:   data.CodeGitHubSettingID,
+				CodeDataSourceId:  data.CodeDataSourceID,
+				ProjectId:         data.ProjectID,
+				RepositoryPattern: data.RepositoryPattern,
+				ScanPublic:        data.ScanPublic,
+				ScanInternal:      data.ScanInternal,
+				ScanPrivate:       data.ScanPrivate,
+				Status:            code.Status_ERROR,
+				StatusDetail:      sanitizeErrorMessage(err),
+				ScanAt:            data.ScanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+				return nil, fmt.Errorf("failed to update status: %w", updateErr)
+			}
+			// Return authentication error to allow InvokeScanAll to handle it appropriately
+			return nil, fmt.Errorf("GitHub authentication error: %w", err)
+		}
+		// For other errors, return error as before
 		return nil, err
 	}
 
@@ -672,7 +723,13 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       codescan.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: code_github_setting_id=%d, err=%+v", codescan.CodeGitHubSettingID, err)
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanCodeScan authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+				continue
+			}
+			// For all other errors, return error to stop processing
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
 			return nil, err
 		}
 	}
