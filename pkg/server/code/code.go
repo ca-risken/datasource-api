@@ -818,7 +818,18 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	if req.CodeScanRepository.Status == code.Status_IN_PROGRESS {
 		existing, err := c.repository.GetCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, true)
 		if err == nil && existing != nil && (existing.Status == "OK" || existing.Status == "IN_PROGRESS") {
-			c.logger.Infof(ctx, "PutCodeScanRepository: skipping re-scan - repository=%s is already %s (project_id=%d, github_setting_id=%d)",
+			// Update ScanAt even if status update is skipped (scan will still be performed)
+			_, updateErr := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
+				GithubSettingId:    req.CodeScanRepository.GithubSettingId,
+				RepositoryFullName: req.CodeScanRepository.RepositoryFullName,
+				Status:             getStatus(existing.Status), // Keep existing status
+				ScanAt:             req.CodeScanRepository.ScanAt, // Update ScanAt with new scan time
+			})
+			if updateErr != nil {
+				c.logger.Warnf(ctx, "PutCodeScanRepository: failed to update ScanAt for repository=%s (project_id=%d, github_setting_id=%d, err=%+v)",
+					req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId, updateErr)
+			}
+			c.logger.Infof(ctx, "PutCodeScanRepository: skipping re-scan - repository=%s is already %s (project_id=%d, github_setting_id=%d), ScanAt updated",
 				req.CodeScanRepository.RepositoryFullName, existing.Status, req.ProjectId, req.CodeScanRepository.GithubSettingId)
 			return &empty.Empty{}, nil
 		}
