@@ -819,10 +819,12 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 		existing, err := c.repository.GetCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, true)
 		if err == nil && existing != nil && (existing.Status == "OK" || existing.Status == "IN_PROGRESS") {
 			// Update ScanAt even if status update is skipped (scan will still be performed)
+			// Preserve existing StatusDetail to prevent it from being overwritten with NULL
 			_, updateErr := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
 				GithubSettingId:    req.CodeScanRepository.GithubSettingId,
 				RepositoryFullName: req.CodeScanRepository.RepositoryFullName,
 				Status:             getStatus(existing.Status), // Keep existing status
+				StatusDetail:       existing.StatusDetail,      // Preserve existing status_detail
 				ScanAt:             req.CodeScanRepository.ScanAt, // Update ScanAt with new scan time
 			})
 			if updateErr != nil {
