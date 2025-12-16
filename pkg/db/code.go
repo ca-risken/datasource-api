@@ -678,7 +678,6 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	var summary codeScanRepoStatusSummary
 	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
 		Scan(&summary).Error; err != nil {
-		// Log error but continue - repository upsert succeeded, parent status will be updated on next upsert
 		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v). Parent status will be updated on next repository upsert.",
 			projectID, data.GithubSettingId, data.RepositoryFullName, err)
 		return &repository, nil
@@ -697,7 +696,6 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		data.GithubSettingId,
 	)
 	if result.Error != nil {
-		// Log error but continue - repository upsert succeeded, parent status will be updated on next upsert
 		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v). Parent status will be updated on next repository upsert.",
 			projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), result.Error)
 		return &repository, nil
