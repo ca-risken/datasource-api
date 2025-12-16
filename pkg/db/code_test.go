@@ -1073,7 +1073,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				// トランザクションなしで実行
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
@@ -1081,7 +1080,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnError(errors.New("DB error"))
-				// 集計処理が失敗しても、リポジトリは返される（エラーなし）
 			},
 		},
 		{
@@ -1109,7 +1107,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				// トランザクションなしで実行
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
