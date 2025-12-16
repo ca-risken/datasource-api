@@ -616,11 +616,7 @@ ON DUPLICATE KEY UPDATE
     status_detail,
     VALUES(status_detail)
   ),
-  scan_at=IF(
-    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
-    scan_at,
-    VALUES(scan_at)
-  )
+  scan_at=VALUES(scan_at)
 `
 
 const selectCodeScanRepositoryStatusSummary = `
@@ -683,7 +679,7 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		return &repository, nil
 	}
 
-	// Step 4: Update parent table status based on summary
+	// Step 4: Update parent table status based on summary (only if status or summary changed)
 	status := determineCodeScanSettingStatus(&summary)
 	statusDetail := buildCodeScanStatusDetail(&summary)
 
@@ -736,8 +732,7 @@ func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary) string {
 		return ""
 	}
 	return fmt.Sprintf(
-		"Repository summary at %s: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
-		time.Now().Format(time.RFC3339),
+		"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
 		summary.Total,
 		summary.OkCount,
 		summary.InProgressCount,

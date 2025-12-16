@@ -828,8 +828,9 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 				ScanAt:             req.CodeScanRepository.ScanAt, // Update ScanAt with new scan time
 			})
 			if updateErr != nil {
-				c.logger.Warnf(ctx, "PutCodeScanRepository: failed to update ScanAt for repository=%s (project_id=%d, github_setting_id=%d, err=%+v)",
+				c.logger.Errorf(ctx, "PutCodeScanRepository: failed to update ScanAt for repository=%s (project_id=%d, github_setting_id=%d, err=%+v)",
 					req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId, updateErr)
+				return nil, fmt.Errorf("failed to update ScanAt for repository %s: %w", req.CodeScanRepository.RepositoryFullName, updateErr)
 			}
 			return &empty.Empty{}, nil
 		}
