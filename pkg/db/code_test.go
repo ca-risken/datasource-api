@@ -1036,7 +1036,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
@@ -1047,7 +1046,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectCommit()
 			},
 		},
 		{
@@ -1062,10 +1060,20 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					ScanAt:             now.Unix(),
 				},
 			},
-			want:    nil,
-			wantErr: true,
+			// 集計処理が失敗しても、リポジトリのupsertは成功しているので続行
+			want: &model.CodeCodeScanRepository{
+				CodeCodeScanRepositoryID: 1,
+				CodeGitHubSettingID:      1,
+				RepositoryFullName:       "owner/repo",
+				Status:                   "OK",
+				StatusDetail:             "done",
+				ScanAt:                   now,
+				CreatedAt:                now,
+				UpdatedAt:                now,
+			},
+			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectBegin()
+				// トランザクションなしで実行
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
@@ -1073,7 +1081,46 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnError(errors.New("DB error"))
-				mock.ExpectRollback()
+				// 集計処理が失敗しても、リポジトリは返される（エラーなし）
+			},
+		},
+		{
+			name: "NG parent table update error",
+			args: args{
+				projectID: 1,
+				data: &code.CodeScanRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+					StatusDetail:       "done",
+					ScanAt:             now.Unix(),
+				},
+			},
+			// 親テーブルの更新が失敗しても、リポジトリのupsertは成功しているので続行
+			want: &model.CodeCodeScanRepository{
+				CodeCodeScanRepositoryID: 1,
+				CodeGitHubSettingID:      1,
+				RepositoryFullName:       "owner/repo",
+				Status:                   "OK",
+				StatusDetail:             "done",
+				ScanAt:                   now,
+				CreatedAt:                now,
+				UpdatedAt:                now,
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				// トランザクションなしで実行
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
+					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
+						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
+				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
+					WillReturnRows(sqlmock.NewRows(summaryColumns).
+						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
+					WillReturnError(errors.New("DB error"))
+				// 親テーブルの更新が失敗しても、リポジトリは返される（エラーなし）
 			},
 		},
 	}

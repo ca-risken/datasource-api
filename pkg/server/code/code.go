@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/github"
@@ -44,6 +45,55 @@ func sanitizeErrorMessage(err error) string {
 	}
 	// For other errors, return a generic message without internal details
 	return "An error occurred during the operation"
+}
+
+// sanitizeUTF8 removes invalid UTF-8 characters from a string
+// This is necessary because gRPC requires valid UTF-8 strings
+func sanitizeUTF8(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+	// Remove invalid UTF-8 characters by converting to bytes and filtering
+	var b strings.Builder
+	b.Grow(len(s))
+	for len(s) > 0 {
+		r, size := utf8.DecodeRuneInString(s)
+		if r == utf8.RuneError && size == 1 {
+			// Invalid UTF-8 byte, skip it
+			s = s[1:]
+			continue
+		}
+		b.WriteRune(r)
+		s = s[size:]
+	}
+	return b.String()
+}
+
+// sanitizeStatusDetail removes invalid UTF-8 characters and potentially sensitive information from status_detail strings
+// Uses the same approach as sanitizeErrorMessage: returns a user-friendly message without internal details
+func sanitizeRepositoryStatusDetail(statusDetail string) string {
+	if statusDetail == "" {
+		return ""
+	}
+
+	// First, sanitize UTF-8 characters to prevent gRPC marshaling errors
+	statusDetail = sanitizeUTF8(statusDetail)
+
+	// Check if it's a GitHub authentication error by checking for common patterns
+	// This matches the logic in sanitizeErrorMessage for GitHub auth errors
+	lower := strings.ToLower(statusDetail)
+	if strings.Contains(lower, "authentication") && (strings.Contains(lower, "failed") || strings.Contains(lower, "error") || strings.Contains(lower, "invalid") || strings.Contains(lower, "unauthorized")) {
+		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
+	}
+
+	// For other error-like messages, return a generic message without internal details
+	// This matches the logic in sanitizeErrorMessage for other errors
+	if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "exception") || strings.Contains(lower, "panic") {
+		return "An error occurred during the operation"
+	}
+
+	// For non-error messages, return as-is (already sanitized for UTF-8)
+	return statusDetail
 }
 
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
@@ -435,6 +485,18 @@ func (c *CodeService) PutCodeScanSetting(ctx context.Context, req *code.PutCodeS
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+
+	// Sanitize StatusDetail to remove invalid UTF-8 characters and sensitive information
+	if req.CodeScanSetting.StatusDetail != "" {
+		original := req.CodeScanSetting.StatusDetail
+		sanitized := sanitizeRepositoryStatusDetail(req.CodeScanSetting.StatusDetail)
+		if sanitized != original {
+			c.logger.Warnf(ctx, "PutCodeScanSetting: sanitized StatusDetail (project_id=%d, github_setting_id=%d)",
+				req.CodeScanSetting.ProjectId, req.CodeScanSetting.GithubSettingId)
+			req.CodeScanSetting.StatusDetail = sanitized
+		}
+	}
+
 	registered, err := c.repository.UpsertCodeScanSetting(ctx, req.CodeScanSetting)
 	if err != nil {
 		return nil, err
@@ -740,9 +802,33 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+
+	// Sanitize StatusDetail to remove invalid UTF-8 characters and sensitive information
+	if req.CodeScanRepository.StatusDetail != "" {
+		original := req.CodeScanRepository.StatusDetail
+		sanitized := sanitizeRepositoryStatusDetail(req.CodeScanRepository.StatusDetail)
+		if sanitized != original {
+			c.logger.Warnf(ctx, "PutCodeScanRepository: sanitized StatusDetail (repository=%s, project_id=%d, github_setting_id=%d)",
+				req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId)
+			req.CodeScanRepository.StatusDetail = sanitized
+		}
+	}
+
+	// Prevent re-scanning already completed or in-progress repositories: skip if trying to change OK or IN_PROGRESS status back to IN_PROGRESS
+	if req.CodeScanRepository.Status == code.Status_IN_PROGRESS {
+		existing, err := c.repository.GetCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, true)
+		if err == nil && existing != nil && (existing.Status == "OK" || existing.Status == "IN_PROGRESS") {
+			c.logger.Infof(ctx, "PutCodeScanRepository: skipping re-scan - repository=%s is already %s (project_id=%d, github_setting_id=%d)",
+				req.CodeScanRepository.RepositoryFullName, existing.Status, req.ProjectId, req.CodeScanRepository.GithubSettingId)
+			return &empty.Empty{}, nil
+		}
+	}
+
 	// Upsert repository status
 	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository)
 	if err != nil {
+		c.logger.Errorf(ctx, "PutCodeScanRepository: failed to upsert repository status (repository=%s, project_id=%d, github_setting_id=%d, status=%s, err=%+v)",
+			req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.Status.String(), err)
 		return nil, err
 	}
 	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",

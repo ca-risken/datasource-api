@@ -8,7 +8,6 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/vikyd/zero"
-	"gorm.io/gorm"
 )
 
 type CodeRepoInterface interface {
@@ -607,9 +606,21 @@ INSERT INTO code_codescan_repository (
 )
 VALUES (?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
-  status=VALUES(status),
-  status_detail=VALUES(status_detail),
-  scan_at=VALUES(scan_at)
+  status=IF(
+    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
+    status,
+    VALUES(status)
+  ),
+  status_detail=IF(
+    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
+    status_detail,
+    VALUES(status_detail)
+  ),
+  scan_at=IF(
+    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
+    scan_at,
+    VALUES(scan_at)
+  )
 `
 
 const selectCodeScanRepositoryStatusSummary = `
@@ -639,56 +650,51 @@ type codeScanRepoStatusSummary struct {
 }
 
 func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error) {
-	var repository model.CodeCodeScanRepository
-	err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		scanAt := time.Unix(data.ScanAt, 0)
-		if data.ScanAt == 0 {
-			scanAt = time.Now()
-		}
-		if err := tx.Exec(
-			upsertCodeScanRepository,
-			data.GithubSettingId,
-			data.RepositoryFullName,
-			data.Status.String(),
-			convertZeroValueToNull(data.StatusDetail),
-			scanAt,
-		).Error; err != nil {
-			return err
-		}
+	scanAt := time.Unix(data.ScanAt, 0)
+	if data.ScanAt == 0 {
+		scanAt = time.Now()
+	}
 
-		if err := tx.Raw(selectGetCodeScanRepository, projectID, data.GithubSettingId, data.RepositoryFullName).
-			First(&repository).Error; err != nil {
-			return err
-		}
-
-		var summary codeScanRepoStatusSummary
-		if err := tx.Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
-			Scan(&summary).Error; err != nil {
-			return err
-		}
-
-		status := determineCodeScanSettingStatus(&summary)
-		statusDetail := buildCodeScanStatusDetail(&summary)
-
-		result := tx.Exec(
-			updateCodeScanSettingStatusByRepo,
-			status.String(),
-			convertZeroValueToNull(statusDetail),
-			scanAt,
-			projectID,
-			data.GithubSettingId,
-		)
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			return fmt.Errorf("code_codescan_setting record not found: project_id=%d, code_github_setting_id=%d", projectID, data.GithubSettingId)
-		}
-
-		return nil
-	})
-	if err != nil {
+	// Step 1: Upsert repository status
+	if err := c.MasterDB.WithContext(ctx).Exec(
+		upsertCodeScanRepository,
+		data.GithubSettingId,
+		data.RepositoryFullName,
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		scanAt,
+	).Error; err != nil {
 		return nil, err
+	}
+
+	// Step 2: Get the updated repository record
+	var repository model.CodeCodeScanRepository
+	if err := c.MasterDB.WithContext(ctx).Raw(selectGetCodeScanRepository, projectID, data.GithubSettingId, data.RepositoryFullName).
+		First(&repository).Error; err != nil {
+		return nil, err
+	}
+
+	// Step 3: Calculate summary from current state
+	var summary codeScanRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
+		Scan(&summary).Error; err != nil {
+		return &repository, nil
+	}
+
+	// Step 4: Update parent table status based on summary
+	status := determineCodeScanSettingStatus(&summary)
+	statusDetail := buildCodeScanStatusDetail(&summary)
+
+	result := c.MasterDB.WithContext(ctx).Exec(
+		updateCodeScanSettingStatusByRepo,
+		status.String(),
+		convertZeroValueToNull(statusDetail),
+		scanAt,
+		projectID,
+		data.GithubSettingId,
+	)
+	if result.Error != nil {
+		return &repository, nil
 	}
 	return &repository, nil
 }
@@ -698,10 +704,11 @@ func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Sta
 		return code.Status_UNKNOWN
 	}
 	switch {
-	case summary.ErrorCount > 0:
-		return code.Status_ERROR
+	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
 	case summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
+	case summary.ErrorCount > 0:
+		return code.Status_ERROR
 	case summary.ConfiguredCount == summary.Total:
 		return code.Status_CONFIGURED
 	default:
