@@ -714,6 +714,12 @@ func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Sta
 	if summary == nil || summary.Total == 0 {
 		return code.Status_UNKNOWN
 	}
+	// Check if there are unknown statuses (Total != sum of known statuses)
+	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
+	if knownStatusCount != summary.Total {
+		// Unknown statuses exist - treat as UNKNOWN to avoid optimistic status
+		return code.Status_UNKNOWN
+	}
 	switch {
 	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
 	case summary.InProgressCount > 0:
