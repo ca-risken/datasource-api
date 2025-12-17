@@ -606,16 +606,8 @@ INSERT INTO code_codescan_repository (
 )
 VALUES (?, ?, ?, ?, ?)
 ON DUPLICATE KEY UPDATE
-  status=IF(
-    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
-    status,
-    VALUES(status)
-  ),
-  status_detail=IF(
-    VALUES(status) = 'IN_PROGRESS' AND (status = 'OK' OR status = 'IN_PROGRESS'),
-    status_detail,
-    VALUES(status_detail)
-  ),
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
   scan_at=VALUES(scan_at)
 `
 

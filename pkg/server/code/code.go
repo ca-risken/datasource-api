@@ -33,17 +33,13 @@ func isGitHubAuthError(err error) bool {
 	return false
 }
 
-// sanitizeErrorMessage removes potentially sensitive information from error messages
-// Returns a user-friendly message without internal details
 func sanitizeErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	// Check if it's a GitHub authentication error
 	if isGitHubAuthError(err) {
 		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
 	}
-	// For other errors, return a generic message without internal details
 	return "An error occurred during the operation"
 }
 
@@ -69,8 +65,6 @@ func sanitizeUTF8(s string) string {
 	return b.String()
 }
 
-// sanitizeStatusDetail removes invalid UTF-8 characters and potentially sensitive information from status_detail strings
-// Uses the same approach as sanitizeErrorMessage: returns a user-friendly message without internal details
 func sanitizeRepositoryStatusDetail(statusDetail string) string {
 	if statusDetail == "" {
 		return ""
@@ -79,15 +73,11 @@ func sanitizeRepositoryStatusDetail(statusDetail string) string {
 	// First, sanitize UTF-8 characters to prevent gRPC marshaling errors
 	statusDetail = sanitizeUTF8(statusDetail)
 
-	// Check if it's a GitHub authentication error by checking for common patterns
-	// This matches the logic in sanitizeErrorMessage for GitHub auth errors
 	lower := strings.ToLower(statusDetail)
 	if strings.Contains(lower, "authentication") && (strings.Contains(lower, "failed") || strings.Contains(lower, "error") || strings.Contains(lower, "invalid") || strings.Contains(lower, "unauthorized")) {
 		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
 	}
 
-	// For other error-like messages, return a generic message without internal details
-	// This matches the logic in sanitizeErrorMessage for other errors
 	if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "exception") || strings.Contains(lower, "panic") {
 		return "An error occurred during the operation"
 	}
@@ -672,6 +662,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	}
 
 	var messageIDs []string
+	var repositoryNames []string
 	for _, repo := range repos {
 		if repo.FullName == nil {
 			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
@@ -691,6 +682,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		}
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
+			repositoryNames = append(repositoryNames, *repo.FullName)
+			c.logger.Infof(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
 		}
 	}
 
@@ -712,7 +706,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 
-	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs)
+	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
 	return &empty.Empty{}, nil
 }
 
@@ -811,26 +805,6 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 			c.logger.Warnf(ctx, "PutCodeScanRepository: sanitized StatusDetail (repository=%s, project_id=%d, github_setting_id=%d)",
 				req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId)
 			req.CodeScanRepository.StatusDetail = sanitized
-		}
-	}
-
-	// Prevent re-scanning already completed or in-progress repositories: skip if trying to change OK or IN_PROGRESS status back to IN_PROGRESS
-	if req.CodeScanRepository.Status == code.Status_IN_PROGRESS {
-		existing, err := c.repository.GetCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, true)
-		if err == nil && existing != nil && (existing.Status == "OK" || existing.Status == "IN_PROGRESS") {
-			_, updateErr := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
-				GithubSettingId:    req.CodeScanRepository.GithubSettingId,
-				RepositoryFullName: req.CodeScanRepository.RepositoryFullName,
-				Status:             getStatus(existing.Status),
-				StatusDetail:       existing.StatusDetail,
-				ScanAt:             req.CodeScanRepository.ScanAt,
-			})
-			if updateErr != nil {
-				c.logger.Errorf(ctx, "PutCodeScanRepository: failed to update ScanAt for repository=%s (project_id=%d, github_setting_id=%d, err=%+v)",
-					req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId, updateErr)
-				return nil, fmt.Errorf("failed to update ScanAt for repository %s: %w", req.CodeScanRepository.RepositoryFullName, updateErr)
-			}
-			return &empty.Empty{}, nil
 		}
 	}
 
