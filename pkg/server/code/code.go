@@ -32,13 +32,17 @@ func isGitHubAuthError(err error) bool {
 	return false
 }
 
+// sanitizeErrorMessage removes potentially sensitive information from error messages
+// Returns a user-friendly message without internal details
 func sanitizeErrorMessage(err error) string {
 	if err == nil {
 		return ""
 	}
+	// Check if it's a GitHub authentication error
 	if isGitHubAuthError(err) {
 		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
 	}
+	// For other errors, return a generic message without internal details
 	return "An error occurred during the operation"
 }
 

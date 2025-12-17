@@ -1060,18 +1060,8 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					ScanAt:             now.Unix(),
 				},
 			},
-			// 集計処理が失敗しても、リポジトリのupsertは成功しているので続行
-			want: &model.CodeCodeScanRepository{
-				CodeCodeScanRepositoryID: 1,
-				CodeGitHubSettingID:      1,
-				RepositoryFullName:       "owner/repo",
-				Status:                   "OK",
-				StatusDetail:             "done",
-				ScanAt:                   now,
-				CreatedAt:                now,
-				UpdatedAt:                now,
-			},
-			wantErr: false,
+			want:    nil,
+			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
@@ -1094,18 +1084,8 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					ScanAt:             now.Unix(),
 				},
 			},
-			// 親テーブルの更新が失敗しても、リポジトリのupsertは成功しているので続行
-			want: &model.CodeCodeScanRepository{
-				CodeCodeScanRepositoryID: 1,
-				CodeGitHubSettingID:      1,
-				RepositoryFullName:       "owner/repo",
-				Status:                   "OK",
-				StatusDetail:             "done",
-				ScanAt:                   now,
-				CreatedAt:                now,
-				UpdatedAt:                now,
-			},
-			wantErr: false,
+			want:    nil,
+			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))

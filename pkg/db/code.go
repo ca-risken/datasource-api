@@ -666,9 +666,9 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	var summary codeScanRepoStatusSummary
 	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
 		Scan(&summary).Error; err != nil {
-		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v). Parent status will be updated on next repository upsert.",
+		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
 			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return &repository, nil
+		return nil, fmt.Errorf("failed to calculate repository status summary: %w", err)
 	}
 
 	// Step 4: Update parent table status based on summary (only if status or summary changed)
@@ -684,9 +684,9 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		data.GithubSettingId,
 	)
 	if result.Error != nil {
-		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v). Parent status will be updated on next repository upsert.",
+		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
 			projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), result.Error)
-		return &repository, nil
+		return nil, fmt.Errorf("failed to update parent table status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		// No rows affected - parent setting may not exist, log as warning
