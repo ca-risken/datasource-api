@@ -42,24 +42,6 @@ func sanitizeErrorMessage(err error) string {
 	return "An error occurred during the operation"
 }
 
-func sanitizeRepositoryStatusDetail(statusDetail string) string {
-	if statusDetail == "" {
-		return ""
-	}
-
-	lower := strings.ToLower(statusDetail)
-	if strings.Contains(lower, "authentication") && (strings.Contains(lower, "failed") || strings.Contains(lower, "error") || strings.Contains(lower, "invalid") || strings.Contains(lower, "unauthorized")) {
-		return "GitHub authentication failed: Personal Access Token may be expired or invalid"
-	}
-
-	if strings.Contains(lower, "error") || strings.Contains(lower, "failed") || strings.Contains(lower, "exception") || strings.Contains(lower, "panic") {
-		return "An error occurred during the operation"
-	}
-
-	// For non-error messages, return as-is (already sanitized for UTF-8)
-	return statusDetail
-}
-
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
 	if data == nil {
 		return &code.CodeDataSource{}
@@ -450,17 +432,6 @@ func (c *CodeService) PutCodeScanSetting(ctx context.Context, req *code.PutCodeS
 		return nil, err
 	}
 
-	// Sanitize StatusDetail to remove invalid UTF-8 characters and sensitive information
-	if req.CodeScanSetting.StatusDetail != "" {
-		original := req.CodeScanSetting.StatusDetail
-		sanitized := sanitizeRepositoryStatusDetail(req.CodeScanSetting.StatusDetail)
-		if sanitized != original {
-			c.logger.Warnf(ctx, "PutCodeScanSetting: sanitized StatusDetail (project_id=%d, github_setting_id=%d)",
-				req.CodeScanSetting.ProjectId, req.CodeScanSetting.GithubSettingId)
-			req.CodeScanSetting.StatusDetail = sanitized
-		}
-	}
-
 	registered, err := c.repository.UpsertCodeScanSetting(ctx, req.CodeScanSetting)
 	if err != nil {
 		return nil, err
@@ -769,17 +740,6 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCodeScanRepositoryRequest) (*empty.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
-	}
-
-	// Sanitize StatusDetail to remove invalid UTF-8 characters and sensitive information
-	if req.CodeScanRepository.StatusDetail != "" {
-		original := req.CodeScanRepository.StatusDetail
-		sanitized := sanitizeRepositoryStatusDetail(req.CodeScanRepository.StatusDetail)
-		if sanitized != original {
-			c.logger.Warnf(ctx, "PutCodeScanRepository: sanitized StatusDetail (repository=%s, project_id=%d, github_setting_id=%d)",
-				req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId)
-			req.CodeScanRepository.StatusDetail = sanitized
-		}
 	}
 
 	// Upsert repository status
