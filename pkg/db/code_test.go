@@ -1097,7 +1097,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WillReturnError(errors.New("DB error"))
-				// 親テーブルの更新が失敗しても、リポジトリは返される（エラーなし）
 			},
 		},
 	}
