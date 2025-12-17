@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/ca-risken/core/proto/project"
 	"github.com/ca-risken/datasource-api/pkg/github"
@@ -43,35 +42,10 @@ func sanitizeErrorMessage(err error) string {
 	return "An error occurred during the operation"
 }
 
-// sanitizeUTF8 removes invalid UTF-8 characters from a string
-// This is necessary because gRPC requires valid UTF-8 strings
-func sanitizeUTF8(s string) string {
-	if utf8.ValidString(s) {
-		return s
-	}
-	// Remove invalid UTF-8 characters by converting to bytes and filtering
-	var b strings.Builder
-	b.Grow(len(s))
-	for len(s) > 0 {
-		r, size := utf8.DecodeRuneInString(s)
-		if r == utf8.RuneError && size == 1 {
-			// Invalid UTF-8 byte, skip it
-			s = s[1:]
-			continue
-		}
-		b.WriteRune(r)
-		s = s[size:]
-	}
-	return b.String()
-}
-
 func sanitizeRepositoryStatusDetail(statusDetail string) string {
 	if statusDetail == "" {
 		return ""
 	}
-
-	// First, sanitize UTF-8 characters to prevent gRPC marshaling errors
-	statusDetail = sanitizeUTF8(statusDetail)
 
 	lower := strings.ToLower(statusDetail)
 	if strings.Contains(lower, "authentication") && (strings.Contains(lower, "failed") || strings.Contains(lower, "error") || strings.Contains(lower, "invalid") || strings.Contains(lower, "unauthorized")) {
