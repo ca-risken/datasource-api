@@ -2,12 +2,14 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/ca-risken/datasource-api/pkg/model"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/vikyd/zero"
+	"gorm.io/gorm"
 )
 
 type CodeRepoInterface interface {
@@ -673,9 +675,17 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	if err := c.MasterDB.WithContext(ctx).
 		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
 		First(&currentParent).Error; err != nil {
-		// Parent doesn't exist yet, use default status_detail
-		currentParent = model.CodeCodeScanSetting{}
-		parentExists = false
+		// Distinguish between "record not found" and actual DB errors (connection issues, timeouts, etc.)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// Parent doesn't exist yet, use default status_detail
+			currentParent = model.CodeCodeScanSetting{}
+			parentExists = false
+		} else {
+			// Actual DB error (connection failure, timeout, etc.) - return error for proper error handling
+			c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+				projectID, data.GithubSettingId, data.RepositoryFullName, err)
+			return nil, fmt.Errorf("failed to get parent setting: %w", err)
+		}
 	}
 
 	// Build status_detail based on status and summary
