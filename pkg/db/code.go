@@ -688,20 +688,18 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	if parentExists {
 		if currentParent.Status == status.String() &&
 			currentParent.StatusDetail == statusDetail {
-			// Skip full UPDATE, but update scan_at if it's different (use the scan_at of the current repository being updated)
-			if currentParent.ScanAt.Before(scanAt) {
-				if err := c.MasterDB.WithContext(ctx).Exec(
-					"UPDATE code_codescan_setting SET scan_at = ?, updated_at = NOW() WHERE project_id = ? AND code_github_setting_id = ?",
-					scanAt,
-					projectID,
-					data.GithubSettingId,
-				).Error; err != nil {
-					c.logger.Warnf(ctx, "UpsertCodeScanRepository: failed to update parent scan_at (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-						projectID, data.GithubSettingId, data.RepositoryFullName, err)
-				} else {
-					c.logger.Infof(ctx, "UpsertCodeScanRepository: skip parent update (status and status_detail unchanged), updated scan_at only (project_id=%d, github_setting_id=%d, repository=%s, status=%s, old_scan_at=%s, new_scan_at=%s).",
-						projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), currentParent.ScanAt.Format(time.RFC3339), scanAt.Format(time.RFC3339))
-				}
+			// Keep status/status_detail as-is, but refresh scan_at to the current repository update time
+			if err := c.MasterDB.WithContext(ctx).Exec(
+				"UPDATE code_codescan_setting SET scan_at = ?, updated_at = NOW() WHERE project_id = ? AND code_github_setting_id = ?",
+				scanAt,
+				projectID,
+				data.GithubSettingId,
+			).Error; err != nil {
+				c.logger.Warnf(ctx, "UpsertCodeScanRepository: failed to update parent scan_at (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+					projectID, data.GithubSettingId, data.RepositoryFullName, err)
+			} else {
+				c.logger.Debugf(ctx, "UpsertCodeScanRepository: skipped parent status/status_detail update (unchanged), refreshed scan_at only (project_id=%d, github_setting_id=%d, repository=%s, status=%s, old_scan_at=%s, new_scan_at=%s).",
+					projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), currentParent.ScanAt.Format(time.RFC3339), scanAt.Format(time.RFC3339))
 			}
 			return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 		}

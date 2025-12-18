@@ -1136,8 +1136,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
-				// Step 3: Check current parent - status and status_detail are same, so skip UPDATE
-				// Parent has: status="OK", status_detail = summary string, scan_at same as new scanAt (no update)
+				// Step 3: Check current parent - status and status_detail are same, so skip full UPDATE but refresh scan_at
 				parentScanAt := time.Unix(now.Unix(), 0)
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
@@ -1148,6 +1147,9 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						"OK",
 						"Repository summary: total=1, ok=1, in_progress=0, configured=0, error=0",
 						parentScanAt, nil, now, now))
+				// UPDATE scan_at only
+				mock.ExpectExec(regexp.QuoteMeta("UPDATE code_codescan_setting SET scan_at = ?, updated_at = NOW() WHERE project_id = ? AND code_github_setting_id = ?")).
+					WillReturnResult(sqlmock.NewResult(1, 1))
 				// Step 4: Get repository
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
 					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
