@@ -632,7 +632,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
 			repositoryNames = append(repositoryNames, *repo.FullName)
-			c.logger.Infof(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+			c.logger.Debugf(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
 		}
 	}

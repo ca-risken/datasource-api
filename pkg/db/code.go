@@ -655,14 +655,7 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		return nil, err
 	}
 
-	// Step 2: Get the updated repository record
-	var repository model.CodeCodeScanRepository
-	if err := c.MasterDB.WithContext(ctx).Raw(selectGetCodeScanRepository, projectID, data.GithubSettingId, data.RepositoryFullName).
-		First(&repository).Error; err != nil {
-		return nil, err
-	}
-
-	// Step 3: Calculate summary from current state
+	// Step 2: Calculate summary from current state
 	var summary codeScanRepoStatusSummary
 	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
 		Scan(&summary).Error; err != nil {
@@ -671,9 +664,48 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		return nil, fmt.Errorf("failed to calculate repository status summary: %w", err)
 	}
 
-	// Step 4: Update parent table status based on summary (only if status or summary changed)
+	// Step 3: Update parent table status based on summary (only if status or summary changed)
 	status := determineCodeScanSettingStatus(&summary)
-	statusDetail := buildCodeScanStatusDetail(&summary)
+
+	// Get current parent to check existing status_detail
+	var currentParent model.CodeCodeScanSetting
+	parentExists := true
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
+		First(&currentParent).Error; err != nil {
+		// Parent doesn't exist yet, use default status_detail
+		currentParent = model.CodeCodeScanSetting{}
+		parentExists = false
+	}
+
+	// Build status_detail based on status and summary
+	statusDetail, err := buildCodeScanStatusDetail(&summary, status, currentParent.StatusDetail)
+	if err != nil {
+		return nil, err
+	}
+
+	// If parent already has the same values, skip UPDATE to avoid needless writes
+	if parentExists {
+		if currentParent.Status == status.String() &&
+			currentParent.StatusDetail == statusDetail {
+			// Skip full UPDATE, but update scan_at if it's different (use the scan_at of the current repository being updated)
+			if currentParent.ScanAt.Before(scanAt) {
+				if err := c.MasterDB.WithContext(ctx).Exec(
+					"UPDATE code_codescan_setting SET scan_at = ?, updated_at = NOW() WHERE project_id = ? AND code_github_setting_id = ?",
+					scanAt,
+					projectID,
+					data.GithubSettingId,
+				).Error; err != nil {
+					c.logger.Warnf(ctx, "UpsertCodeScanRepository: failed to update parent scan_at (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+						projectID, data.GithubSettingId, data.RepositoryFullName, err)
+				} else {
+					c.logger.Infof(ctx, "UpsertCodeScanRepository: skip parent update (status and status_detail unchanged), updated scan_at only (project_id=%d, github_setting_id=%d, repository=%s, status=%s, old_scan_at=%s, new_scan_at=%s).",
+						projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), currentParent.ScanAt.Format(time.RFC3339), scanAt.Format(time.RFC3339))
+				}
+			}
+			return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+		}
+	}
 
 	result := c.MasterDB.WithContext(ctx).Exec(
 		updateCodeScanSettingStatusByRepo,
@@ -693,7 +725,7 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		c.logger.Warnf(ctx, "UpsertCodeScanRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
 			projectID, data.GithubSettingId, data.RepositoryFullName, status.String())
 	}
-	return &repository, nil
+	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 }
 
 func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
@@ -719,18 +751,38 @@ func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Sta
 	}
 }
 
-func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary) string {
+func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, status code.Status, existingStatusDetail string) (string, error) {
 	if summary == nil {
-		return ""
+		return "", nil
 	}
-	return fmt.Sprintf(
-		"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
-		summary.Total,
-		summary.OkCount,
-		summary.InProgressCount,
-		summary.ConfiguredCount,
-		summary.ErrorCount,
-	)
+
+	switch status {
+	case code.Status_IN_PROGRESS:
+		if existingStatusDetail == "" {
+			return "", fmt.Errorf("parent's status_detail is required when status is IN_PROGRESS")
+		}
+		return existingStatusDetail, nil
+	case code.Status_OK:
+		return fmt.Sprintf(
+			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			summary.Total,
+			summary.OkCount,
+			summary.InProgressCount,
+			summary.ConfiguredCount,
+			summary.ErrorCount,
+		), nil
+	case code.Status_ERROR:
+		return fmt.Sprintf(
+			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			summary.Total,
+			summary.OkCount,
+			summary.InProgressCount,
+			summary.ConfiguredCount,
+			summary.ErrorCount,
+		), nil
+	default:
+		return "", nil
+	}
 }
 
 const deleteCodeScanRepository = `

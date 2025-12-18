@@ -1038,14 +1038,20 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
-					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
-						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
+						"scan_public", "scan_internal", "scan_private",
+						"status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at",
+					}).AddRow(uint32(1), uint32(1), uint32(1), "pattern", true, true, true, "CONFIGURED", "old", now, now, now, now))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
+					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
+						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 			},
 		},
 		{
@@ -1065,9 +1071,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
-					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
-						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnError(errors.New("DB error"))
 			},
@@ -1089,14 +1092,66 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
-					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
-						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
+						"scan_public", "scan_internal", "scan_private",
+						"status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at",
+					}).AddRow(uint32(1), uint32(1), uint32(1), "pattern", true, true, true, "CONFIGURED", "old", now, now, now, now))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WillReturnError(errors.New("DB error"))
+			},
+		},
+		{
+			name: "OK skip parent update when status and status_detail are same",
+			args: args{
+				projectID: 1,
+				data: &code.CodeScanRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+					StatusDetail:       "done",
+					ScanAt:             now.Unix(),
+				},
+			},
+			want: &model.CodeCodeScanRepository{
+				CodeCodeScanRepositoryID: 1,
+				CodeGitHubSettingID:      1,
+				RepositoryFullName:       "owner/repo",
+				Status:                   "OK",
+				StatusDetail:             "done",
+				ScanAt:                   now,
+				CreatedAt:                now,
+				UpdatedAt:                now,
+			},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				// Step 1: Upsert repository
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				// Step 2: Calculate summary
+				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
+					WillReturnRows(sqlmock.NewRows(summaryColumns).
+						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+				// Step 3: Check current parent - status and status_detail are same, so skip UPDATE
+				// Parent has: status="OK", status_detail = summary string, scan_at same as new scanAt (no update)
+				parentScanAt := time.Unix(now.Unix(), 0)
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
+						"scan_public", "scan_internal", "scan_private",
+						"status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at",
+					}).AddRow(uint32(1), uint32(1), uint32(1), "pattern", true, true, true,
+						"OK",
+						"Repository summary: total=1, ok=1, in_progress=0, configured=0, error=0",
+						parentScanAt, nil, now, now))
+				// Step 4: Get repository
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
+					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
+						AddRow(uint32(1), uint32(1), "owner/repo", "OK", "done", now, now, now))
 			},
 		},
 	}
