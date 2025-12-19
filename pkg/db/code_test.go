@@ -1147,9 +1147,6 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						"OK",
 						"Repository summary: total=1, ok=1, in_progress=0, configured=0, error=0",
 						parentScanAt, nil, now, now))
-				// UPDATE scan_at only
-				mock.ExpectExec(regexp.QuoteMeta("UPDATE code_codescan_setting SET scan_at = ?, updated_at = NOW() WHERE project_id = ? AND code_github_setting_id = ?")).
-					WillReturnResult(sqlmock.NewResult(1, 1))
 				// Step 4: Get repository
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).
 					WillReturnRows(sqlmock.NewRows(codeCodeScanRepositoryTableColumn).
