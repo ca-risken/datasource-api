@@ -667,7 +667,7 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	}
 
 	// Step 3: Update parent table status based on summary (only if status or summary changed)
-	status := determineCodeScanSettingStatus(&summary)
+	currentParentStatus := determineCodeScanSettingStatus(&summary)
 
 	// Get current parent to check existing status_detail
 	var currentParent model.CodeCodeScanSetting
@@ -689,14 +689,14 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	}
 
 	// Build status_detail based on status and summary
-	statusDetail, err := buildCodeScanStatusDetail(&summary, status, currentParent.StatusDetail)
+	statusDetail, err := buildCodeScanStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
 	if err != nil {
 		return nil, err
 	}
 
 	// If parent already has the same values, skip UPDATE to avoid needless writes
 	if parentExists {
-		if currentParent.Status == status.String() &&
+		if currentParent.Status == currentParentStatus.String() &&
 			currentParent.StatusDetail == statusDetail {
 			return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 		}
@@ -704,20 +704,20 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 
 	result := c.MasterDB.WithContext(ctx).Exec(
 		updateCodeScanSettingStatusByRepo,
-		status.String(),
+		currentParentStatus.String(),
 		convertZeroValueToNull(statusDetail),
 		projectID,
 		data.GithubSettingId,
 	)
 	if result.Error != nil {
 		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, status.String(), result.Error)
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
 		return nil, fmt.Errorf("failed to update parent table status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
 		// No rows affected - parent setting may not exist, log as warning
 		c.logger.Warnf(ctx, "UpsertCodeScanRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
-			projectID, data.GithubSettingId, data.RepositoryFullName, status.String())
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
 	}
 	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 }
@@ -745,15 +745,15 @@ func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Sta
 	}
 }
 
-func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, status code.Status, existingStatusDetail string) (string, error) {
+func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, currentParentStatus code.Status, existingStatusDetail string) (string, error) {
 	if summary == nil {
 		return "", nil
 	}
 
-	switch status {
+	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "", fmt.Errorf("parent's status_detail is required when status is IN_PROGRESS")
+			return "Scanning in progress...", nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK:
