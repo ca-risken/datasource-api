@@ -671,21 +671,15 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 
 	// Get current parent to check existing status_detail
 	var currentParent model.CodeCodeScanSetting
-	parentExists := true
 	if err := c.MasterDB.WithContext(ctx).
 		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
 		First(&currentParent).Error; err != nil {
-		// Distinguish between "record not found" and actual DB errors (connection issues, timeouts, etc.)
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Parent doesn't exist yet, use default status_detail
-			currentParent = model.CodeCodeScanSetting{}
-			parentExists = false
-		} else {
-			// Actual DB error (connection failure, timeout, etc.) - return error for proper error handling
-			c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-				projectID, data.GithubSettingId, data.RepositoryFullName, err)
-			return nil, fmt.Errorf("failed to get parent setting: %w", err)
+			return nil, fmt.Errorf("parent code_codescan_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
 		}
+		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, err)
+		return nil, fmt.Errorf("failed to get parent setting: %w", err)
 	}
 
 	// Build status_detail based on status and summary
@@ -695,11 +689,9 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	}
 
 	// If parent already has the same values, skip UPDATE to avoid needless writes
-	if parentExists {
-		if currentParent.Status == currentParentStatus.String() &&
-			currentParent.StatusDetail == statusDetail {
-			return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
-		}
+	if currentParent.Status == currentParentStatus.String() &&
+		currentParent.StatusDetail == statusDetail {
+		return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
 	}
 
 	result := c.MasterDB.WithContext(ctx).Exec(
