@@ -627,7 +627,7 @@ WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 
 const updateCodeScanSettingStatusByRepo = `
 UPDATE code_codescan_setting
-SET status = ?, status_detail = ?, updated_at = NOW()
+SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
 WHERE project_id = ? AND code_github_setting_id = ?
 `
 
@@ -698,6 +698,7 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		updateCodeScanSettingStatusByRepo,
 		currentParentStatus.String(),
 		convertZeroValueToNull(statusDetail),
+		scanAt,
 		projectID,
 		data.GithubSettingId,
 	)
