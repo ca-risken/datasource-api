@@ -435,6 +435,7 @@ func (c *CodeService) PutCodeScanSetting(ctx context.Context, req *code.PutCodeS
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+
 	registered, err := c.repository.UpsertCodeScanSetting(ctx, req.CodeScanSetting)
 	if err != nil {
 		return nil, err
@@ -610,6 +611,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	}
 
 	var messageIDs []string
+	var repositoryNames []string
 	for _, repo := range repos {
 		if repo.FullName == nil {
 			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
@@ -629,6 +631,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		}
 		if resp.MessageId != nil {
 			messageIDs = append(messageIDs, *resp.MessageId)
+			repositoryNames = append(repositoryNames, *repo.FullName)
+			c.logger.Debugf(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
 		}
 	}
 
@@ -650,7 +655,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		return nil, err
 	}
 
-	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs)
+	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
 	return &empty.Empty{}, nil
 }
 
@@ -740,9 +745,12 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+
 	// Upsert repository status
 	_, err := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, req.CodeScanRepository)
 	if err != nil {
+		c.logger.Errorf(ctx, "PutCodeScanRepository: failed to upsert repository status (repository=%s, project_id=%d, github_setting_id=%d, status=%s, err=%+v)",
+			req.CodeScanRepository.RepositoryFullName, req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.Status.String(), err)
 		return nil, err
 	}
 	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",

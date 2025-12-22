@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/ca-risken/common/pkg/logging"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
@@ -27,5 +28,6 @@ func newDBMock() (*Client, sqlmock.Sqlmock, error) {
 	return &Client{
 		MasterDB: gormDB,
 		SlaveDB:  gormDB,
+		logger:   logging.NewLogger(),
 	}, mock, nil
 }
