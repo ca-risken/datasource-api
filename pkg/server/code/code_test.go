@@ -747,6 +747,9 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 		input   *code.DeleteGitleaksSettingRequest
 		wantErr bool
 
+		callDeleteGitleaksRepository     bool
+		mockDeleteGitleaksRepositoryResp error
+
 		callDeleteGitleaksCache     bool
 		mockDeleteGitleaksCacheResp error
 
@@ -754,10 +757,11 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 		mockDeleteGitleaksSettingResp error
 	}{
 		{
-			name:                      "OK",
-			input:                     &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			callDeleteGitleaksCache:   true,
-			callDeleteGitleaksSetting: true,
+			name:                         "OK",
+			input:                        &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			callDeleteGitleaksRepository: true,
+			callDeleteGitleaksCache:      true,
+			callDeleteGitleaksSetting:    true,
 		},
 		{
 			name:    "NG invalid param",
@@ -765,19 +769,28 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:                        "NG(DeleteGitleaksCache error)",
-			input:                       &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			wantErr:                     true,
-			callDeleteGitleaksCache:     true,
-			mockDeleteGitleaksCacheResp: gorm.ErrInvalidDB,
+			name:                         "NG(DeleteGitleaksCache error)",
+			input:                        &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr:                      true,
+			callDeleteGitleaksRepository: true,
+			callDeleteGitleaksCache:      true,
+			mockDeleteGitleaksCacheResp:  gorm.ErrInvalidDB,
 		},
 		{
 			name:                          "NG(DeleteGitleaksSetting error)",
 			input:                         &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			wantErr:                       true,
+			callDeleteGitleaksRepository:  true,
 			callDeleteGitleaksCache:       true,
 			callDeleteGitleaksSetting:     true,
 			mockDeleteGitleaksSettingResp: gorm.ErrInvalidDB,
+		},
+		{
+			name:                             "NG(DeleteGitleaksRepository error)",
+			input:                            &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr:                          true,
+			callDeleteGitleaksRepository:     true,
+			mockDeleteGitleaksRepositoryResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
@@ -786,8 +799,11 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
 			svc := CodeService{repository: mockDB}
 
+			if c.callDeleteGitleaksRepository {
+				mockDB.On("DeleteGitleaksRepository", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksRepositoryResp).Once()
+			}
 			if c.callDeleteGitleaksCache {
-				mockDB.On("DeleteGitleaksCache", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksCacheResp).Once()
+				mockDB.On("DeleteGitleaksCache", test.RepeatMockAnything(2)...).Return(c.mockDeleteGitleaksCacheResp).Once()
 			}
 			if c.callDeleteGitleaksSetting {
 				mockDB.On("DeleteGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksSettingResp).Once()
@@ -1129,7 +1145,12 @@ func TestDeleteDependencySetting(t *testing.T) {
 			svc := CodeService{repository: mockDB}
 
 			if c.mockCall {
-				mockDB.On("DeleteDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				// First, repositories are deleted in bulk
+				mockDB.On("DeleteDependencyRepository", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				// If the first call errors, the second should not be invoked; set it only when no error expected
+				if c.mockError == nil {
+					mockDB.On("DeleteDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				}
 			}
 			_, err := svc.DeleteDependencySetting(ctx, c.input)
 			if !c.wantErr && err != nil {
