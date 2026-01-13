@@ -260,6 +260,17 @@ func (c *CodeScanRepositoryForUpsert) Validate() error {
 	)
 }
 
+// Validate DependencyRepositoryForUpsert
+func (d *DependencyRepositoryForUpsert) Validate() error {
+	return validation.ValidateStruct(d,
+		validation.Field(&d.GithubSettingId, validation.Required),
+		validation.Field(&d.RepositoryFullName, validation.Required, validation.Length(0, 255)),
+		validation.Field(&d.Status, validation.Required),
+		validation.Field(&d.StatusDetail, validation.Length(0, 255)),
+		validation.Field(&d.ScanAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
 // Validate PutCodeScanRepositoryRequest
 func (p *PutCodeScanRepositoryRequest) Validate() error {
 	if p.CodeScanRepository == nil {
