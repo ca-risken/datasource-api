@@ -39,6 +39,7 @@ type CodeRepoInterface interface {
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
+
 	// code_dependency_repository
 	ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error)
 	GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error)
