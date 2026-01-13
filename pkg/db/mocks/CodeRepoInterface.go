@@ -91,6 +91,24 @@ func (_m *CodeRepoInterface) DeleteDependencyRepository(ctx context.Context, pro
 	return r0
 }
 
+// DeleteGitleaksRepository provides a mock function with given fields: ctx, projectID, githubSettingID
+func (_m *CodeRepoInterface) DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	ret := _m.Called(ctx, projectID, githubSettingID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteGitleaksRepository")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) error); ok {
+		r0 = rf(ctx, projectID, githubSettingID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteGitHubSetting provides a mock function with given fields: ctx, projectID, GitHubSettingID
 func (_m *CodeRepoInterface) DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error {
 	ret := _m.Called(ctx, projectID, GitHubSettingID)
@@ -163,6 +181,36 @@ func (_m *CodeRepoInterface) GetDependencyRepository(ctx context.Context, projec
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.CodeDependencyRepository)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, string, bool) error); ok {
+		r1 = rf(ctx, projectID, githubSettingID, repositoryFullName, immediately)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetGitleaksRepository provides a mock function with given fields: ctx, projectID, githubSettingID, repositoryFullName, immediately
+func (_m *CodeRepoInterface) GetGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID, repositoryFullName, immediately)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGitleaksRepository")
+	}
+
+	var r0 *model.CodeGitleaksRepository
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, string, bool) (*model.CodeGitleaksRepository, error)); ok {
+		return rf(ctx, projectID, githubSettingID, repositoryFullName, immediately)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, string, bool) *model.CodeGitleaksRepository); ok {
+		r0 = rf(ctx, projectID, githubSettingID, repositoryFullName, immediately)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.CodeGitleaksRepository)
 		}
 	}
 
@@ -408,6 +456,36 @@ func (_m *CodeRepoInterface) ListCodeGitHubScanErrorForNotify(ctx context.Contex
 
 	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
 		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListGitleaksRepository provides a mock function with given fields: ctx, projectID, githubSettingID
+func (_m *CodeRepoInterface) ListGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListGitleaksRepository")
+	}
+
+	var r0 *[]model.CodeGitleaksRepository
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*[]model.CodeGitleaksRepository, error)); ok {
+		return rf(ctx, projectID, githubSettingID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) *[]model.CodeGitleaksRepository); ok {
+		r0 = rf(ctx, projectID, githubSettingID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]model.CodeGitleaksRepository)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = rf(ctx, projectID, githubSettingID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -701,6 +779,36 @@ func (_m *CodeRepoInterface) UpsertDependencyRepository(ctx context.Context, pro
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, uint32, *code.DependencyRepositoryForUpsert) error); ok {
+		r1 = rf(ctx, projectID, data)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpsertGitleaksRepository provides a mock function with given fields: ctx, projectID, data
+func (_m *CodeRepoInterface) UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error) {
+	ret := _m.Called(ctx, projectID, data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertGitleaksRepository")
+	}
+
+	var r0 *model.CodeGitleaksRepository
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error)); ok {
+		return rf(ctx, projectID, data)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, *code.GitleaksRepositoryForUpsert) *model.CodeGitleaksRepository); ok {
+		r0 = rf(ctx, projectID, data)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.CodeGitleaksRepository)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, *code.GitleaksRepositoryForUpsert) error); ok {
 		r1 = rf(ctx, projectID, data)
 	} else {
 		r1 = ret.Error(1)
