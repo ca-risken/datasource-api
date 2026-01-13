@@ -40,6 +40,12 @@ type CodeRepoInterface interface {
 	UpsertDependencySetting(ctx context.Context, data *code.DependencySettingForUpsert) (*model.CodeDependencySetting, error)
 	DeleteDependencySetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
+	// code_dependency_repository
+	ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error)
+	GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error)
+	UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error)
+	DeleteDependencyRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
+
 	// code_code_scan_setting
 	ListCodeScanSetting(ctx context.Context, projectID uint32) (*[]model.CodeCodeScanSetting, error)
 	GetCodeScanSetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeCodeScanSetting, error)
@@ -396,6 +402,224 @@ func (c *Client) UpsertDependencySetting(ctx context.Context, data *code.Depende
 
 func (c *Client) DeleteDependencySetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
 	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeDependencySetting{}).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// code_dependency_repository
+const selectListDependencyRepository = `
+select
+  repo.*
+from 
+  code_dependency_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ?
+`
+
+func (c *Client) ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error) {
+	var data []model.CodeDependencyRepository
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListDependencyRepository, projectID, githubSettingID).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const selectGetDependencyRepository = `
+select
+  repo.*
+from 
+  code_dependency_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ? 
+  and repo.repository_full_name = ?
+`
+
+func (c *Client) GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error) {
+	db := c.SlaveDB
+	if immediately {
+		db = c.MasterDB
+	}
+	var data model.CodeDependencyRepository
+	if err := db.WithContext(ctx).Raw(selectGetDependencyRepository, projectID, githubSettingID, repositoryFullName).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const upsertDependencyRepository = `
+INSERT INTO code_dependency_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+VALUES (?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const selectDependencyRepositoryStatusSummary = `
+SELECT
+  COUNT(*) AS total,
+  COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
+FROM code_dependency_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
+`
+
+const updateDependencySettingStatusByRepo = `
+UPDATE code_dependency_setting
+SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+WHERE project_id = ? AND code_github_setting_id = ?
+`
+
+type dependencyRepoStatusSummary struct {
+	Total           int64 `gorm:"column:total"`
+	OkCount         int64 `gorm:"column:ok_count"`
+	ConfiguredCount int64 `gorm:"column:configured_count"`
+	InProgressCount int64 `gorm:"column:in_progress_count"`
+	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error) {
+	scanAt := time.Unix(data.ScanAt, 0)
+	if data.ScanAt == 0 {
+		scanAt = time.Now()
+	}
+
+	// Step 1: Upsert repository status
+	if err := c.MasterDB.WithContext(ctx).Exec(
+		upsertDependencyRepository,
+		data.GithubSettingId,
+		data.RepositoryFullName,
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		scanAt,
+	).Error; err != nil {
+		return nil, err
+	}
+
+	// Step 2: Calculate summary from current state
+	var summary dependencyRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectDependencyRepositoryStatusSummary, projectID, data.GithubSettingId).
+		Scan(&summary).Error; err != nil {
+		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, err)
+		return nil, fmt.Errorf("failed to calculate dependency repository status summary: %w", err)
+	}
+
+	// Step 3: Update parent table status based on summary (only if status or summary changed)
+	currentParentStatus := determineDependencySettingStatus(&summary)
+
+	// Get current parent to check existing status_detail
+	var currentParent model.CodeDependencySetting
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
+		First(&currentParent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("parent code_dependency_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
+		}
+		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, err)
+		return nil, fmt.Errorf("failed to get dependency parent setting: %w", err)
+	}
+
+	// Build status_detail based on status and summary
+	statusDetail, err := buildDependencyStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
+	if err != nil {
+		return nil, err
+	}
+
+	// If parent already has the same values, skip UPDATE to avoid needless writes
+	if currentParent.Status == currentParentStatus.String() &&
+		currentParent.StatusDetail == statusDetail {
+		return c.GetDependencyRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	}
+
+	result := c.MasterDB.WithContext(ctx).Exec(
+		updateDependencySettingStatusByRepo,
+		currentParentStatus.String(),
+		convertZeroValueToNull(statusDetail),
+		scanAt,
+		projectID,
+		data.GithubSettingId,
+	)
+	if result.Error != nil {
+		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
+		return nil, fmt.Errorf("failed to update dependency parent table status: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		// No rows affected - parent setting may not exist, log as warning
+		c.logger.Warnf(ctx, "UpsertDependencyRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
+	}
+	return c.GetDependencyRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func determineDependencySettingStatus(summary *dependencyRepoStatusSummary) code.Status {
+	if summary == nil || summary.Total == 0 {
+		return code.Status_UNKNOWN
+	}
+	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
+	if knownStatusCount != summary.Total {
+		return code.Status_UNKNOWN
+	}
+	switch {
+	case summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.ConfiguredCount == summary.Total:
+		return code.Status_CONFIGURED
+	default:
+		return code.Status_OK
+	}
+}
+
+func buildDependencyStatusDetail(summary *dependencyRepoStatusSummary, currentParentStatus code.Status, existingStatusDetail string) (string, error) {
+	if summary == nil {
+		return "", nil
+	}
+	switch currentParentStatus {
+	case code.Status_IN_PROGRESS:
+		if existingStatusDetail == "" {
+			return "Dependency scan in progress...", nil
+		}
+		return existingStatusDetail, nil
+	case code.Status_OK, code.Status_ERROR:
+		return fmt.Sprintf(
+			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			summary.Total,
+			summary.OkCount,
+			summary.InProgressCount,
+			summary.ConfiguredCount,
+			summary.ErrorCount,
+		), nil
+	default:
+		return "", nil
+	}
+}
+
+const deleteDependencyRepository = `
+DELETE repo FROM code_dependency_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
+`
+
+func (c *Client) DeleteDependencyRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(deleteDependencyRepository, projectID, githubSettingID).Error; err != nil {
 		return err
 	}
 	return nil
