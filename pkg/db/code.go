@@ -34,6 +34,12 @@ type CodeRepoInterface interface {
 	UpsertGitleaksCache(ctx context.Context, projectID uint32, data *code.GitleaksCacheForUpsert) (*model.CodeGitleaksCache, error)
 	DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error
 
+	// code_gitleaks_repository
+	ListGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error)
+	GetGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error)
+	UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error)
+	DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
+
 	// code_dependency_setting
 	ListDependencySetting(ctx context.Context, projectID uint32) (*[]model.CodeDependencySetting, error)
 	GetDependencySetting(ctx context.Context, projectID, githubSettingID uint32) (*model.CodeDependencySetting, error)
@@ -339,6 +345,224 @@ func (c *Client) DeleteGitleaksCache(ctx context.Context, githubSettingID uint32
 		Where("code_github_setting_id = ?", githubSettingID).
 		Delete(&model.CodeGitleaksCache{}).
 		Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+// code_gitleaks_repository
+const selectListGitleaksRepository = `
+select
+  repo.*
+from 
+  code_gitleaks_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ?
+`
+
+func (c *Client) ListGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error) {
+	var data []model.CodeGitleaksRepository
+	if err := c.SlaveDB.WithContext(ctx).Raw(selectListGitleaksRepository, projectID, githubSettingID).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const selectGetGitleaksRepository = `
+select
+  repo.*
+from 
+  code_gitleaks_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where 
+  github.project_id = ?
+  and repo.code_github_setting_id = ? 
+  and repo.repository_full_name = ?
+`
+
+func (c *Client) GetGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error) {
+	db := c.SlaveDB
+	if immediately {
+		db = c.MasterDB
+	}
+	var data model.CodeGitleaksRepository
+	if err := db.WithContext(ctx).Raw(selectGetGitleaksRepository, projectID, githubSettingID, repositoryFullName).First(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const upsertGitleaksRepository = `
+INSERT INTO code_gitleaks_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+VALUES (?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const selectGitleaksRepositoryStatusSummary = `
+SELECT
+  COUNT(*) AS total,
+  COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
+  COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
+FROM code_gitleaks_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
+`
+
+const updateGitleaksSettingStatusByRepo = `
+UPDATE code_gitleaks_setting
+SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+WHERE project_id = ? AND code_github_setting_id = ?
+`
+
+type gitleaksRepoStatusSummary struct {
+	Total           int64 `gorm:"column:total"`
+	OkCount         int64 `gorm:"column:ok_count"`
+	ConfiguredCount int64 `gorm:"column:configured_count"`
+	InProgressCount int64 `gorm:"column:in_progress_count"`
+	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error) {
+	scanAt := time.Unix(data.ScanAt, 0)
+	if data.ScanAt == 0 {
+		scanAt = time.Now()
+	}
+
+	// Step 1: Upsert repository status
+	if err := c.MasterDB.WithContext(ctx).Exec(
+		upsertGitleaksRepository,
+		data.GithubSettingId,
+		data.RepositoryFullName,
+		data.Status.String(),
+		convertZeroValueToNull(data.StatusDetail),
+		scanAt,
+	).Error; err != nil {
+		return nil, err
+	}
+
+	// Step 2: Calculate summary from current state
+	var summary gitleaksRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectGitleaksRepositoryStatusSummary, projectID, data.GithubSettingId).
+		Scan(&summary).Error; err != nil {
+		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, err)
+		return nil, fmt.Errorf("failed to calculate gitleaks repository status summary: %w", err)
+	}
+
+	// Step 3: Update parent table status based on summary (only if status or summary changed)
+	currentParentStatus := determineGitleaksSettingStatus(&summary)
+
+	// Get current parent to check existing status_detail
+	var currentParent model.CodeGitleaksSetting
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
+		First(&currentParent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, fmt.Errorf("parent code_gitleaks_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
+		}
+		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, err)
+		return nil, fmt.Errorf("failed to get gitleaks parent setting: %w", err)
+	}
+
+	// Build status_detail based on status and summary
+	statusDetail, err := buildGitleaksStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
+	if err != nil {
+		return nil, err
+	}
+
+	// If parent already has the same values, skip UPDATE to avoid needless writes
+	if currentParent.Status == currentParentStatus.String() &&
+		currentParent.StatusDetail == statusDetail {
+		return c.GetGitleaksRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	}
+
+	result := c.MasterDB.WithContext(ctx).Exec(
+		updateGitleaksSettingStatusByRepo,
+		currentParentStatus.String(),
+		convertZeroValueToNull(statusDetail),
+		scanAt,
+		projectID,
+		data.GithubSettingId,
+	)
+	if result.Error != nil {
+		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
+		return nil, fmt.Errorf("failed to update gitleaks parent table status: %w", result.Error)
+	}
+	if result.RowsAffected == 0 {
+		// No rows affected - parent setting may not exist, log as warning
+		c.logger.Warnf(ctx, "UpsertGitleaksRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
+			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
+	}
+	return c.GetGitleaksRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func determineGitleaksSettingStatus(summary *gitleaksRepoStatusSummary) code.Status {
+	if summary == nil || summary.Total == 0 {
+		return code.Status_UNKNOWN
+	}
+	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
+	if knownStatusCount != summary.Total {
+		return code.Status_UNKNOWN
+	}
+	switch {
+	case summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.ConfiguredCount == summary.Total:
+		return code.Status_CONFIGURED
+	default:
+		return code.Status_OK
+	}
+}
+
+func buildGitleaksStatusDetail(summary *gitleaksRepoStatusSummary, currentParentStatus code.Status, existingStatusDetail string) (string, error) {
+	if summary == nil {
+		return "", nil
+	}
+	switch currentParentStatus {
+	case code.Status_IN_PROGRESS:
+		if existingStatusDetail == "" {
+			return "Gitleaks scan in progress...", nil
+		}
+		return existingStatusDetail, nil
+	case code.Status_OK, code.Status_ERROR:
+		return fmt.Sprintf(
+			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			summary.Total,
+			summary.OkCount,
+			summary.InProgressCount,
+			summary.ConfiguredCount,
+			summary.ErrorCount,
+		), nil
+	default:
+		return "", nil
+	}
+}
+
+const deleteGitleaksRepository = `
+DELETE repo FROM code_gitleaks_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ? AND repo.code_github_setting_id = ?
+`
+
+func (c *Client) DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Exec(deleteGitleaksRepository, projectID, githubSettingID).Error; err != nil {
 		return err
 	}
 	return nil
