@@ -333,6 +333,10 @@ func (c *CodeService) DeleteGitleaksSetting(ctx context.Context, req *code.Delet
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	// Delete all associated repositories (bulk delete)
+	if err := c.repository.DeleteGitleaksRepository(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
+	}
 	if err := c.repository.DeleteGitleaksCache(ctx, req.GithubSettingId); err != nil {
 		return nil, err
 	}
@@ -424,8 +428,12 @@ func (c *CodeService) DeleteDependencySetting(ctx context.Context, req *code.Del
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId)
-	if err != nil {
+	// Delete all associated repositories (bulk delete)
+	if err := c.repository.DeleteDependencyRepository(ctx, req.ProjectId, req.GithubSettingId); err != nil {
+		return nil, err
+	}
+	// Delete DependencySetting
+	if err := c.repository.DeleteDependencySetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
 	return &empty.Empty{}, nil
@@ -756,6 +764,38 @@ func (c *CodeService) PutCodeScanRepository(ctx context.Context, req *code.PutCo
 	c.logger.Infof(ctx, "PutCodeScanRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
 		req.ProjectId, req.CodeScanRepository.GithubSettingId, req.CodeScanRepository.RepositoryFullName, req.CodeScanRepository.Status.String())
 	c.logger.Debugf(ctx, "PutCodeScanRepository: status_detail=%s", req.CodeScanRepository.StatusDetail)
+	return &empty.Empty{}, nil
+}
+
+func (c *CodeService) PutGitleaksRepository(ctx context.Context, req *code.PutGitleaksRepositoryRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	if _, err := c.repository.UpsertGitleaksRepository(ctx, req.ProjectId, req.GitleaksRepository); err != nil {
+		c.logger.Errorf(ctx, "PutGitleaksRepository: failed to upsert repository status (repository=%s, project_id=%d, github_setting_id=%d, status=%s, err=%+v)",
+			req.GitleaksRepository.RepositoryFullName, req.ProjectId, req.GitleaksRepository.GithubSettingId, req.GitleaksRepository.Status.String(), err)
+		return nil, err
+	}
+	c.logger.Infof(ctx, "PutGitleaksRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
+		req.ProjectId, req.GitleaksRepository.GithubSettingId, req.GitleaksRepository.RepositoryFullName, req.GitleaksRepository.Status.String())
+	c.logger.Debugf(ctx, "PutGitleaksRepository: status_detail=%s", req.GitleaksRepository.StatusDetail)
+	return &empty.Empty{}, nil
+}
+
+func (c *CodeService) PutDependencyRepository(ctx context.Context, req *code.PutDependencyRepositoryRequest) (*empty.Empty, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	if _, err := c.repository.UpsertDependencyRepository(ctx, req.ProjectId, req.DependencyRepository); err != nil {
+		c.logger.Errorf(ctx, "PutDependencyRepository: failed to upsert repository status (repository=%s, project_id=%d, github_setting_id=%d, status=%s, err=%+v)",
+			req.DependencyRepository.RepositoryFullName, req.ProjectId, req.DependencyRepository.GithubSettingId, req.DependencyRepository.Status.String(), err)
+		return nil, err
+	}
+	c.logger.Infof(ctx, "PutDependencyRepository: project_id=%d, github_setting_id=%d, repository=%s, status=%s",
+		req.ProjectId, req.DependencyRepository.GithubSettingId, req.DependencyRepository.RepositoryFullName, req.DependencyRepository.Status.String())
+	c.logger.Debugf(ctx, "PutDependencyRepository: status_detail=%s", req.DependencyRepository.StatusDetail)
 	return &empty.Empty{}, nil
 }
 
