@@ -550,27 +550,87 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, &message.CodeQueueMessage{
-		GitHubSettingID: data.CodeGitHubSettingID,
-		ProjectID:       data.ProjectID,
-		ScanOnly:        req.ScanOnly,
-		RepositoryName:  req.RepositoryName,
-	})
+
+	// Get list of repositories filtered by DependencySetting (RepositoryPattern)
+	repos, err := c.listDependencyTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
+		if isGitHubAuthError(err) {
+			c.logger.Errorf(ctx, "GitHub API authentication error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v (PAT may be expired or invalid)", req.ProjectId, req.GithubSettingId, err)
+			if _, updateErr := c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
+				GithubSettingId:   data.CodeGitHubSettingID,
+				CodeDataSourceId:  data.CodeDataSourceID,
+				ProjectId:         data.ProjectID,
+				RepositoryPattern: data.RepositoryPattern,
+				Status:            code.Status_ERROR,
+				StatusDetail:      sanitizeErrorMessage(err),
+				ScanAt:            data.ScanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+				return nil, fmt.Errorf("failed to update status: %w", updateErr)
+			}
+			return nil, fmt.Errorf("GitHub authentication error: %w", err)
+		}
 		return nil, err
 	}
+
+	// If a specific repository is requested, filter to that repository only
+	if req.RepositoryName != "" {
+		filtered := make([]*ghub.Repository, 0, 1)
+		for _, repo := range repos {
+			if repo.FullName != nil && *repo.FullName == req.RepositoryName {
+				filtered = append(filtered, repo)
+			}
+		}
+		repos = filtered
+	}
+
+	if len(repos) == 0 {
+		c.logger.Warnf(ctx, "No repositories found for dependency scan: project_id=%d, github_setting_id=%d (filter may exclude all repositories)", req.ProjectId, req.GithubSettingId)
+		return &empty.Empty{}, nil
+	}
+
+	var messageIDs []string
+	var repositoryNames []string
+	for _, repo := range repos {
+		if repo.FullName == nil {
+			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
+				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
+			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
+		}
+		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			RepositoryName:  *repo.FullName,
+		})
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
+		}
+		if resp.MessageId != nil {
+			messageIDs = append(messageIDs, *resp.MessageId)
+			repositoryNames = append(repositoryNames, *repo.FullName)
+			c.logger.Debugf(ctx, "Sent dependency message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		}
+	}
+
+	statusDetail := fmt.Sprintf("Start dependency scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
 	if _, err = c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
 		ProjectId:         data.ProjectID,
 		RepositoryPattern: data.RepositoryPattern,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		StatusDetail:      statusDetail,
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+
+	c.logger.Infof(ctx, "Invoke dependency scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
+		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
 	return &empty.Empty{}, nil
 }
 
@@ -797,6 +857,63 @@ func (c *CodeService) PutDependencyRepository(ctx context.Context, req *code.Put
 		req.ProjectId, req.DependencyRepository.GithubSettingId, req.DependencyRepository.RepositoryFullName, req.DependencyRepository.Status.String())
 	c.logger.Debugf(ctx, "PutDependencyRepository: status_detail=%s", req.DependencyRepository.StatusDetail)
 	return &empty.Empty{}, nil
+}
+
+// listDependencyTargetRepository lists repositories filtered by DependencySetting (internal function)
+func (c *CodeService) listDependencyTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
+	// Get GitHub setting to use for API call
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, projectID, githubSettingID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []*ghub.Repository{}, nil
+		}
+		return nil, err
+	}
+
+	// Get DependencySetting from database to use saved filter options
+	dependencySetting, err := c.repository.GetDependencySetting(ctx, projectID, githubSettingID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.logger.Errorf(ctx, "DependencySetting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("dependency setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+		return nil, err
+	}
+
+	// Decrypt PAT before using it for GitHub API call
+	decryptedPAT := ""
+	if githubSetting.PersonalAccessToken != "" {
+		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
+			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
+		}
+		decryptedPAT = decrypted
+		if decryptedPAT == "" {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("decrypted PAT is empty")
+		}
+	} else {
+		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	}
+
+	// Convert model to proto for GitHub API call
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	// Override with decrypted PAT
+	protoGitHubSetting.PersonalAccessToken = decryptedPAT
+
+	// Call GitHub API to list repositories
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply name pattern filter based on DependencySetting
+	if dependencySetting != nil {
+		repos = github.FilterByNamePattern(repos, dependencySetting.RepositoryPattern)
+	}
+
+	return repos, nil
 }
 
 // ListCodescanTargetRepository lists repositories filtered by CodeScanSetting (RPC handler)
