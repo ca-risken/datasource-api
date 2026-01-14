@@ -295,6 +295,32 @@ func (p *PutCodeScanRepositoryRequest) Validate() error {
 	return p.CodeScanRepository.Validate()
 }
 
+// Validate PutGitleaksRepositoryRequest
+func (p *PutGitleaksRepositoryRequest) Validate() error {
+	if p.GitleaksRepository == nil {
+		return errors.New("required GitleaksRepository")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required),
+	); err != nil {
+		return err
+	}
+	return p.GitleaksRepository.Validate()
+}
+
+// Validate PutDependencyRepositoryRequest
+func (p *PutDependencyRepositoryRequest) Validate() error {
+	if p.DependencyRepository == nil {
+		return errors.New("required DependencyRepository")
+	}
+	if err := validation.ValidateStruct(p,
+		validation.Field(&p.ProjectId, validation.Required),
+	); err != nil {
+		return err
+	}
+	return p.DependencyRepository.Validate()
+}
+
 // Validate ListCodescanTargetRepositoryRequest
 func (l *ListCodescanTargetRepositoryRequest) Validate() error {
 	return validation.ValidateStruct(l,

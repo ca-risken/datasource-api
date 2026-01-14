@@ -72,7 +72,7 @@ func TestListDataSource(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("ListCodeDataSource", test.RepeatMockAnything(3)...).Return(c.mockResponse, c.mockError).Once()
@@ -246,7 +246,7 @@ func TestListGitHubSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("ListGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockResponse, c.mockError).Once()
@@ -421,7 +421,7 @@ func TestGetGitHubSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockResponse, c.mockError).Once()
@@ -505,7 +505,7 @@ func TestPutGitHubSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB, cipherBlock: block}
+			svc := CodeService{repository: mockDB, cipherBlock: block, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("UpsertGitHubSetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
@@ -645,7 +645,7 @@ func TestDeleteGitHubSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.callDeleteGitleaksCache {
 				mockDB.On("DeleteGitleaksCache", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksCacheResp).Once()
@@ -722,7 +722,7 @@ func TestPutGitleaksSetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockResponse, c.mockError).Once()
@@ -747,6 +747,9 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 		input   *code.DeleteGitleaksSettingRequest
 		wantErr bool
 
+		callDeleteGitleaksRepository     bool
+		mockDeleteGitleaksRepositoryResp error
+
 		callDeleteGitleaksCache     bool
 		mockDeleteGitleaksCacheResp error
 
@@ -754,10 +757,11 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 		mockDeleteGitleaksSettingResp error
 	}{
 		{
-			name:                      "OK",
-			input:                     &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			callDeleteGitleaksCache:   true,
-			callDeleteGitleaksSetting: true,
+			name:                         "OK",
+			input:                        &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			callDeleteGitleaksRepository: true,
+			callDeleteGitleaksCache:      true,
+			callDeleteGitleaksSetting:    true,
 		},
 		{
 			name:    "NG invalid param",
@@ -765,29 +769,41 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:                        "NG(DeleteGitleaksCache error)",
-			input:                       &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
-			wantErr:                     true,
-			callDeleteGitleaksCache:     true,
-			mockDeleteGitleaksCacheResp: gorm.ErrInvalidDB,
+			name:                         "NG(DeleteGitleaksCache error)",
+			input:                        &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr:                      true,
+			callDeleteGitleaksRepository: true,
+			callDeleteGitleaksCache:      true,
+			mockDeleteGitleaksCacheResp:  gorm.ErrInvalidDB,
 		},
 		{
 			name:                          "NG(DeleteGitleaksSetting error)",
 			input:                         &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			wantErr:                       true,
+			callDeleteGitleaksRepository:  true,
 			callDeleteGitleaksCache:       true,
 			callDeleteGitleaksSetting:     true,
 			mockDeleteGitleaksSettingResp: gorm.ErrInvalidDB,
+		},
+		{
+			name:                             "NG(DeleteGitleaksRepository error)",
+			input:                            &code.DeleteGitleaksSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr:                          true,
+			callDeleteGitleaksRepository:     true,
+			mockDeleteGitleaksRepositoryResp: gorm.ErrInvalidDB,
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
+			if c.callDeleteGitleaksRepository {
+				mockDB.On("DeleteGitleaksRepository", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksRepositoryResp).Once()
+			}
 			if c.callDeleteGitleaksCache {
-				mockDB.On("DeleteGitleaksCache", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksCacheResp).Once()
+				mockDB.On("DeleteGitleaksCache", test.RepeatMockAnything(2)...).Return(c.mockDeleteGitleaksCacheResp).Once()
 			}
 			if c.callDeleteGitleaksSetting {
 				mockDB.On("DeleteGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteGitleaksSettingResp).Once()
@@ -795,6 +811,71 @@ func TestDeleteGitleaksSetting(t *testing.T) {
 			_, err := svc.DeleteGitleaksSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+		})
+	}
+}
+
+func TestPutGitleaksRepository(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name      string
+		input     *code.PutGitleaksRepositoryRequest
+		mockCall  bool
+		mockError error
+		wantErr   bool
+	}{
+		{
+			name: "OK",
+			input: &code.PutGitleaksRepositoryRequest{
+				ProjectId: 1,
+				GitleaksRepository: &code.GitleaksRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+					StatusDetail:       "ok",
+					ScanAt:             now.Unix(),
+				},
+			},
+			mockCall: true,
+		},
+		{
+			name: "NG invalid param",
+			input: &code.PutGitleaksRepositoryRequest{
+				ProjectId: 0, // missing project id triggers validation error
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG repository error",
+			input: &code.PutGitleaksRepositoryRequest{
+				ProjectId: 1,
+				GitleaksRepository: &code.GitleaksRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+				},
+			},
+			mockCall:  true,
+			mockError: gorm.ErrInvalidDB,
+			wantErr:   true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewCodeRepoInterface(t)
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
+
+			if c.mockCall {
+				mockDB.On("UpsertGitleaksRepository", test.RepeatMockAnything(3)...).Return(&model.CodeGitleaksRepository{}, c.mockError).Once()
+			}
+			_, err := svc.PutGitleaksRepository(ctx, c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
 			}
 		})
 	}
@@ -847,7 +928,7 @@ func TestListGitleaksCache(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 			if c.mockResp != nil || c.mockErr != nil {
 				mockDB.On("ListGitleaksCache", test.RepeatMockAnything(3)...).Return(c.mockResp, c.mockErr).Once()
 			}
@@ -915,7 +996,7 @@ func TestGetGitleaksCache(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 			if c.mockResp != nil || c.mockErr != nil {
 				mockDB.On("GetGitleaksCache", test.RepeatMockAnything(5)...).Return(c.mockResp, c.mockErr).Once()
 			}
@@ -1002,7 +1083,7 @@ func TestPutGitleaksCache(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 			if c.mockGetGitleaksSettingResp != nil || c.mockGetGitleaksSettingErr != nil {
 				mockDB.On("GetGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitleaksSettingResp, c.mockGetGitleaksSettingErr).Once()
 			}
@@ -1075,7 +1156,7 @@ func TestPutDependencySetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
@@ -1126,14 +1207,86 @@ func TestDeleteDependencySetting(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			var ctx context.Context
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB}
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
 			if c.mockCall {
-				mockDB.On("DeleteDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				// First, repositories are deleted in bulk
+				mockDB.On("DeleteDependencyRepository", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				// If the first call errors, the second should not be invoked; set it only when no error expected
+				if c.mockError == nil {
+					mockDB.On("DeleteDependencySetting", test.RepeatMockAnything(3)...).Return(c.mockError).Once()
+				}
 			}
 			_, err := svc.DeleteDependencySetting(ctx, c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+		})
+	}
+}
+
+func TestPutDependencyRepository(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name      string
+		input     *code.PutDependencyRepositoryRequest
+		mockCall  bool
+		mockError error
+		wantErr   bool
+	}{
+		{
+			name: "OK",
+			input: &code.PutDependencyRepositoryRequest{
+				ProjectId: 1,
+				DependencyRepository: &code.DependencyRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+					StatusDetail:       "ok",
+					ScanAt:             now.Unix(),
+				},
+			},
+			mockCall: true,
+		},
+		{
+			name: "NG invalid param",
+			input: &code.PutDependencyRepositoryRequest{
+				ProjectId: 1,
+				// missing repository payload
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG repository error",
+			input: &code.PutDependencyRepositoryRequest{
+				ProjectId: 1,
+				DependencyRepository: &code.DependencyRepositoryForUpsert{
+					GithubSettingId:    1,
+					RepositoryFullName: "owner/repo",
+					Status:             code.Status_OK,
+					ScanAt:             now.Unix(),
+				},
+			},
+			mockCall:  true,
+			mockError: gorm.ErrInvalidDB,
+			wantErr:   true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var ctx context.Context
+			mockDB := mocks.NewCodeRepoInterface(t)
+			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
+
+			if c.mockCall {
+				mockDB.On("UpsertDependencyRepository", test.RepeatMockAnything(3)...).Return(&model.CodeDependencyRepository{}, c.mockError).Once()
+			}
+			_, err := svc.PutDependencyRepository(ctx, c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
 			}
 		})
 	}

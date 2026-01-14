@@ -59,6 +59,10 @@ service CodeService {
   // Repository-level status update
   rpc PutCodeScanRepository(PutCodeScanRepositoryRequest)
       returns (google.protobuf.Empty);
+  rpc PutGitleaksRepository(PutGitleaksRepositoryRequest)
+      returns (google.protobuf.Empty);
+  rpc PutDependencyRepository(PutDependencyRepositoryRequest)
+      returns (google.protobuf.Empty);
   rpc ListCodescanTargetRepository(ListCodescanTargetRepositoryRequest)
       returns (ListCodescanTargetRepositoryResponse);
 }
@@ -180,6 +184,16 @@ message InvokeScanCodeScanRequest {
 message PutCodeScanRepositoryRequest {
   uint32 project_id = 1;
   CodeScanRepositoryForUpsert code_scan_repository = 2;
+}
+
+message PutGitleaksRepositoryRequest {
+  uint32 project_id = 1;
+  GitleaksRepositoryForUpsert gitleaks_repository = 2;
+}
+
+message PutDependencyRepositoryRequest {
+  uint32 project_id = 1;
+  DependencyRepositoryForUpsert dependency_repository = 2;
 }
 
 message ListCodescanTargetRepositoryRequest {
