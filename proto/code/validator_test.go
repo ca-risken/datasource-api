@@ -486,14 +486,6 @@ func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 			input: &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
-			name:  "OK with repository_name",
-			input: &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/repo"},
-		},
-		{
-			name:  "OK with empty repository_name",
-			input: &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: ""},
-		},
-		{
 			name:    "NG Required(project_id)",
 			input:   &InvokeScanGitleaksRequest{GithubSettingId: 1},
 			wantErr: true,
@@ -501,26 +493,6 @@ func TestValidate_InvokeScanGitleaksRequest(t *testing.T) {
 		{
 			name:    "NG Required(github_setting_id)",
 			input:   &InvokeScanGitleaksRequest{ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Invalid repository_name format",
-			input:   &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "invalid-format"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty owner in repository_name",
-			input:   &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "/repo"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty repo in repository_name",
-			input:   &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Too long repository_name",
-			input:   &InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: stringLength256},
 			wantErr: true,
 		},
 	}
@@ -547,14 +519,6 @@ func TestValidate_InvokeScanDependencyRequest(t *testing.T) {
 			input: &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
 		},
 		{
-			name:  "OK with repository_name",
-			input: &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/repo"},
-		},
-		{
-			name:  "OK with empty repository_name",
-			input: &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: ""},
-		},
-		{
 			name:    "NG Required(project_id)",
 			input:   &InvokeScanDependencyRequest{GithubSettingId: 1},
 			wantErr: true,
@@ -562,26 +526,6 @@ func TestValidate_InvokeScanDependencyRequest(t *testing.T) {
 		{
 			name:    "NG Required(github_setting_id)",
 			input:   &InvokeScanDependencyRequest{ProjectId: 1},
-			wantErr: true,
-		},
-		{
-			name:    "NG Invalid repository_name format",
-			input:   &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "invalid-format"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty owner in repository_name",
-			input:   &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "/repo"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Empty repo in repository_name",
-			input:   &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: "owner/"},
-			wantErr: true,
-		},
-		{
-			name:    "NG Too long repository_name",
-			input:   &InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1, RepositoryName: stringLength256},
 			wantErr: true,
 		},
 	}

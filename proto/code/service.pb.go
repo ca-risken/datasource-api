@@ -1282,7 +1282,6 @@ type InvokeScanGitleaksRequest struct {
 	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 	ScanOnly        bool   `protobuf:"varint,3,opt,name=scan_only,json=scanOnly,proto3" json:"scan_only,omitempty"`
 	FullScan        bool   `protobuf:"varint,4,opt,name=full_scan,json=fullScan,proto3" json:"full_scan,omitempty"`
-	RepositoryName  string `protobuf:"bytes,5,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
 }
 
 func (x *InvokeScanGitleaksRequest) Reset() {
@@ -1345,13 +1344,6 @@ func (x *InvokeScanGitleaksRequest) GetFullScan() bool {
 	return false
 }
 
-func (x *InvokeScanGitleaksRequest) GetRepositoryName() string {
-	if x != nil {
-		return x.RepositoryName
-	}
-	return ""
-}
-
 type InvokeScanDependencyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1360,7 +1352,6 @@ type InvokeScanDependencyRequest struct {
 	ProjectId       uint32 `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 	ScanOnly        bool   `protobuf:"varint,3,opt,name=scan_only,json=scanOnly,proto3" json:"scan_only,omitempty"`
-	RepositoryName  string `protobuf:"bytes,4,opt,name=repository_name,json=repositoryName,proto3" json:"repository_name,omitempty"`
 }
 
 func (x *InvokeScanDependencyRequest) Reset() {
@@ -1414,13 +1405,6 @@ func (x *InvokeScanDependencyRequest) GetScanOnly() bool {
 		return x.ScanOnly
 	}
 	return false
-}
-
-func (x *InvokeScanDependencyRequest) GetRepositoryName() string {
-	if x != nil {
-		return x.RepositoryName
-	}
-	return ""
 }
 
 type InvokeScanCodeScanRequest struct {

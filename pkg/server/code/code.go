@@ -519,7 +519,6 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		ProjectID:       data.ProjectID,
 		ScanOnly:        req.ScanOnly,
 		FullScan:        req.FullScan,
-		RepositoryName:  req.RepositoryName,
 	})
 	if err != nil {
 		return nil, err
@@ -571,17 +570,6 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 			return nil, fmt.Errorf("GitHub authentication error: %w", err)
 		}
 		return nil, err
-	}
-
-	// If a specific repository is requested, filter to that repository only
-	if req.RepositoryName != "" {
-		filtered := make([]*ghub.Repository, 0, 1)
-		for _, repo := range repos {
-			if repo.FullName != nil && *repo.FullName == req.RepositoryName {
-				filtered = append(filtered, repo)
-			}
-		}
-		repos = filtered
 	}
 
 	if len(repos) == 0 {
