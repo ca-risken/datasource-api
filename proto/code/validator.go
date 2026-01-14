@@ -2,28 +2,14 @@ package code
 
 import (
 	"errors"
-	"strings"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
 // validateRepositoryName validates repository name format (owner/repo)
-func validateRepositoryName(value any) error {
-	s, ok := value.(string)
-	if !ok {
-		return nil // Skip validation for non-string values
-	}
-	if s == "" {
-		return nil // Empty is allowed (optional field)
-	}
-	parts := strings.Split(s, "/")
-	if len(parts) != 2 {
-		return errors.New("repository name must be in format 'owner/repo'")
-	}
-	if parts[0] == "" || parts[1] == "" {
-		return errors.New("repository name must have both owner and repo name")
-	}
+// Deprecated: InvokeScan requests no longer accept repository_name.
+func validateRepositoryName(_ any) error {
 	return nil
 }
 
