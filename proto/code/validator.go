@@ -8,10 +8,6 @@ import (
 )
 
 // validateRepositoryName validates repository name format (owner/repo)
-// Deprecated: InvokeScan requests no longer accept repository_name.
-func validateRepositoryName(_ any) error {
-	return nil
-}
 
 // Validate ListDataSourceRequest
 func (l *ListDataSourceRequest) Validate() error {
