@@ -1503,6 +1503,7 @@ func TestInvokeScanDependency(t *testing.T) {
 
 func TestInvokeScanAll(t *testing.T) {
 	now := time.Now()
+	authErr := &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusUnauthorized}}
 	cases := []struct {
 		name                         string
 		ProjectID                    uint32
@@ -1691,6 +1692,22 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:              true,
 		},
 		{
+			name:      "OK skip gitleaks on github auth error",
+			ProjectID: 1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:        &project.IsActiveResponse{Active: true},
+			mockGetGitleaksResponse:     &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now,
+			},
+			mockGithubClient:           newFakeGithubClient(nil, authErr),
+			wantErr:                   false,
+		},
+		{
 			name:                     "NG error InvokeScanDependency",
 			ProjectID:                1,
 			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
@@ -1701,6 +1718,20 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetDependencyError:       gorm.ErrInvalidDB,
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			wantErr:                      true,
+		},
+		{
+			name:                     "OK skip dependency on github auth error",
+			ProjectID:                1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListCodeScanResponse:       &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:           &project.IsActiveResponse{Active: true},
+			mockGetDependencyResponse:      &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse:   &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:               newFakeGithubClient(nil, authErr),
+			wantErr:                        false,
 		},
 		{
 			name:                       "NG error GetCodeScan",

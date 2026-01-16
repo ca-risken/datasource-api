@@ -790,6 +790,11 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanGitleaks authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+				continue
+			}
 			c.logger.Errorf(ctx, "InvokeScanGitleaks error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
 			return nil, err
 		}
@@ -814,6 +819,11 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanDependency authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+				continue
+			}
 			c.logger.Errorf(ctx, "InvokeScanDependency error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
 			return nil, err
 		}
