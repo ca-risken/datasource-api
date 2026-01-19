@@ -611,6 +611,43 @@ func (_m *CodeServiceClient) PutCodeScanSetting(ctx context.Context, in *code.Pu
 	return r0, r1
 }
 
+// PutDependencyRepository provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) PutDependencyRepository(ctx context.Context, in *code.PutDependencyRepositoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PutDependencyRepository")
+	}
+
+	var r0 *emptypb.Empty
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutDependencyRepositoryRequest, ...grpc.CallOption) (*emptypb.Empty, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutDependencyRepositoryRequest, ...grpc.CallOption) *emptypb.Empty); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*emptypb.Empty)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutDependencyRepositoryRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PutDependencySetting provides a mock function with given fields: ctx, in, opts
 func (_m *CodeServiceClient) PutDependencySetting(ctx context.Context, in *code.PutDependencySettingRequest, opts ...grpc.CallOption) (*code.PutDependencySettingResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -714,6 +751,43 @@ func (_m *CodeServiceClient) PutGitleaksCache(ctx context.Context, in *code.PutG
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksCacheRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutGitleaksRepository provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) PutGitleaksRepository(ctx context.Context, in *code.PutGitleaksRepositoryRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PutGitleaksRepository")
+	}
+
+	var r0 *emptypb.Empty
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitleaksRepositoryRequest, ...grpc.CallOption) (*emptypb.Empty, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitleaksRepositoryRequest, ...grpc.CallOption) *emptypb.Empty); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*emptypb.Empty)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksRepositoryRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
