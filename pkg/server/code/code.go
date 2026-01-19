@@ -514,15 +514,67 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	if err != nil {
 		return nil, err
 	}
-	resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, &message.CodeQueueMessage{
-		GitHubSettingID: data.CodeGitHubSettingID,
-		ProjectID:       data.ProjectID,
-		ScanOnly:        req.ScanOnly,
-		FullScan:        req.FullScan,
-	})
+
+	// Get list of repositories filtered by GitleaksSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
+	repos, err := c.listGitleaksTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
+		if isGitHubAuthError(err) {
+			c.logger.Errorf(ctx, "GitHub API authentication error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v (PAT may be expired or invalid)", req.ProjectId, req.GithubSettingId, err)
+			if _, updateErr := c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksSettingForUpsert{
+				GithubSettingId:   data.CodeGitHubSettingID,
+				CodeDataSourceId:  data.CodeDataSourceID,
+				ProjectId:         data.ProjectID,
+				RepositoryPattern: data.RepositoryPattern,
+				ScanPublic:        data.ScanPublic,
+				ScanInternal:      data.ScanInternal,
+				ScanPrivate:       data.ScanPrivate,
+				Status:            code.Status_ERROR,
+				StatusDetail:      sanitizeErrorMessage(err),
+				ScanAt:            data.ScanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+				return nil, fmt.Errorf("failed to update status: %w", updateErr)
+			}
+			return nil, fmt.Errorf("GitHub authentication error: %w", err)
+		}
 		return nil, err
 	}
+
+	if len(repos) == 0 {
+		c.logger.Warnf(ctx, "No repositories found for gitleaks scan: project_id=%d, github_setting_id=%d (this may be expected if filter criteria exclude all repositories)",
+			req.ProjectId, req.GithubSettingId)
+		return &empty.Empty{}, nil
+	}
+
+	var messageIDs []string
+	var repositoryNames []string
+	for _, repo := range repos {
+		if repo.FullName == nil {
+			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
+				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
+			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
+		}
+		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, &message.CodeQueueMessage{
+			GitHubSettingID: data.CodeGitHubSettingID,
+			ProjectID:       data.ProjectID,
+			ScanOnly:        req.ScanOnly,
+			FullScan:        req.FullScan,
+			RepositoryName:  *repo.FullName,
+		})
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
+		}
+		if resp.MessageId != nil {
+			messageIDs = append(messageIDs, *resp.MessageId)
+			repositoryNames = append(repositoryNames, *repo.FullName)
+			c.logger.Debugf(ctx, "Sent gitleaks message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		}
+	}
+
+	statusDetail := fmt.Sprintf("Start gitleaks scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
 	if _, err = c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksSettingForUpsert{
 		GithubSettingId:   data.CodeGitHubSettingID,
 		CodeDataSourceId:  data.CodeDataSourceID,
@@ -532,12 +584,14 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
 		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      fmt.Sprintf("Start scan at %+v", time.Now().Format(time.RFC3339)),
+		StatusDetail:      statusDetail,
 		ScanAt:            data.ScanAt.Unix(),
 	}); err != nil {
 		return nil, err
 	}
-	c.logger.Infof(ctx, "Invoke scanned, messageId: %v", resp.MessageId)
+
+	c.logger.Infof(ctx, "Invoke gitleaks scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
+		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
 	return &empty.Empty{}, nil
 }
 
@@ -736,6 +790,11 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanGitleaks authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+				continue
+			}
 			c.logger.Errorf(ctx, "InvokeScanGitleaks error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
 			return nil, err
 		}
@@ -760,6 +819,11 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
+			// Check if error is authentication error - continue with other settings
+			if isGitHubAuthError(err) {
+				c.logger.Errorf(ctx, "InvokeScanDependency authentication error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+				continue
+			}
 			c.logger.Errorf(ctx, "InvokeScanDependency error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
 			return nil, err
 		}
@@ -845,6 +909,72 @@ func (c *CodeService) PutDependencyRepository(ctx context.Context, req *code.Put
 		req.ProjectId, req.DependencyRepository.GithubSettingId, req.DependencyRepository.RepositoryFullName, req.DependencyRepository.Status.String())
 	c.logger.Debugf(ctx, "PutDependencyRepository: status_detail=%s", req.DependencyRepository.StatusDetail)
 	return &empty.Empty{}, nil
+}
+
+// listGitleaksTargetRepository lists repositories filtered by GitleaksSetting (internal function)
+func (c *CodeService) listGitleaksTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
+	// Get GitHub setting to use for API call
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, projectID, githubSettingID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return []*ghub.Repository{}, nil
+		}
+		return nil, err
+	}
+
+	// Get GitleaksSetting from database to use saved filter options
+	gitleaksSetting, err := c.repository.GetGitleaksSetting(ctx, projectID, githubSettingID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.logger.Errorf(ctx, "GitleaksSetting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("gitleaks setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+		return nil, err
+	}
+
+	// Decrypt PAT before using it for GitHub API call
+	decryptedPAT := ""
+	if githubSetting.PersonalAccessToken != "" {
+		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
+			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
+		}
+		decryptedPAT = decrypted
+		if decryptedPAT == "" {
+			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+			return nil, fmt.Errorf("decrypted PAT is empty")
+		}
+	} else {
+		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	}
+
+	// Convert model to proto for GitHub API call
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	// Override with decrypted PAT
+	protoGitHubSetting.PersonalAccessToken = decryptedPAT
+
+	// Call GitHub API to list repositories
+	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply size-based and excluded repository filtering
+	repos = github.FilterExcludedRepositories(repos, c.limitRepositorySizeKb)
+
+	// Apply filter options based on GitleaksSetting
+	if gitleaksSetting != nil {
+		filterOpts := &github.FilterOptions{
+			RepositoryPattern: gitleaksSetting.RepositoryPattern,
+			ScanPublic:        gitleaksSetting.ScanPublic,
+			ScanInternal:      gitleaksSetting.ScanInternal,
+			ScanPrivate:       gitleaksSetting.ScanPrivate,
+		}
+		repos = github.ApplyFilters(repos, filterOpts)
+	}
+
+	return repos, nil
 }
 
 // listDependencyTargetRepository lists repositories filtered by DependencySetting (internal function)
