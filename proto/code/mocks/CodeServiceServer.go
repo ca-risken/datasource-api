@@ -497,6 +497,36 @@ func (_m *CodeServiceServer) PutCodeScanSetting(_a0 context.Context, _a1 *code.P
 	return r0, r1
 }
 
+// PutDependencyRepository provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) PutDependencyRepository(_a0 context.Context, _a1 *code.PutDependencyRepositoryRequest) (*emptypb.Empty, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PutDependencyRepository")
+	}
+
+	var r0 *emptypb.Empty
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutDependencyRepositoryRequest) (*emptypb.Empty, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutDependencyRepositoryRequest) *emptypb.Empty); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*emptypb.Empty)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutDependencyRepositoryRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // PutDependencySetting provides a mock function with given fields: _a0, _a1
 func (_m *CodeServiceServer) PutDependencySetting(_a0 context.Context, _a1 *code.PutDependencySettingRequest) (*code.PutDependencySettingResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -579,6 +609,36 @@ func (_m *CodeServiceServer) PutGitleaksCache(_a0 context.Context, _a1 *code.Put
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksCacheRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// PutGitleaksRepository provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) PutGitleaksRepository(_a0 context.Context, _a1 *code.PutGitleaksRepositoryRequest) (*emptypb.Empty, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PutGitleaksRepository")
+	}
+
+	var r0 *emptypb.Empty
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitleaksRepositoryRequest) (*emptypb.Empty, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.PutGitleaksRepositoryRequest) *emptypb.Empty); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*emptypb.Empty)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksRepositoryRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
