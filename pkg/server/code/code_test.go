@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/aes"
 	"errors"
-	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -1504,6 +1503,9 @@ func TestInvokeScanDependency(t *testing.T) {
 func TestInvokeScanAll(t *testing.T) {
 	now := time.Now()
 	authErr := &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusUnauthorized}}
+	notFoundErr := &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}
+	badRequestErr := &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusBadRequest}}
+	serverErr := &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusInternalServerError}}
 	cases := []struct {
 		name                         string
 		ProjectID                    uint32
@@ -1709,6 +1711,40 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:                    false,
 		},
 		{
+			name:      "OK skip gitleaks on github not found error",
+			ProjectID: 1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:        &project.IsActiveResponse{Active: true},
+			mockGetGitleaksResponse:     &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now,
+			},
+			mockGithubClient: newFakeGithubClient(nil, notFoundErr),
+			mockUpsertGitleaksResponse: &model.CodeGitleaksSetting{},
+			wantErr:         false,
+		},
+		{
+			name:      "OK skip gitleaks on github bad request error",
+			ProjectID: 1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
+			mockGetGitleaksResponse:    &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now,
+			},
+			mockGithubClient: newFakeGithubClient(nil, badRequestErr),
+			mockUpsertGitleaksResponse: &model.CodeGitleaksSetting{},
+			wantErr:         false,
+		},
+		{
 			name:                     "NG error InvokeScanDependency",
 			ProjectID:                1,
 			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
@@ -1734,6 +1770,80 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGithubClient:             newFakeGithubClient(nil, authErr),
 			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
 			wantErr:                      false,
+		},
+		{
+			name:                     "OK skip dependency on github not found error",
+			ProjectID:                1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListCodeScanResponse:     &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient(nil, notFoundErr),
+			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
+			wantErr:                      false,
+		},
+		{
+			name:                     "OK skip dependency on github bad request error",
+			ProjectID:                1,
+			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockListCodeScanResponse:     &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient(nil, badRequestErr),
+			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
+			wantErr:                      false,
+		},
+		{
+			name:                       "OK skip codescan on github not found error",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient(nil, notFoundErr),
+			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
+			wantErr:                      false,
+		},
+		{
+			name:                       "OK skip codescan on github bad request error",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient(nil, badRequestErr),
+			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
+			wantErr:                      false,
+		},
+		{
+			name:                       "NG stop codescan on github server error",
+			ProjectID:                  1,
+			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse: &[]model.CodeCodeScanSetting{
+				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
+			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient(nil, serverErr),
+			wantErr:                      true,
 		},
 		{
 			name:                       "NG error GetCodeScan",
@@ -1878,108 +1988,4 @@ func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL str
 	return g.err
 }
 
-func TestIsGitHubAuthError(t *testing.T) {
-	cases := []struct {
-		name     string
-		err      error
-		expected bool
-	}{
-		{
-			name:     "nil error",
-			err:      nil,
-			expected: false,
-		},
-		{
-			name:     "non-GitHub error",
-			err:      errors.New("some other error"),
-			expected: false,
-		},
-		{
-			name: "GitHub authentication error (401)",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusUnauthorized,
-				},
-				Message: "Bad credentials",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 404 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusNotFound,
-				},
-				Message: "Not Found",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub error with 403 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusForbidden,
-				},
-				Message: "Forbidden",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub error with 500 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusInternalServerError,
-				},
-				Message: "Internal Server Error",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub ErrorResponse with nil Response",
-			err: &ghub.ErrorResponse{
-				Response: nil,
-				Message:  "Some error",
-			},
-			expected: false,
-		},
-		{
-			name: "wrapped GitHub authentication error",
-			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusUnauthorized,
-				},
-				Message: "Bad credentials",
-			}),
-			expected: true,
-		},
-		{
-			name: "wrapped GitHub error with 404 status",
-			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusNotFound,
-				},
-				Message: "Not Found",
-			}),
-			expected: false,
-		},
-		{
-			name: "double wrapped GitHub authentication error",
-			err: fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusUnauthorized,
-				},
-				Message: "Bad credentials",
-			})),
-			expected: true,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := isGitHubAuthError(c.err)
-			if got != c.expected {
-				t.Errorf("isGitHubAuthError(%v) = %v, want %v", c.err, got, c.expected)
-			}
-		})
-	}
-}
+// NOTE: isGitHubAuthError was removed; 4xx handling is unified via isGitHubClientError.
