@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -18,23 +17,6 @@ import (
 	"github.com/vikyd/zero"
 	"gorm.io/gorm"
 )
-
-// isGitHubClientError checks if the error is a GitHub 4xx error
-// by checking for ErrorResponse with 400-499 status code.
-func isGitHubClientError(err error) bool {
-	if err == nil {
-		return false
-	}
-	var errResp *ghub.ErrorResponse
-	if errors.As(err, &errResp) {
-		if errResp.Response == nil {
-			return false
-		}
-		code := errResp.Response.StatusCode
-		return code >= http.StatusBadRequest && code < http.StatusInternalServerError
-	}
-	return false
-}
 
 // sanitizeErrorMessage removes potentially sensitive information from error messages
 // Returns a user-friendly message without internal details
@@ -518,26 +500,23 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	// Get list of repositories filtered by GitleaksSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
 	repos, err := c.listGitleaksTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
-		if isGitHubClientError(err) {
-			c.logger.Errorf(ctx, "GitHub API client error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-			if _, updateErr := c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksSettingForUpsert{
-				GithubSettingId:   data.CodeGitHubSettingID,
-				CodeDataSourceId:  data.CodeDataSourceID,
-				ProjectId:         data.ProjectID,
-				RepositoryPattern: data.RepositoryPattern,
-				ScanPublic:        data.ScanPublic,
-				ScanInternal:      data.ScanInternal,
-				ScanPrivate:       data.ScanPrivate,
-				Status:            code.Status_ERROR,
-				StatusDetail:      sanitizeErrorMessage(err),
-				ScanAt:            data.ScanAt.Unix(),
-			}); updateErr != nil {
-				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
-				return nil, fmt.Errorf("failed to update status: %w", updateErr)
-			}
-			return nil, fmt.Errorf("GitHub client error: %w", err)
+		c.logger.Errorf(ctx, "Error listing repositories for gitleaks: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		if _, updateErr := c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksSettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			ScanPublic:        data.ScanPublic,
+			ScanInternal:      data.ScanInternal,
+			ScanPrivate:       data.ScanPrivate,
+			Status:            code.Status_ERROR,
+			StatusDetail:      sanitizeErrorMessage(err),
+			ScanAt:            data.ScanAt.Unix(),
+		}); updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+			return nil, fmt.Errorf("failed to update status: %w", updateErr)
 		}
-		return nil, err
+		return nil, fmt.Errorf("listing repositories: %w", err)
 	}
 
 	if len(repos) == 0 {
@@ -607,23 +586,20 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 	// Get list of repositories filtered by DependencySetting (RepositoryPattern)
 	repos, err := c.listDependencyTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
-		if isGitHubClientError(err) {
-			c.logger.Errorf(ctx, "GitHub API client error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-			if _, updateErr := c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
-				GithubSettingId:   data.CodeGitHubSettingID,
-				CodeDataSourceId:  data.CodeDataSourceID,
-				ProjectId:         data.ProjectID,
-				RepositoryPattern: data.RepositoryPattern,
-				Status:            code.Status_ERROR,
-				StatusDetail:      sanitizeErrorMessage(err),
-				ScanAt:            data.ScanAt.Unix(),
-			}); updateErr != nil {
-				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
-				return nil, fmt.Errorf("failed to update status: %w", updateErr)
-			}
-			return nil, fmt.Errorf("GitHub client error: %w", err)
+		c.logger.Errorf(ctx, "Error listing repositories for dependency: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		if _, updateErr := c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			Status:            code.Status_ERROR,
+			StatusDetail:      sanitizeErrorMessage(err),
+			ScanAt:            data.ScanAt.Unix(),
+		}); updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+			return nil, fmt.Errorf("failed to update status: %w", updateErr)
 		}
-		return nil, err
+		return nil, fmt.Errorf("listing repositories: %w", err)
 	}
 
 	if len(repos) == 0 {
@@ -688,30 +664,23 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	// Get list of repositories filtered by CodeScanSetting (RepositoryPattern, ScanPublic/Internal/Private, etc.)
 	repos, err := c.listCodescanTargetRepository(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
-		// Check if error is GitHub client error (4xx) using error type
-		if isGitHubClientError(err) {
-			c.logger.Errorf(ctx, "GitHub API client error when listing repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-			// Update status to ERROR with sanitized error message
-			if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
-				GithubSettingId:   data.CodeGitHubSettingID,
-				CodeDataSourceId:  data.CodeDataSourceID,
-				ProjectId:         data.ProjectID,
-				RepositoryPattern: data.RepositoryPattern,
-				ScanPublic:        data.ScanPublic,
-				ScanInternal:      data.ScanInternal,
-				ScanPrivate:       data.ScanPrivate,
-				Status:            code.Status_ERROR,
-				StatusDetail:      sanitizeErrorMessage(err),
-				ScanAt:            data.ScanAt.Unix(),
-			}); updateErr != nil {
-				c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
-				return nil, fmt.Errorf("failed to update status: %w", updateErr)
-			}
-			// Return client error to allow InvokeScanAll to handle it appropriately
-			return nil, fmt.Errorf("GitHub client error: %w", err)
+		c.logger.Errorf(ctx, "Error listing repositories for codescan: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		if _, updateErr := c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
+			GithubSettingId:   data.CodeGitHubSettingID,
+			CodeDataSourceId:  data.CodeDataSourceID,
+			ProjectId:         data.ProjectID,
+			RepositoryPattern: data.RepositoryPattern,
+			ScanPublic:        data.ScanPublic,
+			ScanInternal:      data.ScanInternal,
+			ScanPrivate:       data.ScanPrivate,
+			Status:            code.Status_ERROR,
+			StatusDetail:      sanitizeErrorMessage(err),
+			ScanAt:            data.ScanAt.Unix(),
+		}); updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update status to ERROR: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+			return nil, fmt.Errorf("failed to update status: %w", updateErr)
 		}
-		// For other errors, return error as before
-		return nil, err
+		return nil, fmt.Errorf("listing repositories: %w", err)
 	}
 
 	if len(repos) == 0 {
@@ -790,13 +759,8 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			// Skip GitHub 4xx (bad request, auth, not found, etc.) and continue with other settings
-			if isGitHubClientError(err) {
-				c.logger.Errorf(ctx, "InvokeScanGitleaks github client error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
-				continue
-			}
-			c.logger.Errorf(ctx, "InvokeScanGitleaks error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
-			return nil, err
+			c.logger.Errorf(ctx, "InvokeScanGitleaks error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+			continue
 		}
 	}
 	listDependency, err := c.repository.ListDependencySetting(ctx, 0)
@@ -819,13 +783,8 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       g.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			// Skip GitHub 4xx (bad request, auth, not found, etc.) and continue with other settings
-			if isGitHubClientError(err) {
-				c.logger.Errorf(ctx, "InvokeScanDependency github client error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
-				continue
-			}
-			c.logger.Errorf(ctx, "InvokeScanDependency error occured: code_github_setting_id=%d, err=%+v", g.CodeGitHubSettingID, err)
-			return nil, err
+			c.logger.Errorf(ctx, "InvokeScanDependency error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", g.ProjectID, g.CodeGitHubSettingID, err)
+			continue
 		}
 	}
 	listCodeScan, err := c.repository.ListCodeScanSetting(ctx, 0)
@@ -848,14 +807,8 @@ func (c *CodeService) InvokeScanAll(ctx context.Context, _ *empty.Empty) (*empty
 			ProjectId:       codescan.ProjectID,
 			ScanOnly:        true,
 		}); err != nil {
-			// Skip GitHub 4xx (bad request, auth, not found, etc.) and continue with other settings
-			if isGitHubClientError(err) {
-				c.logger.Errorf(ctx, "InvokeScanCodeScan github client error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-				continue
-			}
-			// For all other errors, return error to stop processing
-			c.logger.Errorf(ctx, "InvokeScanCodeScan error occured: project_id=%d, code_github_setting_id=%d, err=%+v", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
-			return nil, err
+			c.logger.Errorf(ctx, "InvokeScanCodeScan error: project_id=%d, code_github_setting_id=%d, err=%+v (skipping this setting)", codescan.ProjectID, codescan.CodeGitHubSettingID, err)
+			continue
 		}
 	}
 	return &empty.Empty{}, nil

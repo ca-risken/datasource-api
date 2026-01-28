@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/aes"
 	"errors"
-	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
@@ -1685,14 +1684,16 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:           true,
 		},
 		{
-			name:      "NG error InvokeScanGitleaks",
-			ProjectID: 1,
+			name:                     "OK skip gitleaks on InvokeScanGitleaks error",
+			ProjectID:                1,
 			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
-			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
-			mockGetGitleaksError: gorm.ErrInvalidDB,
-			wantErr:              true,
+			mockListDependencyResponse: &[]model.CodeDependencySetting{},
+			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
+			mockGetGitleaksError:       gorm.ErrInvalidDB,
+			wantErr:                    false,
 		},
 		{
 			name:      "OK skip gitleaks on github auth error",
@@ -1746,16 +1747,17 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name:                     "NG error InvokeScanDependency",
+			name:                     "OK skip dependency on InvokeScanDependency error",
 			ProjectID:                1,
 			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
+			mockListCodeScanResponse:     &[]model.CodeCodeScanSetting{},
 			mockIsActiveResponse:         &project.IsActiveResponse{Active: true},
 			mockGetDependencyError:       gorm.ErrInvalidDB,
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
-			wantErr:                      true,
+			wantErr:                      false,
 		},
 		{
 			name:                     "OK skip dependency on github auth error",
@@ -1833,7 +1835,7 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:                      false,
 		},
 		{
-			name:                       "NG stop codescan on github server error",
+			name:                       "OK skip codescan on github server error",
 			ProjectID:                  1,
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
@@ -1844,10 +1846,11 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient(nil, serverErr),
-			wantErr:                      true,
+			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
+			wantErr:                      false,
 		},
 		{
-			name:                       "NG error GetCodeScan",
+			name:                       "OK skip codescan on GetCodeScan error",
 			ProjectID:                  1,
 			mockListGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
@@ -1856,7 +1859,7 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockIsActiveResponse: &project.IsActiveResponse{Active: true},
 			mockGetCodeScanError: gorm.ErrInvalidDB,
-			wantErr:              true, // If GetCodeScanSetting returns an error, InvokeScanCodeScan returns an error
+			wantErr:              false,
 		},
 	}
 	for _, c := range cases {
@@ -1989,150 +1992,3 @@ func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL str
 	return g.err
 }
 
-func TestIsGitHubClientError(t *testing.T) {
-	cases := []struct {
-		name     string
-		err      error
-		expected bool
-	}{
-		{
-			name:     "nil error",
-			err:      nil,
-			expected: false,
-		},
-		{
-			name:     "non-GitHub error",
-			err:      errors.New("some other error"),
-			expected: false,
-		},
-		{
-			name: "GitHub error with 399 status (boundary: below 400)",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: 399,
-				},
-				Message: "Client Error",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub error with 400 status (boundary: start of 4xx)",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusBadRequest,
-				},
-				Message: "Bad Request",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 401 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusUnauthorized,
-				},
-				Message: "Unauthorized",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 403 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusForbidden,
-				},
-				Message: "Forbidden",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 404 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusNotFound,
-				},
-				Message: "Not Found",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 499 status (boundary: end of 4xx)",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: 499,
-				},
-				Message: "Client Closed Request",
-			},
-			expected: true,
-		},
-		{
-			name: "GitHub error with 500 status (boundary: start of 5xx)",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusInternalServerError,
-				},
-				Message: "Internal Server Error",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub error with 502 status",
-			err: &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusBadGateway,
-				},
-				Message: "Bad Gateway",
-			},
-			expected: false,
-		},
-		{
-			name: "GitHub ErrorResponse with nil Response",
-			err: &ghub.ErrorResponse{
-				Response: nil,
-				Message:  "Some error",
-			},
-			expected: false,
-		},
-		{
-			name: "wrapped GitHub error with 400 status",
-			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusBadRequest,
-				},
-				Message: "Bad Request",
-			}),
-			expected: true,
-		},
-		{
-			name: "wrapped GitHub error with 500 status",
-			err: fmt.Errorf("wrapped error: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusInternalServerError,
-				},
-				Message: "Internal Server Error",
-			}),
-			expected: false,
-		},
-		{
-			name: "double wrapped GitHub error with 404 status",
-			err: fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", &ghub.ErrorResponse{
-				Response: &http.Response{
-					StatusCode: http.StatusNotFound,
-				},
-				Message: "Not Found",
-			})),
-			expected: true,
-		},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got := isGitHubClientError(c.err)
-			if got != c.expected {
-				t.Errorf("isGitHubClientError(%v) = %v, want %v", c.err, got, c.expected)
-			}
-		})
-	}
-}
-
-// NOTE: isGitHubAuthError was removed; 4xx handling is unified via isGitHubClientError.
