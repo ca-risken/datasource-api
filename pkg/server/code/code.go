@@ -59,26 +59,29 @@ func buildCodeQueueMessage(githubSettingID, projectID uint32, scanOnly, fullScan
 	if repo == nil {
 		return msg, nil
 	}
-	msg.Name = stringValue(repo.Name)
-	msg.FullName = stringValue(repo.FullName)
-	if msg.FullName == "" {
+	repository := &message.RepositoryMetadata{
+		Name:       stringValue(repo.Name),
+		FullName:   stringValue(repo.FullName),
+		CloneURL:   stringValue(repo.CloneURL),
+		Visibility: stringValue(repo.Visibility),
+		Archived:   boolValue(repo.Archived),
+		Fork:       boolValue(repo.Fork),
+		Disabled:   boolValue(repo.Disabled),
+		Size:       int64ValueFromInt(repo.Size),
+		HTMLURL:    stringValue(repo.HTMLURL),
+	}
+	if repository.FullName == "" {
 		return nil, fmt.Errorf("repository full name is empty: repo_id=%d", repo.GetID())
 	}
-	// Keep legacy field until all handlers migrate to full_name.
-	msg.RepositoryName = msg.FullName
-	msg.CloneURL = stringValue(repo.CloneURL)
-	msg.Visibility = stringValue(repo.Visibility)
-	msg.Archived = boolValue(repo.Archived)
-	msg.Fork = boolValue(repo.Fork)
-	msg.Disabled = boolValue(repo.Disabled)
-	msg.Size = int64ValueFromInt(repo.Size)
 	if repo.CreatedAt != nil {
-		msg.CreatedAt = repo.CreatedAt.Unix()
+		repository.CreatedAt = repo.CreatedAt.Unix()
 	}
 	if repo.PushedAt != nil {
-		msg.PushedAt = repo.PushedAt.Unix()
+		repository.PushedAt = repo.PushedAt.Unix()
 	}
-	msg.HTMLURL = stringValue(repo.HTMLURL)
+	msg.Repository = repository
+	// Keep legacy field until all handlers migrate to full_name.
+	msg.RepositoryName = repository.FullName
 	return msg, nil
 }
 
