@@ -28,6 +28,57 @@ func sanitizeErrorMessage(err error) string {
 	return "An error occurred during the operation"
 }
 
+func boolValue(v *bool) bool {
+	if v == nil {
+		return false
+	}
+	return *v
+}
+
+func int64ValueFromInt(v *int) int64 {
+	if v == nil {
+		return 0
+	}
+	return int64(*v)
+}
+
+func stringValue(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func buildCodeQueueMessage(githubSettingID, projectID uint32, scanOnly, fullScan bool, repo *ghub.Repository) *message.CodeQueueMessage {
+	msg := &message.CodeQueueMessage{
+		GitHubSettingID: githubSettingID,
+		ProjectID:       projectID,
+		ScanOnly:        scanOnly,
+		FullScan:        fullScan,
+	}
+	if repo == nil {
+		return msg
+	}
+	msg.Name = stringValue(repo.Name)
+	msg.FullName = stringValue(repo.FullName)
+	// Keep legacy field until all handlers migrate to full_name.
+	msg.RepositoryName = msg.FullName
+	msg.CloneURL = stringValue(repo.CloneURL)
+	msg.Visibility = stringValue(repo.Visibility)
+	msg.Archived = boolValue(repo.Archived)
+	msg.Fork = boolValue(repo.Fork)
+	msg.Disabled = boolValue(repo.Disabled)
+	msg.Size = int64ValueFromInt(repo.Size)
+	if repo.CreatedAt != nil {
+		msg.CreatedAt = repo.CreatedAt.Unix()
+	}
+	if repo.PushedAt != nil {
+		msg.PushedAt = repo.PushedAt.Unix()
+	}
+	msg.HTMLURL = stringValue(repo.HTMLURL)
+	return msg
+}
+
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
 	if data == nil {
 		return &code.CodeDataSource{}
@@ -533,13 +584,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			FullScan:        req.FullScan,
-			RepositoryName:  *repo.FullName,
-		})
+		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, req.FullScan, repo))
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
@@ -615,12 +660,7 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			RepositoryName:  *repo.FullName,
-		})
+		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo))
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
@@ -697,12 +737,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			RepositoryName:  *repo.FullName,
-		})
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo))
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
