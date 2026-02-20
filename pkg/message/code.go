@@ -15,13 +15,28 @@ const (
 	CodeScanDataSource = "code:codescan"
 )
 
+type RepositoryMetadata struct {
+	Name       string `json:"name"`
+	FullName   string `json:"full_name"`
+	CloneURL   string `json:"clone_url"`
+	Visibility string `json:"visibility"`
+	Archived   bool   `json:"archived"`
+	Fork       bool   `json:"fork"`
+	Disabled   bool   `json:"disabled"`
+	Size       int64  `json:"size"`
+	CreatedAt  int64  `json:"created_at"`
+	PushedAt   int64  `json:"pushed_at"`
+	HTMLURL    string `json:"html_url"`
+}
+
 // CodeQueueMessage is the message for SQS queue
 type CodeQueueMessage struct {
-	GitHubSettingID uint32 `json:"github_setting_id"`
-	ProjectID       uint32 `json:"project_id"`
-	ScanOnly        bool   `json:"scan_only,string"`
-	FullScan        bool   `json:"full_scan,string"`
-	RepositoryName  string `json:"repository_name"`
+	GitHubSettingID uint32              `json:"github_setting_id"`
+	ProjectID       uint32              `json:"project_id"`
+	ScanOnly        bool                `json:"scan_only,string"`
+	FullScan        bool                `json:"full_scan,string"`
+	RepositoryName  string              `json:"repository_name"`
+	Repository      *RepositoryMetadata `json:"repository"`
 }
 
 // Validate is the validation to GuardDutyMessage

@@ -28,6 +28,63 @@ func sanitizeErrorMessage(err error) string {
 	return "An error occurred during the operation"
 }
 
+func boolValue(v *bool) bool {
+	if v == nil {
+		return false
+	}
+	return *v
+}
+
+func int64ValueFromInt(v *int) int64 {
+	if v == nil {
+		return 0
+	}
+	return int64(*v)
+}
+
+func stringValue(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func buildCodeQueueMessage(githubSettingID, projectID uint32, scanOnly, fullScan bool, repo *ghub.Repository) (*message.CodeQueueMessage, error) {
+	msg := &message.CodeQueueMessage{
+		GitHubSettingID: githubSettingID,
+		ProjectID:       projectID,
+		ScanOnly:        scanOnly,
+		FullScan:        fullScan,
+	}
+	if repo == nil {
+		return msg, nil
+	}
+	repository := &message.RepositoryMetadata{
+		Name:       stringValue(repo.Name),
+		FullName:   stringValue(repo.FullName),
+		CloneURL:   stringValue(repo.CloneURL),
+		Visibility: stringValue(repo.Visibility),
+		Archived:   boolValue(repo.Archived),
+		Fork:       boolValue(repo.Fork),
+		Disabled:   boolValue(repo.Disabled),
+		Size:       int64ValueFromInt(repo.Size),
+		HTMLURL:    stringValue(repo.HTMLURL),
+	}
+	if repository.FullName == "" {
+		return nil, fmt.Errorf("repository full name is empty: repo_id=%d", repo.GetID())
+	}
+	if repo.CreatedAt != nil {
+		repository.CreatedAt = repo.CreatedAt.Unix()
+	}
+	if repo.PushedAt != nil {
+		repository.PushedAt = repo.PushedAt.Unix()
+	}
+	msg.Repository = repository
+	// Keep legacy field until all handlers migrate to full_name.
+	msg.RepositoryName = repository.FullName
+	return msg, nil
+}
+
 func convertDataSource(data *model.CodeDataSource) *code.CodeDataSource {
 	if data == nil {
 		return &code.CodeDataSource{}
@@ -533,13 +590,13 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			FullScan:        req.FullScan,
-			RepositoryName:  *repo.FullName,
-		})
+		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, req.FullScan, repo)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to build gitleaks message: project_id=%d, github_setting_id=%d, repo_id=%v, err=%+v",
+				req.ProjectId, req.GithubSettingId, repo.ID, err)
+			return nil, err
+		}
+		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, msg)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
@@ -615,12 +672,13 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			RepositoryName:  *repo.FullName,
-		})
+		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to build dependency message: project_id=%d, github_setting_id=%d, repo_id=%v, err=%+v",
+				req.ProjectId, req.GithubSettingId, repo.ID, err)
+			return nil, err
+		}
+		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, msg)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
@@ -697,12 +755,13 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
 			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
 		}
-		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, &message.CodeQueueMessage{
-			GitHubSettingID: data.CodeGitHubSettingID,
-			ProjectID:       data.ProjectID,
-			ScanOnly:        req.ScanOnly,
-			RepositoryName:  *repo.FullName,
-		})
+		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo)
+		if err != nil {
+			c.logger.Errorf(ctx, "Failed to build codescan message: project_id=%d, github_setting_id=%d, repo_id=%v, err=%+v",
+				req.ProjectId, req.GithubSettingId, repo.ID, err)
+			return nil, err
+		}
+		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, msg)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
