@@ -65,6 +65,28 @@ func TestParseMessageGitHub(t *testing.T) {
 			want:  &CodeQueueMessage{GitHubSettingID: 1, ProjectID: 1, RepositoryName: "test-repo"},
 		},
 		{
+			name: "OK(repository_metadata)",
+			input: `{"github_setting_id":1, "project_id":1, "repository_name":"owner/repo", "repository":{"name":"repo", "full_name":"owner/repo", "clone_url":"https://github.com/owner/repo.git", "visibility":"public", "archived":false, "fork":false, "disabled":false, "size":123, "created_at":1700000000, "pushed_at":1700003600, "html_url":"https://github.com/owner/repo"}}`,
+			want: &CodeQueueMessage{
+				GitHubSettingID: 1,
+				ProjectID:       1,
+				RepositoryName:  "owner/repo",
+				Repository: &RepositoryMetadata{
+					Name:       "repo",
+					FullName:   "owner/repo",
+					CloneURL:   "https://github.com/owner/repo.git",
+					Visibility: "public",
+					Archived:   false,
+					Fork:       false,
+					Disabled:   false,
+					Size:       123,
+					CreatedAt:  1700000000,
+					PushedAt:   1700003600,
+					HTMLURL:    "https://github.com/owner/repo",
+				},
+			},
+		},
+		{
 			name:    "NG Json parse erroro",
 			input:   `{"parse...: error`,
 			wantErr: true,
