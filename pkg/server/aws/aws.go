@@ -205,11 +205,7 @@ func (a *AWSService) InvokeScan(ctx context.Context, req *aws.InvokeScanRequest)
 	case message.AWSAdminCheckerDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSAdminCheckerQueueURL, msg)
 	case message.AWSCloudSploitDataSource:
-		if ds.SpecificVersion == "" {
-			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
-		} else {
-			resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitOldQueueURL, msg)
-		}
+		resp, err = a.sqs.Send(ctx, a.sqs.AWSCloudSploitQueueURL, msg)
 	case message.AWSGuardDutyDataSource:
 		resp, err = a.sqs.Send(ctx, a.sqs.AWSGuardDutyQueueURL, msg)
 	case message.AWSPortscanDataSource:

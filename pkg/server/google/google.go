@@ -289,11 +289,7 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	case cloudAssetDataSourceID:
 		resp, err = g.sqs.Send(ctx, g.sqs.GoogleAssetQueueURL, msg)
 	case cloudSploitDataSourceID:
-		if data.SpecificVersion == "" {
-			resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitQueueURL, msg)
-		} else {
-			resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitOldQueueURL, msg)
-		}
+		resp, err = g.sqs.Send(ctx, g.sqs.GoogleCloudSploitQueueURL, msg)
 	case sccDataSourceID:
 		resp, err = g.sqs.Send(ctx, g.sqs.GoogleSCCQueueURL, msg)
 	case portscanDataSourceID:
