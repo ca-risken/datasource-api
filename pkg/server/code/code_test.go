@@ -1988,13 +1988,6 @@ func (g *FakeGithubClient) ListRepository(ctx context.Context, config *code.GitH
 	return g.repos, g.err
 }
 
-func (g *FakeGithubClient) ResolveToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
-	if config == nil {
-		return "", g.err
-	}
-	return config.PersonalAccessToken, g.err
-}
-
 func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL string, dstDir string) error {
 	return g.err
 }
