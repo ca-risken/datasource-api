@@ -16,17 +16,19 @@ const (
 )
 
 type RepositoryMetadata struct {
-	Name       string `json:"name"`
-	FullName   string `json:"full_name"`
-	CloneURL   string `json:"clone_url"`
-	Visibility string `json:"visibility"`
-	Archived   bool   `json:"archived"`
-	Fork       bool   `json:"fork"`
-	Disabled   bool   `json:"disabled"`
-	Size       int64  `json:"size"`
-	CreatedAt  int64  `json:"created_at"`
-	PushedAt   int64  `json:"pushed_at"`
-	HTMLURL    string `json:"html_url"`
+	ID            int64  `json:"id"`
+	Name          string `json:"name"`
+	FullName      string `json:"full_name"`
+	CloneURL      string `json:"clone_url"`
+	DefaultBranch string `json:"default_branch"`
+	Visibility    string `json:"visibility"`
+	Archived      bool   `json:"archived"`
+	Fork          bool   `json:"fork"`
+	Disabled      bool   `json:"disabled"`
+	Size          int64  `json:"size"`
+	CreatedAt     int64  `json:"created_at"`
+	PushedAt      int64  `json:"pushed_at"`
+	HTMLURL       string `json:"html_url"`
 }
 
 // CodeQueueMessage is the message for SQS queue
