@@ -53,9 +53,8 @@ type GitHubV3Client struct {
 }
 
 type AppAuthConfig struct {
-	AppID            string
-	PrivateKey       string
-	PrivateKeyBase64 string
+	AppID      string
+	PrivateKey string
 }
 
 type gitHubAppAuthenticator struct {
@@ -95,7 +94,7 @@ func newGitHubAppAuthenticator(cfg *AppAuthConfig) (*gitHubAppAuthenticator, err
 	if appID == "" {
 		return nil, nil
 	}
-	privateKey, err := parseGitHubAppPrivateKey(cfg.PrivateKey, cfg.PrivateKeyBase64)
+	privateKey, err := parseGitHubAppPrivateKey(cfg.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -112,15 +111,8 @@ func newGitHubAppAuthenticator(cfg *AppAuthConfig) (*gitHubAppAuthenticator, err
 	}, nil
 }
 
-func parseGitHubAppPrivateKey(rawKey, base64Key string) (*rsa.PrivateKey, error) {
+func parseGitHubAppPrivateKey(rawKey string) (*rsa.PrivateKey, error) {
 	keyText := strings.TrimSpace(rawKey)
-	if keyText == "" && strings.TrimSpace(base64Key) != "" {
-		decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(base64Key))
-		if err != nil {
-			return nil, fmt.Errorf("decode github app private key base64: %w", err)
-		}
-		keyText = string(decoded)
-	}
 	if keyText == "" {
 		return nil, nil
 	}

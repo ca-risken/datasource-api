@@ -65,7 +65,6 @@ type AppConf struct {
 	GithubDefaultToken        string `split_words:"true"`
 	GitHubAppID               string `split_words:"true"`
 	GitHubAppPrivateKey       string `split_words:"true"`
-	GitHubAppPrivateKeyBase64 string `split_words:"true"`
 	SlackAPIToken             string `split_words:"true"` // slack
 	AzureClientID             string `split_words:"true"` // azure
 	AzureTenantID             string `split_words:"true"` // azure
@@ -173,9 +172,8 @@ func main() {
 		logger.Fatalf(ctx, "Failed to create sqs client: %w", err)
 	}
 	githubAppAuth := &github.AppAuthConfig{
-		AppID:            conf.GitHubAppID,
-		PrivateKey:       conf.GitHubAppPrivateKey,
-		PrivateKeyBase64: conf.GitHubAppPrivateKeyBase64,
+		AppID:      conf.GitHubAppID,
+		PrivateKey: conf.GitHubAppPrivateKey,
 	}
 	s := server.NewServer(
 		conf.Port,
