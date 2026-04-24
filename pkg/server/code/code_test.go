@@ -1684,8 +1684,8 @@ func TestInvokeScanAll(t *testing.T) {
 			wantErr:           true,
 		},
 		{
-			name:                     "OK skip gitleaks on InvokeScanGitleaks error",
-			ProjectID:                1,
+			name:      "OK skip gitleaks on InvokeScanGitleaks error",
+			ProjectID: 1,
 			mockListGitleaksResponse: &[]model.CodeGitleaksSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			},
@@ -1720,14 +1720,14 @@ func TestInvokeScanAll(t *testing.T) {
 			},
 			mockListDependencyResponse: &[]model.CodeDependencySetting{},
 			mockListCodeScanResponse:   &[]model.CodeCodeScanSetting{},
-			mockIsActiveResponse:        &project.IsActiveResponse{Active: true},
-			mockGetGitleaksResponse:     &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			mockIsActiveResponse:       &project.IsActiveResponse{Active: true},
+			mockGetGitleaksResponse:    &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now,
 			},
-			mockGithubClient: newFakeGithubClient(nil, notFoundErr),
+			mockGithubClient:           newFakeGithubClient(nil, notFoundErr),
 			mockUpsertGitleaksResponse: &model.CodeGitleaksSetting{},
-			wantErr:         false,
+			wantErr:                    false,
 		},
 		{
 			name:      "OK skip gitleaks on github bad request error",
@@ -1742,9 +1742,9 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now,
 			},
-			mockGithubClient: newFakeGithubClient(nil, badRequestErr),
+			mockGithubClient:           newFakeGithubClient(nil, badRequestErr),
 			mockUpsertGitleaksResponse: &model.CodeGitleaksSetting{},
-			wantErr:         false,
+			wantErr:                    false,
 		},
 		{
 			name:                     "OK skip dependency on InvokeScanDependency error",
@@ -1992,3 +1992,37 @@ func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL str
 	return g.err
 }
 
+func TestBuildCodeQueueMessage(t *testing.T) {
+	repo := &ghub.Repository{
+		ID:            ghub.Int64(12345),
+		Name:          ghub.String("repo"),
+		FullName:      ghub.String("owner/repo"),
+		CloneURL:      ghub.String("https://github.com/owner/repo.git"),
+		DefaultBranch: ghub.String("main"),
+		Visibility:    ghub.String("private"),
+		Archived:      ghub.Bool(false),
+		Fork:          ghub.Bool(false),
+		Disabled:      ghub.Bool(false),
+		Size:          ghub.Int(123),
+		HTMLURL:       ghub.String("https://github.com/owner/repo"),
+		CreatedAt:     &ghub.Timestamp{Time: time.Unix(1700000000, 0)},
+		PushedAt:      &ghub.Timestamp{Time: time.Unix(1700003600, 0)},
+	}
+
+	msg, err := buildCodeQueueMessage(10, 20, true, false, repo)
+	if err != nil {
+		t.Fatalf("unexpected error: %+v", err)
+	}
+	if msg.Repository == nil {
+		t.Fatal("repository metadata is nil")
+	}
+	if msg.Repository.ID != 12345 {
+		t.Fatalf("unexpected repository id: %+v", msg.Repository.ID)
+	}
+	if msg.Repository.DefaultBranch != "main" {
+		t.Fatalf("unexpected default branch: %+v", msg.Repository.DefaultBranch)
+	}
+	if msg.RepositoryName != "owner/repo" {
+		t.Fatalf("unexpected repository name: %+v", msg.RepositoryName)
+	}
+}

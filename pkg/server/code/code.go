@@ -60,15 +60,17 @@ func buildCodeQueueMessage(githubSettingID, projectID uint32, scanOnly, fullScan
 		return msg, nil
 	}
 	repository := &message.RepositoryMetadata{
-		Name:       stringValue(repo.Name),
-		FullName:   stringValue(repo.FullName),
-		CloneURL:   stringValue(repo.CloneURL),
-		Visibility: stringValue(repo.Visibility),
-		Archived:   boolValue(repo.Archived),
-		Fork:       boolValue(repo.Fork),
-		Disabled:   boolValue(repo.Disabled),
-		Size:       int64ValueFromInt(repo.Size),
-		HTMLURL:    stringValue(repo.HTMLURL),
+		ID:            repo.GetID(),
+		Name:          stringValue(repo.Name),
+		FullName:      stringValue(repo.FullName),
+		CloneURL:      stringValue(repo.CloneURL),
+		DefaultBranch: stringValue(repo.DefaultBranch),
+		Visibility:    stringValue(repo.Visibility),
+		Archived:      boolValue(repo.Archived),
+		Fork:          boolValue(repo.Fork),
+		Disabled:      boolValue(repo.Disabled),
+		Size:          int64ValueFromInt(repo.Size),
+		HTMLURL:       stringValue(repo.HTMLURL),
 	}
 	if repository.FullName == "" {
 		return nil, fmt.Errorf("repository full name is empty: repo_id=%d", repo.GetID())
