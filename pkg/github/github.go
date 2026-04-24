@@ -304,6 +304,9 @@ func (g *riskenGitHubClient) listRepositoryForInstallation(ctx context.Context, 
 		if err != nil {
 			return nil, err
 		}
+		if resp == nil {
+			return nil, errors.New("github app list repositories response is nil")
+		}
 		repos := []*github.Repository{}
 		if repositories != nil {
 			repos = repositories.Repositories
@@ -441,7 +444,7 @@ func validateRepositoryBelongsToTarget(config *code.GitHubSetting, repoName stri
 		return fmt.Errorf("invalid repository name format: %s, expected 'owner/repo'", repoName)
 	}
 	owner := parts[0]
-	if owner != config.TargetResource {
+	if !strings.EqualFold(owner, config.TargetResource) {
 		return fmt.Errorf("repository %s does not belong to %s %s", repoName, config.Type.String(), config.TargetResource)
 	}
 	return nil
@@ -461,7 +464,7 @@ func (a *gitHubAppAuthenticator) createJWT(now time.Time) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("marshal github app jwt header: %w", err)
 	}
-	payloadJSON, err := json.Marshal(map[string]interface{}{
+	payloadJSON, err := json.Marshal(map[string]any{
 		"iat": now.Add(-1 * time.Minute).Unix(),
 		"exp": now.Add(9 * time.Minute).Unix(),
 		"iss": strconv.FormatInt(a.appID, 10),
