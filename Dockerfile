@@ -50,6 +50,10 @@ ENV PORT= \
     AZURE_CLIENT_ID= \
     AZURE_CLIENT_SECRET= \
     CODE_DATA_KEY= \
+    GITHUB_DEFAULT_TOKEN= \
+    GITHUB_APP_ID= \
+    GITHUB_APP_PRIVATE_KEY= \
+    GITHUB_APP_PRIVATE_KEY_BASE64= \
     TZ=Asia/Tokyo
 WORKDIR /usr/local/
 ENTRYPOINT ["/usr/local/bin/env-injector", "docker-entrypoint.sh"]

@@ -17,6 +17,13 @@ type fakeGitHubRepoService struct {
 	err   error
 }
 
+type fakeGitHubAppService struct {
+	installation *github.Installation
+	repositories *github.ListRepositories
+	resp         *github.Response
+	err          error
+}
+
 func makeGitHubRepository(name, login string) github.Repository {
 	return github.Repository{
 		Name: &name,
@@ -62,6 +69,22 @@ func (f *fakeGitHubRepoService) Get(ctx context.Context, owner, repo string) (*g
 		return f.repos[0], f.resp, f.err
 	}
 	return nil, f.resp, f.err
+}
+
+func (f *fakeGitHubAppService) FindOrganizationInstallation(ctx context.Context, org string) (*github.Installation, *github.Response, error) {
+	return f.installation, f.resp, f.err
+}
+
+func (f *fakeGitHubAppService) FindUserInstallation(ctx context.Context, user string) (*github.Installation, *github.Response, error) {
+	return f.installation, f.resp, f.err
+}
+
+func (f *fakeGitHubAppService) CreateInstallationToken(ctx context.Context, id int64, opts *github.InstallationTokenOptions) (*github.InstallationToken, *github.Response, error) {
+	return nil, f.resp, f.err
+}
+
+func (f *fakeGitHubAppService) ListRepos(ctx context.Context, opts *github.ListOptions) (*github.ListRepositories, *github.Response, error) {
+	return f.repositories, f.resp, f.err
 }
 
 func Test_listRepositoryForUserWithOption(t *testing.T) {
@@ -262,5 +285,107 @@ func TestGetSingleRepository(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestFindInstallation(t *testing.T) {
+	cases := []struct {
+		name          string
+		config        *code.GitHubSetting
+		appSvc        GitHubAppService
+		wantID        int64
+		wantError     bool
+		expectedError string
+	}{
+		{
+			name: "OK organization",
+			config: &code.GitHubSetting{
+				Type:           code.Type_ORGANIZATION,
+				TargetResource: "ca-risken",
+			},
+			appSvc: &fakeGitHubAppService{
+				installation: &github.Installation{ID: github.Int64(10)},
+			},
+			wantID: 10,
+		},
+		{
+			name: "OK user",
+			config: &code.GitHubSetting{
+				Type:           code.Type_USER,
+				TargetResource: "octocat",
+			},
+			appSvc: &fakeGitHubAppService{
+				installation: &github.Installation{ID: github.Int64(20)},
+			},
+			wantID: 20,
+		},
+		{
+			name: "NG unsupported type",
+			config: &code.GitHubSetting{
+				Type:           code.Type_UNKNOWN_TYPE,
+				TargetResource: "octocat",
+			},
+			appSvc:        &fakeGitHubAppService{},
+			wantError:     true,
+			expectedError: "does not support type",
+		},
+		{
+			name: "NG github api error",
+			config: &code.GitHubSetting{
+				Type:           code.Type_ORGANIZATION,
+				TargetResource: "ca-risken",
+			},
+			appSvc: &fakeGitHubAppService{
+				err: errors.New("github app error"),
+			},
+			wantError:     true,
+			expectedError: "find organization installation",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			client := NewGithubClient("token", logging.NewLogger())
+			got, err := client.findInstallation(context.Background(), c.appSvc, c.config)
+			if c.wantError {
+				if err == nil {
+					t.Fatal("expected error but got nil")
+				}
+				if !strings.Contains(err.Error(), c.expectedError) {
+					t.Fatalf("expected error to contain %q, got %v", c.expectedError, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got.GetID() != c.wantID {
+				t.Fatalf("unexpected installation id: want=%d got=%d", c.wantID, got.GetID())
+			}
+		})
+	}
+}
+
+func TestFilterRepositoriesByOwner(t *testing.T) {
+	repos := []*github.Repository{
+		{
+			Name:     github.String("repo1"),
+			FullName: github.String("owner/repo1"),
+			Owner:    &github.User{Login: github.String("owner")},
+		},
+		{
+			Name:     github.String("repo2"),
+			FullName: github.String("other/repo2"),
+			Owner:    &github.User{Login: github.String("other")},
+		},
+		nil,
+	}
+
+	got := filterRepositoriesByOwner(repos, "owner")
+	if len(got) != 1 {
+		t.Fatalf("unexpected repository count: got=%d", len(got))
+	}
+	if got[0].GetFullName() != "owner/repo1" {
+		t.Fatalf("unexpected repository: %+v", got[0])
 	}
 }
