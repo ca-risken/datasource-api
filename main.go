@@ -60,15 +60,15 @@ type AppConf struct {
 	AzureProwlerQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/azure-prowler"`
 
 	// datasource
-	GoogleCredentialPath      string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
-	CodeDataKey               string `split_words:"true" required:"true"`                                // code
-	GithubDefaultToken        string `split_words:"true"`
-	GitHubAppID               string `split_words:"true"`
-	GitHubAppPrivateKey       string `split_words:"true"`
-	SlackAPIToken             string `split_words:"true"` // slack
-	AzureClientID             string `split_words:"true"` // azure
-	AzureTenantID             string `split_words:"true"` // azure
-	AzureClientSecret         string `split_words:"true"` // azure
+	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
+	CodeDataKey          string `split_words:"true" required:"true"`                                // code
+	GithubDefaultToken   string `split_words:"true"`
+	GitHubAppID          string `envconfig:"github_app_id"`
+	GitHubAppPrivateKey  string `envconfig:"github_app_private_key"`
+	SlackAPIToken        string `split_words:"true"` // slack
+	AzureClientID        string `split_words:"true"` // azure
+	AzureTenantID        string `split_words:"true"` // azure
+	AzureClientSecret    string `split_words:"true"` // azure
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`

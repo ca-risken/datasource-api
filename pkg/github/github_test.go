@@ -22,10 +22,13 @@ type fakeGitHubRepoService struct {
 }
 
 type fakeGitHubAppService struct {
-	installation *github.Installation
-	repositories *github.ListRepositories
-	resp         *github.Response
-	err          error
+	installation                   *github.Installation
+	installationToken              *github.InstallationToken
+	createInstallationTokenID      int64
+	createInstallationTokenOptions *github.InstallationTokenOptions
+	repositories                   *github.ListRepositories
+	resp                           *github.Response
+	err                            error
 }
 
 func makeGitHubRepository(name, login string) github.Repository {
@@ -84,7 +87,9 @@ func (f *fakeGitHubAppService) FindUserInstallation(ctx context.Context, user st
 }
 
 func (f *fakeGitHubAppService) CreateInstallationToken(ctx context.Context, id int64, opts *github.InstallationTokenOptions) (*github.InstallationToken, *github.Response, error) {
-	return nil, f.resp, f.err
+	f.createInstallationTokenID = id
+	f.createInstallationTokenOptions = opts
+	return f.installationToken, f.resp, f.err
 }
 
 func (f *fakeGitHubAppService) ListRepos(ctx context.Context, opts *github.ListOptions) (*github.ListRepositories, *github.Response, error) {
