@@ -2,12 +2,16 @@ package github
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/code"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-github/v44/github"
 )
 
@@ -363,6 +367,64 @@ func TestFindInstallation(t *testing.T) {
 				t.Fatalf("unexpected installation id: want=%d got=%d", c.wantID, got.GetID())
 			}
 		})
+	}
+}
+
+func TestInstallationTokenOptions(t *testing.T) {
+	t.Run("nil when repoName is empty", func(t *testing.T) {
+		if got := installationTokenOptions(""); got != nil {
+			t.Fatalf("expected nil options, got %+v", got)
+		}
+	})
+
+	t.Run("scopes token to repository name", func(t *testing.T) {
+		got := installationTokenOptions("owner/repo")
+		if got == nil {
+			t.Fatal("expected options, got nil")
+		}
+		if len(got.Repositories) != 1 || got.Repositories[0] != "repo" {
+			t.Fatalf("unexpected repositories: %+v", got.Repositories)
+		}
+	})
+}
+
+func TestCreateJWT(t *testing.T) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("generate private key: %v", err)
+	}
+	now := time.Now()
+	auth := &gitHubAppAuthenticator{
+		appID:      12345,
+		privateKey: privateKey,
+	}
+
+	signedToken, err := auth.createJWT(now)
+	if err != nil {
+		t.Fatalf("createJWT() error = %v", err)
+	}
+
+	claims := jwt.MapClaims{}
+	parsedToken, err := jwt.ParseWithClaims(signedToken, claims, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodRS256 {
+			t.Fatalf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return &privateKey.PublicKey, nil
+	})
+	if err != nil {
+		t.Fatalf("parse signed token: %v", err)
+	}
+	if !parsedToken.Valid {
+		t.Fatal("expected valid token")
+	}
+	if claims["iss"] != "12345" {
+		t.Fatalf("unexpected issuer: %v", claims["iss"])
+	}
+	if int64(claims["iat"].(float64)) != now.Add(-1*time.Minute).Unix() {
+		t.Fatalf("unexpected issued at: %v", claims["iat"])
+	}
+	if int64(claims["exp"].(float64)) != now.Add(9*time.Minute).Unix() {
+		t.Fatalf("unexpected expiration: %v", claims["exp"])
 	}
 }
 

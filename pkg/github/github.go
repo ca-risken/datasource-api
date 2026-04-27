@@ -2,13 +2,8 @@ package github
 
 import (
 	"context"
-	"crypto"
-	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -22,6 +17,7 @@ import (
 	"github.com/cenkalti/backoff/v4"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/go-github/v44/github"
 	"golang.org/x/oauth2"
 )
@@ -267,7 +263,7 @@ func (g *riskenGitHubClient) resolveInstallationToken(ctx context.Context, confi
 	if err != nil {
 		return "", err
 	}
-	token, _, err := appClient.Apps.CreateInstallationToken(ctx, installation.GetID(), nil)
+	token, _, err := appClient.Apps.CreateInstallationToken(ctx, installation.GetID(), installationTokenOptions(repoName))
 	if err != nil {
 		return "", fmt.Errorf("create installation token: %w", err)
 	}
@@ -275,6 +271,19 @@ func (g *riskenGitHubClient) resolveInstallationToken(ctx context.Context, confi
 		return "", errors.New("installation token is empty")
 	}
 	return token.GetToken(), nil
+}
+
+func installationTokenOptions(repoName string) *github.InstallationTokenOptions {
+	if repoName == "" {
+		return nil
+	}
+	parts := strings.Split(repoName, "/")
+	if len(parts) != 2 {
+		return nil
+	}
+	return &github.InstallationTokenOptions{
+		Repositories: []string{parts[1]},
+	}
 }
 
 func (g *riskenGitHubClient) findInstallation(ctx context.Context, appSvc GitHubAppService, config *code.GitHubSetting) (*github.Installation, error) {
@@ -457,26 +466,14 @@ func (t *riskenGitHubClient) newRetryLogger(ctx context.Context, funcName string
 }
 
 func (a *gitHubAppAuthenticator) createJWT(now time.Time) (string, error) {
-	headerJSON, err := json.Marshal(map[string]string{
-		"alg": "RS256",
-		"typ": "JWT",
-	})
-	if err != nil {
-		return "", fmt.Errorf("marshal github app jwt header: %w", err)
-	}
-	payloadJSON, err := json.Marshal(map[string]any{
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.MapClaims{
 		"iat": now.Add(-1 * time.Minute).Unix(),
 		"exp": now.Add(9 * time.Minute).Unix(),
 		"iss": strconv.FormatInt(a.appID, 10),
 	})
-	if err != nil {
-		return "", fmt.Errorf("marshal github app jwt payload: %w", err)
-	}
-	signingInput := base64.RawURLEncoding.EncodeToString(headerJSON) + "." + base64.RawURLEncoding.EncodeToString(payloadJSON)
-	sum := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, a.privateKey, crypto.SHA256, sum[:])
+	signedToken, err := token.SignedString(a.privateKey)
 	if err != nil {
 		return "", fmt.Errorf("sign github app jwt: %w", err)
 	}
-	return signingInput + "." + base64.RawURLEncoding.EncodeToString(signature), nil
+	return signedToken, nil
 }
