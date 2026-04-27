@@ -293,11 +293,17 @@ func (g *riskenGitHubClient) findInstallation(ctx context.Context, appSvc GitHub
 		if err != nil {
 			return nil, fmt.Errorf("find organization installation for %s: %w", config.TargetResource, err)
 		}
+		if installation == nil {
+			return nil, fmt.Errorf("find organization installation for %s: installation is nil", config.TargetResource)
+		}
 		return installation, nil
 	case code.Type_USER:
 		installation, _, err := appSvc.FindUserInstallation(ctx, config.TargetResource)
 		if err != nil {
 			return nil, fmt.Errorf("find user installation for %s: %w", config.TargetResource, err)
+		}
+		if installation == nil {
+			return nil, fmt.Errorf("find user installation for %s: installation is nil", config.TargetResource)
 		}
 		return installation, nil
 	default:
@@ -319,6 +325,8 @@ func (g *riskenGitHubClient) listRepositoryForInstallation(ctx context.Context, 
 		repos := []*github.Repository{}
 		if repositories != nil {
 			repos = repositories.Repositories
+		} else {
+			g.logger.Warnf(ctx, "github app list repositories returned nil repositories: target_resource=%s, option=%+v, response=%+v", targetResource, opt, resp)
 		}
 		if targetResource != "" {
 			repos = filterRepositoriesByOwner(repos, targetResource)

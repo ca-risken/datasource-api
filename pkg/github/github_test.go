@@ -334,6 +334,26 @@ func TestFindInstallation(t *testing.T) {
 			expectedError: "does not support type",
 		},
 		{
+			name: "NG nil organization installation",
+			config: &code.GitHubSetting{
+				Type:           code.Type_ORGANIZATION,
+				TargetResource: "ca-risken",
+			},
+			appSvc:        &fakeGitHubAppService{},
+			wantError:     true,
+			expectedError: "installation is nil",
+		},
+		{
+			name: "NG nil user installation",
+			config: &code.GitHubSetting{
+				Type:           code.Type_USER,
+				TargetResource: "octocat",
+			},
+			appSvc:        &fakeGitHubAppService{},
+			wantError:     true,
+			expectedError: "installation is nil",
+		},
+		{
 			name: "NG github api error",
 			config: &code.GitHubSetting{
 				Type:           code.Type_ORGANIZATION,
