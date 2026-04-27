@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/ca-risken/datasource-api/pkg/attackflow"
 	"github.com/ca-risken/datasource-api/proto/datasource"
 )
@@ -37,6 +38,18 @@ func TestGetS3ARNFromDomain(t *testing.T) {
 				t.Errorf("Unexpected response: want=%+v, got=%+v", c.want, got)
 			}
 		})
+	}
+}
+
+func TestBoolValue(t *testing.T) {
+	if !boolValue(true) {
+		t.Fatal("expected true bool to be true")
+	}
+	if !boolValue(aws.Bool(true)) {
+		t.Fatal("expected true bool pointer to be true")
+	}
+	if boolValue((*bool)(nil)) {
+		t.Fatal("expected nil bool pointer to be false")
 	}
 }
 
