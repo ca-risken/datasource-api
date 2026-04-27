@@ -115,7 +115,7 @@ func (s *s3Analyzer) Analyze(ctx context.Context, resp *datasource.AnalyzeAttack
 		s.metadata.Encryption = fmt.Sprint(rule.ApplyServerSideEncryptionByDefault.SSEAlgorithm)
 		break
 	}
-	s.metadata.IsPublic = policyStatus.PolicyStatus != nil && policyStatus.PolicyStatus.IsPublic
+	s.metadata.IsPublic = policyStatus.PolicyStatus != nil && aws.ToBool(policyStatus.PolicyStatus.IsPublic)
 	s.metadata.Versioning = versioning.Status == types.BucketVersioningStatusEnabled
 	for _, config := range notification.LambdaFunctionConfigurations {
 		s.metadata.LambdaConfiguration = append(s.metadata.LambdaConfiguration, aws.ToString(config.LambdaFunctionArn))
