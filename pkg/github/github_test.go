@@ -395,6 +395,22 @@ func TestFindInstallation(t *testing.T) {
 	}
 }
 
+func TestResolveAccessTokenDoesNotFallbackToGitHubApp(t *testing.T) {
+	client := &riskenGitHubClient{
+		defaultToken: "default-token",
+		appAuth:      &gitHubAppAuthenticator{},
+	}
+	config := &code.GitHubSetting{}
+
+	got, err := client.resolveAccessToken(context.Background(), config, "")
+	if err != nil {
+		t.Fatalf("resolveAccessToken() error = %v", err)
+	}
+	if got != "default-token" {
+		t.Fatalf("unexpected token: want=%q got=%q", "default-token", got)
+	}
+}
+
 func TestInstallationTokenOptions(t *testing.T) {
 	t.Run("nil when repoName is empty", func(t *testing.T) {
 		if got := installationTokenOptions(""); got != nil {
