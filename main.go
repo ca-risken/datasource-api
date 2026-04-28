@@ -8,6 +8,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	"github.com/ca-risken/common/pkg/tracer"
 	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	"github.com/ca-risken/datasource-api/pkg/server"
 	"github.com/gassara-kys/envconfig"
@@ -61,10 +62,13 @@ type AppConf struct {
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey          string `split_words:"true" required:"true"`                                // code
-	SlackAPIToken        string `split_words:"true"`                                                // slack
-	AzureClientID        string `split_words:"true"`                                                // azure
-	AzureTenantID        string `split_words:"true"`                                                // azure
-	AzureClientSecret    string `split_words:"true"`                                                // azure
+	GithubDefaultToken   string `split_words:"true"`
+	GithubAppID          string `split_words:"true"`
+	GithubAppPrivateKey  string `split_words:"true"`
+	SlackAPIToken        string `split_words:"true"` // slack
+	AzureClientID        string `split_words:"true"` // azure
+	AzureTenantID        string `split_words:"true"` // azure
+	AzureClientSecret    string `split_words:"true"` // azure
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -167,12 +171,18 @@ func main() {
 	if err != nil {
 		logger.Fatalf(ctx, "Failed to create sqs client: %w", err)
 	}
+	githubAppAuth := &github.AppAuthConfig{
+		AppID:      conf.GithubAppID,
+		PrivateKey: conf.GithubAppPrivateKey,
+	}
 	s := server.NewServer(
 		conf.Port,
 		conf.CoreSvcAddr,
 		conf.AWSRegion,
 		conf.GoogleCredentialPath,
 		conf.CodeDataKey,
+		conf.GithubDefaultToken,
+		githubAppAuth,
 		d,
 		q,
 		conf.BaseURL,

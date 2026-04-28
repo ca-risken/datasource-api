@@ -16,6 +16,7 @@ import (
 	azureClient "github.com/ca-risken/datasource-api/pkg/azure"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/gcp"
+	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
 	azureServer "github.com/ca-risken/datasource-api/pkg/server/azure"
@@ -42,34 +43,38 @@ import (
 )
 
 type Server struct {
-	port                 string
-	coreSvcAddr          string
-	awsRegion            string
-	googleCredentialPath string
-	dataKey              string
-	db                   *db.Client
-	queue                *queue.Client
-	baseURL              string
-	defaultLocale        string
-	slackAPIToken        string
+	port                  string
+	coreSvcAddr           string
+	awsRegion             string
+	googleCredentialPath  string
+	dataKey               string
+	githubDefaultToken    string
+	githubAppAuth         *github.AppAuthConfig
+	db                    *db.Client
+	queue                 *queue.Client
+	baseURL               string
+	defaultLocale         string
+	slackAPIToken         string
 	limitRepositorySizeKb int
-	logger               logging.Logger
+	logger                logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, limitRepositorySizeKb int, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey, githubDefaultToken string, githubAppAuth *github.AppAuthConfig, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, limitRepositorySizeKb int, logger logging.Logger) *Server {
 	return &Server{
-		port:                 port,
-		coreSvcAddr:          coreSvcAddr,
-		awsRegion:            awsRegion,
-		googleCredentialPath: googleCredentialPath,
-		dataKey:              dataKey,
-		db:                   db,
-		queue:                q,
-		baseURL:              url,
-		defaultLocale:        defaultLocale,
-		slackAPIToken:        slackAPIToken,
+		port:                  port,
+		coreSvcAddr:           coreSvcAddr,
+		awsRegion:             awsRegion,
+		googleCredentialPath:  googleCredentialPath,
+		dataKey:               dataKey,
+		githubDefaultToken:    githubDefaultToken,
+		githubAppAuth:         githubAppAuth,
+		db:                    db,
+		queue:                 q,
+		baseURL:               url,
+		defaultLocale:         defaultLocale,
+		slackAPIToken:         slackAPIToken,
 		limitRepositorySizeKb: limitRepositorySizeKb,
-		logger:               logger,
+		logger:                logger,
 	}
 }
 
@@ -99,7 +104,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
-	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.limitRepositorySizeKb, s.logger)
+	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.db, s.queue, pjClient, s.githubDefaultToken, s.githubAppAuth, s.limitRepositorySizeKb, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create code service: %w", err)
 	}
