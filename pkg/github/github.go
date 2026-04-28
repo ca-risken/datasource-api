@@ -395,7 +395,7 @@ func (g *riskenGitHubClient) listRepositoryForUserWithOption(ctx context.Context
 
 		for _, r := range repos {
 			// Filter repositories by user owner
-			if r.Owner != nil && r.Owner.Login != nil && *r.Owner.Login == login {
+			if r.Owner != nil && r.Owner.Login != nil && strings.EqualFold(*r.Owner.Login, login) {
 				allRepo = append(allRepo, r)
 			}
 		}

@@ -63,8 +63,8 @@ type AppConf struct {
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey          string `split_words:"true" required:"true"`                                // code
 	GithubDefaultToken   string `split_words:"true"`
-	GitHubAppID          string `envconfig:"github_app_id"`
-	GitHubAppPrivateKey  string `envconfig:"github_app_private_key"`
+	GithubAppID          string `split_words:"true"`
+	GithubAppPrivateKey  string `split_words:"true"`
 	SlackAPIToken        string `split_words:"true"` // slack
 	AzureClientID        string `split_words:"true"` // azure
 	AzureTenantID        string `split_words:"true"` // azure
@@ -172,8 +172,8 @@ func main() {
 		logger.Fatalf(ctx, "Failed to create sqs client: %w", err)
 	}
 	githubAppAuth := &github.AppAuthConfig{
-		AppID:      conf.GitHubAppID,
-		PrivateKey: conf.GitHubAppPrivateKey,
+		AppID:      conf.GithubAppID,
+		PrivateKey: conf.GithubAppPrivateKey,
 	}
 	s := server.NewServer(
 		conf.Port,
