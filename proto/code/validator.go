@@ -7,6 +7,11 @@ import (
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 )
 
+const (
+	GitHubAuthModePersonalAccessToken = "PERSONAL_ACCESS_TOKEN"
+	GitHubAuthModeGitHubApp           = "GITHUB_APP"
+)
+
 // validateRepositoryName validates repository name format (owner/repo)
 
 // Validate ListDataSourceRequest
@@ -182,7 +187,8 @@ func (g *GitHubSettingForUpsert) Validate() error {
 		validation.Field(&g.TargetResource, validation.Required, validation.Length(0, 128)),
 		validation.Field(&g.GithubUser, validation.Length(0, 64)),
 		validation.Field(&g.PersonalAccessToken, validation.Length(0, 255)),
-		validation.Field(&g.AuthMode, validation.Length(0, 32)),
+		validation.Field(&g.AuthMode, validation.Length(0, 32), validation.In("", GitHubAuthModePersonalAccessToken, GitHubAuthModeGitHubApp)),
+		validation.Field(&g.InstallationId, validation.When(g.AuthMode == GitHubAuthModeGitHubApp, validation.Required)),
 	)
 }
 

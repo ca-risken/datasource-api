@@ -593,6 +593,18 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 			},
 		},
 		{
+			name: "OK auth mode personal access token",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: GitHubAuthModePersonalAccessToken,
+			},
+		},
+		{
+			name: "OK auth mode github app",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: GitHubAuthModeGitHubApp, InstallationId: 12345,
+			},
+		},
+		{
 			name: "NG Length(name)",
 			input: &GitHubSettingForUpsert{
 				Name: stringLength65, ProjectId: 1, Type: Type_ORGANIZATION, BaseUrl: "https://api.github.com/", TargetResource: "target", GithubUser: "user", PersonalAccessToken: "xxx",
@@ -645,6 +657,20 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 			name: "NG Length(personal_access_token)",
 			input: &GitHubSettingForUpsert{
 				Name: "name", ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: stringLength256,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Invalid(auth_mode)",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: "invalid",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(installation_id for github app)",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: GitHubAuthModeGitHubApp,
 			},
 			wantErr: true,
 		},
