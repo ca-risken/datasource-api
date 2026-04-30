@@ -22,12 +22,31 @@ type CodeGitHubSetting struct {
 	TargetResource      string
 	GitHubUser          string `gorm:"column:github_user"`
 	PersonalAccessToken string
+	InstallationID      *uint64 `gorm:"column:installation_id"`
+	AuthMode            string  `gorm:"column:auth_mode"`
+	VerificationStatus  string  `gorm:"column:verification_status"`
+	VerifiedGitHubUser  string  `gorm:"column:verified_github_user"`
+	VerifiedAt          time.Time
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
 
 func (CodeGitHubSetting) TableName() string {
 	return "code_github_setting"
+}
+
+// GitHubAppSettingRepository entity
+type GitHubAppSettingRepository struct {
+	GitHubAppSettingRepositoryID uint32 `gorm:"primary_key;column:ghapp_setting_repository_id"`
+	CodeGitHubSettingID          uint32 `gorm:"column:code_github_setting_id"`
+	GitHubRepositoryID           uint64 `gorm:"column:github_repository_id"`
+	GitHubRepositoryFullName     string `gorm:"column:github_repository_full_name"`
+	CreatedAt                    time.Time
+	UpdatedAt                    time.Time
+}
+
+func (GitHubAppSettingRepository) TableName() string {
+	return "ghapp_setting_repository"
 }
 
 // CodeGitleaksSetting entity
