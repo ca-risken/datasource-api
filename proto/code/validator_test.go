@@ -708,6 +708,59 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 	}
 }
 
+func TestValidate_GitHubAppSettingRepositoryForUpsert(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *GitHubAppSettingRepositoryForUpsert
+		wantErr bool
+	}{
+		{
+			name: "OK",
+			input: &GitHubAppSettingRepositoryForUpsert{
+				GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: "org/repo",
+			},
+		},
+		{
+			name: "NG Required(github_setting_id)",
+			input: &GitHubAppSettingRepositoryForUpsert{
+				GithubRepositoryId: 12345, GithubRepositoryFullName: "org/repo",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(github_repository_id)",
+			input: &GitHubAppSettingRepositoryForUpsert{
+				GithubSettingId: 1, GithubRepositoryFullName: "org/repo",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Required(github_repository_full_name)",
+			input: &GitHubAppSettingRepositoryForUpsert{
+				GithubSettingId: 1, GithubRepositoryId: 12345,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG Length(github_repository_full_name)",
+			input: &GitHubAppSettingRepositoryForUpsert{
+				GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: stringLength256,
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_GitleaksSettingForUpsert(t *testing.T) {
 	now := time.Now()
 	cases := []struct {
