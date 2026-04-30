@@ -122,9 +122,6 @@ message GitHubSettingForUpsert {
   string target_resource = 8;
   string auth_mode = 9;
   uint64 installation_id = 10;
-  string verification_status = 11;
-  string verified_github_user = 12;
-  int64 verified_at = 13;
 }
 
 // GitHubAppSettingRepository
