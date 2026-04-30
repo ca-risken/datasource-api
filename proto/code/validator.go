@@ -182,6 +182,19 @@ func (g *GitHubSettingForUpsert) Validate() error {
 		validation.Field(&g.TargetResource, validation.Required, validation.Length(0, 128)),
 		validation.Field(&g.GithubUser, validation.Length(0, 64)),
 		validation.Field(&g.PersonalAccessToken, validation.Length(0, 255)),
+		validation.Field(&g.AuthMode, validation.Length(0, 32)),
+		validation.Field(&g.VerificationStatus, validation.Length(0, 32)),
+		validation.Field(&g.VerifiedGithubUser, validation.Length(0, 64)),
+		validation.Field(&g.VerifiedAt, validation.Min(0), validation.Max(253402268399)), //  1970-01-01T00:00:00 ~ 9999-12-31T23:59:59
+	)
+}
+
+// Validate GitHubAppSettingRepositoryForUpsert
+func (g *GitHubAppSettingRepositoryForUpsert) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.GithubSettingId, validation.Required),
+		validation.Field(&g.GithubRepositoryId, validation.Required),
+		validation.Field(&g.GithubRepositoryFullName, validation.Required, validation.Length(0, 255)),
 	)
 }
 
