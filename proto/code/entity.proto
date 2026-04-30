@@ -129,20 +129,18 @@ message GitHubSettingForUpsert {
 
 // GitHubAppSettingRepository
 message GitHubAppSettingRepository {
-  uint32 github_app_setting_repository_id = 1;
-  uint32 github_setting_id = 2;
-  uint64 github_repository_id = 3;
-  string github_repository_full_name = 4;
-  int64 created_at = 5;
-  int64 updated_at = 6;
+  uint32 github_setting_id = 1;
+  uint64 github_repository_id = 2;
+  string github_repository_full_name = 3;
+  int64 created_at = 4;
+  int64 updated_at = 5;
 }
 
 // GitHubAppSettingRepositoryForUpsert
 message GitHubAppSettingRepositoryForUpsert {
-  uint32 github_app_setting_repository_id = 1;
-  uint32 github_setting_id = 2;
-  uint64 github_repository_id = 3;
-  string github_repository_full_name = 4;
+  uint32 github_setting_id = 1;
+  uint64 github_repository_id = 2;
+  string github_repository_full_name = 3;
 }
 
 // GitleaksSettingForUpsert
