@@ -186,9 +186,17 @@ func (g *GitHubSettingForUpsert) Validate() error {
 		validation.Field(&g.BaseUrl, validation.Length(0, 128), is.URL),
 		validation.Field(&g.TargetResource, validation.Required, validation.Length(0, 128)),
 		validation.Field(&g.GithubUser, validation.Length(0, 64)),
-		validation.Field(&g.PersonalAccessToken, validation.Length(0, 255)),
+		validation.Field(
+			&g.PersonalAccessToken,
+			validation.Length(0, 255),
+			validation.When(g.AuthMode == GitHubAuthModeGitHubApp, validation.Empty),
+		),
 		validation.Field(&g.AuthMode, validation.Length(0, 32), validation.In("", GitHubAuthModePersonalAccessToken, GitHubAuthModeGitHubApp)),
-		validation.Field(&g.InstallationId, validation.When(g.AuthMode == GitHubAuthModeGitHubApp, validation.Required)),
+		validation.Field(
+			&g.InstallationId,
+			validation.When(g.AuthMode == GitHubAuthModeGitHubApp, validation.Required),
+			validation.When(g.AuthMode == "" || g.AuthMode == GitHubAuthModePersonalAccessToken, validation.Empty),
+		),
 	)
 }
 

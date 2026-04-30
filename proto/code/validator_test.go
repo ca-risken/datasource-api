@@ -674,6 +674,27 @@ func TestValidate_GitHubSettingForUpsert(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "NG PersonalAccessToken with github app",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: GitHubAuthModeGitHubApp, InstallationId: 12345, PersonalAccessToken: "xxx",
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG InstallationId with personal access token",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", AuthMode: GitHubAuthModePersonalAccessToken, InstallationId: 12345,
+			},
+			wantErr: true,
+		},
+		{
+			name: "NG InstallationId without auth mode",
+			input: &GitHubSettingForUpsert{
+				ProjectId: 1, Type: Type_ORGANIZATION, TargetResource: "target", InstallationId: 12345,
+			},
+			wantErr: true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
