@@ -32,6 +32,12 @@ message GitHubSetting {
   GitleaksSetting gitleaks_setting = 11;
   DependencySetting dependency_setting = 12;
   CodeScanSetting code_scan_setting = 13;
+  string auth_mode = 14;
+  uint64 installation_id = 15;
+  string verification_status = 16;
+  string verified_github_user = 17;
+  int64 verified_at = 18;
+  repeated GitHubAppSettingRepository github_app_setting_repository = 19;
 }
 
 // GitleaksSetting
@@ -114,6 +120,24 @@ message GitHubSettingForUpsert {
   Type type = 6;
   string base_url = 7;
   string target_resource = 8;
+  string auth_mode = 9;
+  uint64 installation_id = 10;
+}
+
+// GitHubAppSettingRepository
+message GitHubAppSettingRepository {
+  uint32 github_setting_id = 1;
+  uint64 github_repository_id = 2;
+  string github_repository_full_name = 3;
+  int64 created_at = 4;
+  int64 updated_at = 5;
+}
+
+// GitHubAppSettingRepositoryForUpsert
+message GitHubAppSettingRepositoryForUpsert {
+  uint32 github_setting_id = 1;
+  uint64 github_repository_id = 2;
+  string github_repository_full_name = 3;
 }
 
 // GitleaksSettingForUpsert
