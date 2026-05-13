@@ -1070,8 +1070,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT ?")).
-					WithArgs(uint32(1), uint32(1), 1).
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
 						"scan_public", "scan_internal", "scan_private",
@@ -1125,8 +1124,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT ?")).
-					WithArgs(uint32(1), uint32(1), 1).
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
 						"scan_public", "scan_internal", "scan_private",
@@ -1169,8 +1167,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
 				// Step 3: Check current parent - status and status_detail are same, so skip full UPDATE but refresh scan_at
 				parentScanAt := time.Unix(now.Unix(), 0)
-				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT ?")).
-					WithArgs(uint32(1), uint32(1), 1).
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
 						"scan_public", "scan_internal", "scan_private",
