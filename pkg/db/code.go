@@ -117,10 +117,30 @@ func (c *Client) GetGitHubSetting(ctx context.Context, projectID uint32, githubS
 }
 
 func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if data.AuthMode == code.GitHubAuthModeGitHubApp {
+		return c.UpsertGitHubAppSetting(ctx, data)
+	}
+	if data.AuthMode == code.GitHubAuthModePersonalAccessToken {
+		return c.UpsertGitHubPATSetting(ctx, data)
+	}
 	if data.PersonalAccessToken != "" {
 		return c.UpsertGitHubSettingWithToken(ctx, data)
 	}
 	return c.UpsertGitHubSettingWithoutToken(ctx, data)
+}
+
+func convertInstallationIDToNull(installationID uint64) interface{} {
+	if installationID == 0 {
+		return nil
+	}
+	return installationID
+}
+
+func convertPersonalAccessTokenToNil(personalAccessToken string) interface{} {
+	if personalAccessToken == "" {
+		return nil
+	}
+	return personalAccessToken
 }
 
 const upsertGitHubWithToken = `
@@ -161,6 +181,50 @@ func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.Gi
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
+const upsertGitHubAppAuth = `
+INSERT INTO code_github_setting (
+  code_github_setting_id,
+  name,
+  project_id,
+  type,
+  base_url,
+  target_resource,
+  github_user,
+  personal_access_token,
+  installation_id,
+  auth_mode
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	code_github_setting_id=VALUES(code_github_setting_id),
+	name=VALUES(name),
+	project_id=VALUES(project_id),
+	type=VALUES(type),
+	base_url=VALUES(base_url),
+	target_resource=VALUES(target_resource),
+	github_user=VALUES(github_user),
+	personal_access_token=VALUES(personal_access_token),
+	installation_id=VALUES(installation_id),
+	auth_mode=VALUES(auth_mode)
+`
+
+func (c *Client) UpsertGitHubAppSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubAppAuth,
+		data.GithubSettingId,
+		convertZeroValueToNull(data.Name),
+		data.ProjectId,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		nil,
+		convertInstallationIDToNull(data.InstallationId),
+		data.AuthMode).Error; err != nil {
+		return nil, err
+	}
+	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+}
+
 const upsertGitHubSettingWithoutToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
@@ -191,6 +255,50 @@ func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code
 		data.BaseUrl,
 		data.TargetResource,
 		convertZeroValueToNull(data.GithubUser)).Error; err != nil {
+		return nil, err
+	}
+	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+}
+
+const upsertGitHubPATAuth = `
+INSERT INTO code_github_setting (
+  code_github_setting_id,
+  name,
+  project_id,
+  type,
+  base_url,
+  target_resource,
+  github_user,
+  personal_access_token,
+  installation_id,
+  auth_mode
+)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON DUPLICATE KEY UPDATE
+	code_github_setting_id=VALUES(code_github_setting_id),
+	name=VALUES(name),
+	project_id=VALUES(project_id),
+	type=VALUES(type),
+	base_url=VALUES(base_url),
+	target_resource=VALUES(target_resource),
+	github_user=VALUES(github_user),
+	personal_access_token=IF(VALUES(personal_access_token) IS NULL, personal_access_token, VALUES(personal_access_token)),
+	installation_id=VALUES(installation_id),
+	auth_mode=VALUES(auth_mode)
+`
+
+func (c *Client) UpsertGitHubPATSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubPATAuth,
+		data.GithubSettingId,
+		convertZeroValueToNull(data.Name),
+		data.ProjectId,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		convertPersonalAccessTokenToNil(data.PersonalAccessToken),
+		nil,
+		data.AuthMode).Error; err != nil {
 		return nil, err
 	}
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)

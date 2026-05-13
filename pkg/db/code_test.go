@@ -163,6 +163,7 @@ func TestGetGitHubSetting(t *testing.T) {
 
 func TestUpsertGitHubSetting(t *testing.T) {
 	now := time.Now()
+	installationID := uint64(12345)
 	type args struct {
 		data *code.GitHubSettingForUpsert
 	}
@@ -186,6 +187,34 @@ func TestUpsertGitHubSetting(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
 					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
+			},
+		},
+		{
+			name: "OK github app",
+			args: args{
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID},
+			},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppAuth)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "installation_id", "auth_mode", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", installationID, code.GitHubAuthModeGitHubApp, now, now))
+			},
+		},
+		{
+			name: "OK personal access token auth mode",
+			args: args{
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", AuthMode: code.GitHubAuthModePersonalAccessToken},
+			},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", AuthMode: code.GitHubAuthModePersonalAccessToken, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubPATAuth)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "auth_mode", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", code.GitHubAuthModePersonalAccessToken, now, now))
 			},
 		},
 		{

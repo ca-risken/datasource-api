@@ -451,6 +451,8 @@ func TestGetGitHubSetting(t *testing.T) {
 
 func TestPutGitHubSetting(t *testing.T) {
 	now := time.Now()
+	verifiedAt := now.Add(-time.Hour)
+	installationID := uint64(12345)
 	key := []byte("1234567890123456")
 	block, err := aes.NewCipher(key)
 	assert.NoError(t, err)
@@ -472,6 +474,18 @@ func TestPutGitHubSetting(t *testing.T) {
 			},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now,
+			},
+		},
+		{
+			name: "OK github app",
+			input: &code.PutGitHubSettingRequest{ProjectId: 1, GithubSetting: &code.GitHubSettingForUpsert{
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID},
+			},
+			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: "VERIFIED", VerifiedGithubUser: "octocat", VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+			},
+			mockResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: "VERIFIED", VerifiedGitHubUser: "octocat", VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
 			},
 		},
 		{
