@@ -129,14 +129,14 @@ func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSetti
 	return c.UpsertGitHubSettingWithoutToken(ctx, data)
 }
 
-func convertInstallationIDToNull(installationID uint64) interface{} {
+func convertInstallationIDToNull(installationID uint64) any {
 	if installationID == 0 {
 		return nil
 	}
 	return installationID
 }
 
-func convertPersonalAccessTokenToNil(personalAccessToken string) interface{} {
+func convertPersonalAccessTokenToNil(personalAccessToken string) any {
 	if personalAccessToken == "" {
 		return nil
 	}
