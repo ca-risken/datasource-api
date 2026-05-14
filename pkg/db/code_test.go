@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -211,7 +212,8 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", AuthMode: code.GitHubAuthModePersonalAccessToken, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubPATAuth)).WillReturnResult(sqlmock.NewResult(1, 1))
+				query := strings.Replace(upsertGitHubPATAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, NULL, ?, ?", 1)
+				mock.ExpectExec(regexp.QuoteMeta(query)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "auth_mode", "created_at", "updated_at"}).
 					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", code.GitHubAuthModePersonalAccessToken, now, now))

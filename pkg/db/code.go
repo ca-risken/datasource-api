@@ -136,13 +136,6 @@ func convertInstallationIDToNull(installationID uint64) any {
 	return installationID
 }
 
-func convertPersonalAccessTokenToNil(personalAccessToken string) any {
-	if personalAccessToken == "" {
-		return nil
-	}
-	return personalAccessToken
-}
-
 const upsertGitHubWithToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
@@ -296,7 +289,7 @@ func (c *Client) UpsertGitHubPATSetting(ctx context.Context, data *code.GitHubSe
 		data.BaseUrl,
 		data.TargetResource,
 		convertZeroValueToNull(data.GithubUser),
-		convertPersonalAccessTokenToNil(data.PersonalAccessToken),
+		convertZeroValueToNull(data.PersonalAccessToken),
 		nil,
 		data.AuthMode).Error; err != nil {
 		return nil, err
