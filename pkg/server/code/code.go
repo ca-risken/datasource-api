@@ -141,8 +141,17 @@ func convertGitHubSetting(
 		TargetResource:      gitHubSetting.TargetResource,
 		GithubUser:          gitHubSetting.GitHubUser,
 		PersonalAccessToken: gitHubSetting.PersonalAccessToken,
+		AuthMode:            gitHubSetting.AuthMode,
+		VerificationStatus:  gitHubSetting.VerificationStatus,
+		VerifiedGithubUser:  gitHubSetting.VerifiedGitHubUser,
 		CreatedAt:           gitHubSetting.CreatedAt.Unix(),
 		UpdatedAt:           gitHubSetting.UpdatedAt.Unix(),
+	}
+	if gitHubSetting.InstallationID != nil {
+		convertedGithubSetting.InstallationId = *gitHubSetting.InstallationID
+	}
+	if !gitHubSetting.VerifiedAt.IsZero() {
+		convertedGithubSetting.VerifiedAt = gitHubSetting.VerifiedAt.Unix()
 	}
 	if convertedGithubSetting.PersonalAccessToken != "" && maskKey {
 		convertedGithubSetting.PersonalAccessToken = maskData // Masking sensitive data.
