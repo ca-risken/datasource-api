@@ -129,13 +129,6 @@ func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSetti
 	return c.UpsertGitHubSettingWithoutToken(ctx, data)
 }
 
-func convertInstallationIDToNull(installationID uint64) any {
-	if installationID == 0 {
-		return nil
-	}
-	return installationID
-}
-
 const upsertGitHubWithToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
@@ -211,7 +204,7 @@ func (c *Client) UpsertGitHubAppSetting(ctx context.Context, data *code.GitHubSe
 		data.TargetResource,
 		convertZeroValueToNull(data.GithubUser),
 		nil,
-		convertInstallationIDToNull(data.InstallationId),
+		convertZeroValueToNull(data.InstallationId),
 		data.AuthMode).Error; err != nil {
 		return nil, err
 	}
