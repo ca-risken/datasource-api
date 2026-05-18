@@ -21,6 +21,8 @@ const RETRY_NUM uint64 = 3
 type GithubServiceClient interface {
 	ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*github.Repository, error)
 	Clone(ctx context.Context, token string, cloneURL string, dstDir string) error
+	SupportsGitHubApp() bool
+	ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error)
 }
 
 type GitHubRepoService interface {
@@ -36,6 +38,7 @@ type GitHubV3Client struct {
 
 type riskenGitHubClient struct {
 	defaultToken string
+	appAuth      *appAuth
 	retryer      backoff.BackOff
 	logger       logging.Logger
 }
@@ -46,6 +49,16 @@ func NewGithubClient(defaultToken string, logger logging.Logger) *riskenGitHubCl
 		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), RETRY_NUM),
 		logger:       logger,
 	}
+}
+
+func NewGithubClientWithAppAuth(defaultToken string, appAuthConf *AppAuthConfig, logger logging.Logger) (*riskenGitHubClient, error) {
+	appAuth, err := newAppAuth(appAuthConf)
+	if err != nil {
+		return nil, err
+	}
+	client := NewGithubClient(defaultToken, logger)
+	client.appAuth = appAuth
+	return client, nil
 }
 
 func (g *riskenGitHubClient) newV3Client(ctx context.Context, token, baseURL string) (*GitHubV3Client, error) {

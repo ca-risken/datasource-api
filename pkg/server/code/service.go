@@ -32,14 +32,17 @@ type CodeQueue interface {
 	Send(ctx context.Context, url string, msg interface{}) (*sqs.SendMessageOutput, error)
 }
 
-func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, limitRepositorySizeKb int, l logging.Logger) (code.CodeServiceServer, error) {
+func NewCodeService(dataKey string, appAuth *github.AppAuthConfig, repo db.CodeRepoInterface, q *queue.Client, pj project.ProjectServiceClient, limitRepositorySizeKb int, l logging.Logger) (code.CodeServiceServer, error) {
 	key := []byte(dataKey)
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cipher, err=%w", err)
 	}
 
-	githubClient := github.NewGithubClient("", l)
+	githubClient, err := github.NewGithubClientWithAppAuth("", appAuth, l)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create github client, err=%w", err)
+	}
 
 	return &CodeService{
 		repository:             repo,
@@ -51,6 +54,6 @@ func NewCodeService(dataKey string, repo db.CodeRepoInterface, q *queue.Client, 
 		codeDependencyQueueURL: q.CodeDependencyQueueURL,
 		codeCodeScanQueueURL:   q.CodeCodeScanQueueURL,
 		githubClient:           githubClient,
-		limitRepositorySizeKb: limitRepositorySizeKb,
+		limitRepositorySizeKb:  limitRepositorySizeKb,
 	}, nil
 }

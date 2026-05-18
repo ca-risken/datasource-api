@@ -8,6 +8,7 @@ import (
 	"github.com/ca-risken/common/pkg/profiler"
 	"github.com/ca-risken/common/pkg/tracer"
 	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/queue"
 	"github.com/ca-risken/datasource-api/pkg/server"
 	"github.com/gassara-kys/envconfig"
@@ -61,6 +62,8 @@ type AppConf struct {
 	// datasource
 	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey          string `split_words:"true" required:"true"`                                // code
+	GithubAppID          string `split_words:"true"`                                                // code
+	GithubAppPrivateKey  string `split_words:"true"`                                                // code
 	SlackAPIToken        string `split_words:"true"`                                                // slack
 	AzureClientID        string `split_words:"true"`                                                // azure
 	AzureTenantID        string `split_words:"true"`                                                // azure
@@ -173,6 +176,10 @@ func main() {
 		conf.AWSRegion,
 		conf.GoogleCredentialPath,
 		conf.CodeDataKey,
+		&github.AppAuthConfig{
+			AppID:      conf.GithubAppID,
+			PrivateKey: conf.GithubAppPrivateKey,
+		},
 		d,
 		q,
 		conf.BaseURL,
