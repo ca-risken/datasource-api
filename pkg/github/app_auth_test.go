@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/code"
 	jwt "github.com/golang-jwt/jwt/v5"
+	"golang.org/x/oauth2"
 )
 
 func generateRSAPrivateKeyPEM(t *testing.T) (*rsa.PrivateKey, string) {
@@ -159,7 +161,7 @@ func TestResolveInstallationToken(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	var gotAuthorization string
 	var gotRepositories []string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/app/installations/12345/access_tokens" {
 			t.Fatalf("Unexpected path: %s", r.URL.Path)
 		}
@@ -180,6 +182,24 @@ func TestResolveInstallationToken(t *testing.T) {
 		}
 	}))
 	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	githubAppAllowedBaseURLHosts[serverURL.Hostname()] = struct{}{}
+	defer delete(githubAppAllowedBaseURLHosts, serverURL.Hostname())
+	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
+	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
+		client := server.Client()
+		client.Transport = &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(token),
+			Base:   client.Transport,
+		}
+		return client
+	}
+	defer func() {
+		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
+	}()
 
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{AppID: "12345", PrivateKey: privateKeyPEM}, logging.NewLogger())
 	if err != nil {
@@ -207,5 +227,23 @@ func TestResolveInstallationTokenError(t *testing.T) {
 	client := NewGithubClient("default-token", logging.NewLogger())
 	if _, err := client.ResolveInstallationToken(context.Background(), &code.GitHubSetting{InstallationId: 12345}, ""); err == nil {
 		t.Fatal("Expected error but got none")
+	}
+}
+
+func TestResolveInstallationTokenRejectsUntrustedBaseURL(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{AppID: "12345", PrivateKey: privateKeyPEM}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	_, err = client.ResolveInstallationToken(context.Background(), &code.GitHubSetting{
+		BaseUrl:        "https://attacker.example/",
+		InstallationId: 12345,
+	}, "")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if !strings.Contains(err.Error(), "base_url host is not allowed") {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }

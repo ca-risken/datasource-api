@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,6 +21,14 @@ const (
 	githubAppJWTBackdate = time.Minute
 	githubAppJWTLifetime = 9 * time.Minute
 )
+
+var githubAppAllowedBaseURLHosts = map[string]struct{}{
+	"api.github.com": {},
+}
+
+var newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
+	return oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
+}
 
 // AppAuthConfig is the server-side GitHub App credential set.
 type AppAuthConfig struct {
@@ -80,22 +89,37 @@ func (g *riskenGitHubClient) createGitHubAppJWT(now time.Time) (string, error) {
 }
 
 func (g *riskenGitHubClient) newGitHubAppClient(ctx context.Context, baseURL string) (*ghub.Client, error) {
+	base, err := validateGitHubAppBaseURL(baseURL)
+	if err != nil {
+		return nil, err
+	}
 	jwtToken, err := g.createGitHubAppJWT(time.Now())
 	if err != nil {
 		return nil, err
 	}
-	httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: jwtToken, TokenType: "Bearer"},
-	))
+	httpClient := newGitHubAppHTTPClient(ctx, &oauth2.Token{AccessToken: jwtToken, TokenType: "Bearer"})
 	client := ghub.NewClient(httpClient)
-	if baseURL != "" {
-		u, err := url.Parse(baseURL)
-		if err != nil {
-			return nil, err
-		}
-		client.BaseURL = u
+	if base != nil {
+		client.BaseURL = base
 	}
 	return client, nil
+}
+
+func validateGitHubAppBaseURL(baseURL string) (*url.URL, error) {
+	if baseURL == "" {
+		return nil, nil
+	}
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme != "https" {
+		return nil, fmt.Errorf("github app base_url must use https: %s", baseURL)
+	}
+	if _, ok := githubAppAllowedBaseURLHosts[strings.ToLower(u.Hostname())]; !ok {
+		return nil, fmt.Errorf("github app base_url host is not allowed: %s", u.Hostname())
+	}
+	return u, nil
 }
 
 func (g *riskenGitHubClient) ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
