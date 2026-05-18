@@ -2006,6 +2006,14 @@ func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL str
 	return g.err
 }
 
+func (g *FakeGithubClient) SupportsGitHubApp() bool {
+	return false
+}
+
+func (g *FakeGithubClient) ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
+	return "", g.err
+}
+
 func TestBuildCodeQueueMessage(t *testing.T) {
 	repo := &ghub.Repository{
 		ID:            ghub.Int64(12345),
