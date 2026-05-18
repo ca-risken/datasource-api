@@ -60,14 +60,15 @@ type AppConf struct {
 	AzureProwlerQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/azure-prowler"`
 
 	// datasource
-	GoogleCredentialPath string `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
-	CodeDataKey          string `split_words:"true" required:"true"`                                // code
-	GithubAppID          string `split_words:"true"`                                                // code
-	GithubAppPrivateKey  string `split_words:"true"`                                                // code
-	SlackAPIToken        string `split_words:"true"`                                                // slack
-	AzureClientID        string `split_words:"true"`                                                // azure
-	AzureTenantID        string `split_words:"true"`                                                // azure
-	AzureClientSecret    string `split_words:"true"`                                                // azure
+	GoogleCredentialPath         string   `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
+	CodeDataKey                  string   `split_words:"true" required:"true"`                                // code
+	GithubAppID                  string   `split_words:"true"`                                                // code
+	GithubAppPrivateKey          string   `split_words:"true"`                                                // code
+	GithubAppAllowedBaseURLHosts []string `split_words:"true"`                                                // code
+	SlackAPIToken                string   `split_words:"true"`                                                // slack
+	AzureClientID                string   `split_words:"true"`                                                // azure
+	AzureTenantID                string   `split_words:"true"`                                                // azure
+	AzureClientSecret            string   `split_words:"true"`                                                // azure
 
 	// db
 	DBMasterHost     string `split_words:"true" default:"db.middleware.svc.cluster.local"`
@@ -177,8 +178,9 @@ func main() {
 		conf.GoogleCredentialPath,
 		conf.CodeDataKey,
 		&github.AppAuthConfig{
-			AppID:      conf.GithubAppID,
-			PrivateKey: conf.GithubAppPrivateKey,
+			AppID:               conf.GithubAppID,
+			PrivateKey:          conf.GithubAppPrivateKey,
+			AllowedBaseURLHosts: conf.GithubAppAllowedBaseURLHosts,
 		},
 		d,
 		q,

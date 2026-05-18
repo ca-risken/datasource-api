@@ -22,7 +22,7 @@ const (
 	githubAppJWTLifetime = 9 * time.Minute
 )
 
-var githubAppAllowedBaseURLHosts = map[string]struct{}{
+var defaultGitHubAppAllowedBaseURLHosts = map[string]struct{}{
 	"api.github.com": {},
 }
 
@@ -32,13 +32,15 @@ var newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *htt
 
 // AppAuthConfig is the server-side GitHub App credential set.
 type AppAuthConfig struct {
-	AppID      string
-	PrivateKey string
+	AppID               string
+	PrivateKey          string
+	AllowedBaseURLHosts []string
 }
 
 type appAuth struct {
-	appID      int64
-	privateKey *rsa.PrivateKey
+	appID               int64
+	privateKey          *rsa.PrivateKey
+	allowedBaseURLHosts map[string]struct{}
 }
 
 func newAppAuth(conf *AppAuthConfig) (*appAuth, error) {
@@ -57,9 +59,25 @@ func newAppAuth(conf *AppAuthConfig) (*appAuth, error) {
 		return nil, fmt.Errorf("parse github app private key: %w", err)
 	}
 	return &appAuth{
-		appID:      appID,
-		privateKey: privateKey,
+		appID:               appID,
+		privateKey:          privateKey,
+		allowedBaseURLHosts: allowedGitHubAppBaseURLHosts(conf.AllowedBaseURLHosts),
 	}, nil
+}
+
+func allowedGitHubAppBaseURLHosts(configuredHosts []string) map[string]struct{} {
+	allowedHosts := make(map[string]struct{}, len(defaultGitHubAppAllowedBaseURLHosts)+len(configuredHosts))
+	for host := range defaultGitHubAppAllowedBaseURLHosts {
+		allowedHosts[host] = struct{}{}
+	}
+	for _, host := range configuredHosts {
+		normalized := strings.ToLower(strings.TrimSpace(host))
+		if normalized == "" {
+			continue
+		}
+		allowedHosts[normalized] = struct{}{}
+	}
+	return allowedHosts
 }
 
 func parseGitHubAppPrivateKey(privateKey string) (*rsa.PrivateKey, error) {
@@ -89,7 +107,7 @@ func (g *riskenGitHubClient) createGitHubAppJWT(now time.Time) (string, error) {
 }
 
 func (g *riskenGitHubClient) newGitHubAppClient(ctx context.Context, baseURL string) (*ghub.Client, error) {
-	base, err := validateGitHubAppBaseURL(baseURL)
+	base, err := g.appAuth.validateBaseURL(baseURL)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +123,7 @@ func (g *riskenGitHubClient) newGitHubAppClient(ctx context.Context, baseURL str
 	return client, nil
 }
 
-func validateGitHubAppBaseURL(baseURL string) (*url.URL, error) {
+func (a *appAuth) validateBaseURL(baseURL string) (*url.URL, error) {
 	if baseURL == "" {
 		return nil, nil
 	}
@@ -116,7 +134,7 @@ func validateGitHubAppBaseURL(baseURL string) (*url.URL, error) {
 	if u.Scheme != "https" {
 		return nil, fmt.Errorf("github app base_url must use https: %s", baseURL)
 	}
-	if _, ok := githubAppAllowedBaseURLHosts[strings.ToLower(u.Hostname())]; !ok {
+	if _, ok := a.allowedBaseURLHosts[strings.ToLower(u.Hostname())]; !ok {
 		return nil, fmt.Errorf("github app base_url host is not allowed: %s", u.Hostname())
 	}
 	return u, nil

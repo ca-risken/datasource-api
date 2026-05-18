@@ -186,8 +186,6 @@ func TestResolveInstallationToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse test server URL: %v", err)
 	}
-	githubAppAllowedBaseURLHosts[serverURL.Hostname()] = struct{}{}
-	defer delete(githubAppAllowedBaseURLHosts, serverURL.Hostname())
 	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
 	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
 		client := server.Client()
@@ -201,7 +199,11 @@ func TestResolveInstallationToken(t *testing.T) {
 		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
 	}()
 
-	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{AppID: "12345", PrivateKey: privateKeyPEM}, logging.NewLogger())
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{serverURL.Hostname()},
+	}, logging.NewLogger())
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
@@ -244,6 +246,21 @@ func TestResolveInstallationTokenRejectsUntrustedBaseURL(t *testing.T) {
 		t.Fatal("Expected error but got none")
 	}
 	if !strings.Contains(err.Error(), "base_url host is not allowed") {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
+func TestResolveInstallationTokenAllowsConfiguredBaseURLHost(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{"ghe.example.com"},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if _, err := client.appAuth.validateBaseURL("https://ghe.example.com/api/v3/"); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 }
