@@ -250,6 +250,67 @@ func TestResolveInstallationTokenRejectsUntrustedBaseURL(t *testing.T) {
 	}
 }
 
+func TestVerifyInstallation(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	var gotFindInstallation bool
+	var gotCreateToken bool
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/installation":
+			gotFindInstallation = true
+			if _, err := w.Write([]byte(`{"id":12345}`)); err != nil {
+				t.Fatalf("write installation response: %v", err)
+			}
+		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
+			gotCreateToken = true
+			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
+	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
+		client := server.Client()
+		client.Transport = &oauth2.Transport{
+			Source: oauth2.StaticTokenSource(token),
+			Base:   client.Transport,
+		}
+		return client
+	}
+	defer func() {
+		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
+	}()
+
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	err = client.VerifyInstallation(context.Background(), &code.GitHubSetting{
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "target",
+		BaseUrl:        server.URL,
+		InstallationId: 12345,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !gotFindInstallation || !gotCreateToken {
+		t.Fatalf("Expected find installation and create token calls, gotFindInstallation=%t, gotCreateToken=%t", gotFindInstallation, gotCreateToken)
+	}
+}
+
 func TestResolveInstallationTokenAllowsConfiguredBaseURLHost(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{

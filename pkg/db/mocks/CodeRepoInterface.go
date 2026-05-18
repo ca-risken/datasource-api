@@ -4,6 +4,7 @@ package mocks
 
 import (
 	context "context"
+	time "time"
 
 	code "github.com/ca-risken/datasource-api/proto/code"
 
@@ -900,6 +901,36 @@ func (_m *CodeRepoInterface) UpsertGitHubSetting(ctx context.Context, data *code
 
 	if rf, ok := ret.Get(1).(func(context.Context, *code.GitHubSettingForUpsert) error); ok {
 		r1 = rf(ctx, data)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// UpdateGitHubAppVerification provides a mock function with given fields: ctx, projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt
+func (_m *CodeRepoInterface) UpdateGitHubAppVerification(ctx context.Context, projectID uint32, githubSettingID uint32, verificationStatus string, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateGitHubAppVerification")
+	}
+
+	var r0 *model.CodeGitHubSetting
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, string, string, time.Time) (*model.CodeGitHubSetting, error)); ok {
+		return rf(ctx, projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, string, string, time.Time) *model.CodeGitHubSetting); ok {
+		r0 = rf(ctx, projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.CodeGitHubSetting)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, string, string, time.Time) error); ok {
+		r1 = rf(ctx, projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt)
 	} else {
 		r1 = ret.Error(1)
 	}

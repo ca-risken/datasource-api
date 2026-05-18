@@ -20,6 +20,7 @@ type CodeRepoInterface interface {
 	ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error)
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
 	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
+	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -288,6 +289,30 @@ func (c *Client) UpsertGitHubPATSetting(ctx context.Context, data *code.GitHubSe
 		return nil, err
 	}
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+}
+
+const updateGitHubAppVerification = `
+UPDATE code_github_setting
+SET
+	verification_status = ?,
+	verified_github_user = ?,
+	verified_at = ?
+WHERE project_id = ?
+	AND code_github_setting_id = ?
+	AND auth_mode = ?
+`
+
+func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
+		verificationStatus,
+		convertZeroValueToNull(verifiedGitHubUser),
+		verifiedAt,
+		projectID,
+		githubSettingID,
+		code.GitHubAuthModeGitHubApp).Error; err != nil {
+		return nil, err
+	}
+	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
 }
 
 func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {

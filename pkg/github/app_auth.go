@@ -171,6 +171,44 @@ func (g *riskenGitHubClient) ResolveInstallationToken(ctx context.Context, confi
 	return token.GetToken(), nil
 }
 
+func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *code.GitHubSetting) error {
+	if g.appAuth == nil {
+		return errors.New("github app auth is not configured")
+	}
+	if config == nil {
+		return errors.New("github setting is required")
+	}
+	if config.InstallationId == 0 {
+		return errors.New("installation_id is required")
+	}
+	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)
+	if err != nil {
+		return fmt.Errorf("create github app client: %w", err)
+	}
+	installation, _, err := findInstallation(ctx, client.Apps, config)
+	if err != nil {
+		return fmt.Errorf("find installation: %w", err)
+	}
+	if installation.GetID() != int64(config.InstallationId) {
+		return fmt.Errorf("installation_id mismatch: expected=%d, actual=%d", config.InstallationId, installation.GetID())
+	}
+	if _, err := g.ResolveInstallationToken(ctx, config, ""); err != nil {
+		return fmt.Errorf("resolve installation token: %w", err)
+	}
+	return nil
+}
+
+func findInstallation(ctx context.Context, appSvc GitHubAppService, config *code.GitHubSetting) (*ghub.Installation, *ghub.Response, error) {
+	switch config.Type {
+	case code.Type_ORGANIZATION:
+		return appSvc.FindOrganizationInstallation(ctx, config.TargetResource)
+	case code.Type_USER:
+		return appSvc.FindUserInstallation(ctx, config.TargetResource)
+	default:
+		return nil, nil, fmt.Errorf("unknown github type: type=%s", config.Type.String())
+	}
+}
+
 func installationTokenOptions(repoName string) (*ghub.InstallationTokenOptions, error) {
 	repoName = strings.TrimSpace(repoName)
 	if repoName == "" {

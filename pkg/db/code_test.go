@@ -267,6 +267,61 @@ func TestUpsertGitHubSetting(t *testing.T) {
 	}
 }
 
+func TestUpdateGitHubAppVerification(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name        string
+		want        *model.CodeGitHubSetting
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			want: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusVerified,
+				VerifiedGitHubUser:  "octocat",
+				VerifiedAt:          now,
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "project_id", "auth_mode", "verification_status", "verified_github_user", "verified_at"}).
+					AddRow(uint32(1), uint32(1), code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusVerified, "octocat", now))
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.UpdateGitHubAppVerification(ctx, 1, 1, code.GitHubVerificationStatusVerified, "octocat", now)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestDeleteGitHubSetting(t *testing.T) {
 	type args struct {
 		ProjectID           uint32

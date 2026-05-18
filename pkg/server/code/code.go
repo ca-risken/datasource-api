@@ -341,6 +341,37 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 	return &code.PutGitHubSettingResponse{GithubSetting: convertGitHubSetting(registeredGitHubSetting, nil, nil, nil, true)}, nil
 }
 
+func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
+		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
+	if githubSetting.InstallationID == nil || *githubSetting.InstallationID == 0 {
+		return nil, fmt.Errorf("installation_id is required: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
+
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	if err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting); err != nil {
+		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, githubSetting.GitHubUser, time.Now())
+		if updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+		}
+		return nil, err
+	}
+
+	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusVerified, githubSetting.GitHubUser, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	return &code.VerifyGitHubAppInstallationResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)}, nil
+}
+
 func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteGitHubSettingRequest) (*empty.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
