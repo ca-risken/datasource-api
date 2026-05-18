@@ -137,6 +137,9 @@ func (a *appAuth) validateBaseURL(baseURL string) (*url.URL, error) {
 	if _, ok := a.allowedBaseURLHosts[strings.ToLower(u.Hostname())]; !ok {
 		return nil, fmt.Errorf("github app base_url host is not allowed: %s", u.Hostname())
 	}
+	if u.Path == "" || !strings.HasSuffix(u.Path, "/") {
+		u.Path += "/"
+	}
 	return u, nil
 }
 
@@ -154,7 +157,10 @@ func (g *riskenGitHubClient) ResolveInstallationToken(ctx context.Context, confi
 	if err != nil {
 		return "", fmt.Errorf("create github app client: %w", err)
 	}
-	opts := installationTokenOptions(repoName)
+	opts, err := installationTokenOptions(repoName)
+	if err != nil {
+		return "", err
+	}
 	token, _, err := client.Apps.CreateInstallationToken(ctx, int64(config.InstallationId), opts)
 	if err != nil {
 		return "", fmt.Errorf("create installation token: %w", err)
@@ -165,15 +171,26 @@ func (g *riskenGitHubClient) ResolveInstallationToken(ctx context.Context, confi
 	return token.GetToken(), nil
 }
 
-func installationTokenOptions(repoName string) *ghub.InstallationTokenOptions {
+func installationTokenOptions(repoName string) (*ghub.InstallationTokenOptions, error) {
+	repoName = strings.TrimSpace(repoName)
 	if repoName == "" {
-		return nil
+		return nil, nil
 	}
 	parts := strings.Split(repoName, "/")
-	if len(parts) == 2 {
+	switch len(parts) {
+	case 1:
+		if parts[0] == "" {
+			return nil, fmt.Errorf("invalid repository name: %s", repoName)
+		}
+	case 2:
+		if parts[0] == "" || parts[1] == "" {
+			return nil, fmt.Errorf("invalid repository full name: %s", repoName)
+		}
 		repoName = parts[1]
+	default:
+		return nil, fmt.Errorf("invalid repository full name: %s", repoName)
 	}
 	return &ghub.InstallationTokenOptions{
 		Repositories: []string{repoName},
-	}
+	}, nil
 }

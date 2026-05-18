@@ -264,3 +264,64 @@ func TestResolveInstallationTokenAllowsConfiguredBaseURLHost(t *testing.T) {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 }
+
+func TestValidateGitHubAppBaseURLAddsTrailingSlash(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{"ghe.example.com"},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	got, err := client.appAuth.validateBaseURL("https://ghe.example.com/api/v3")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if got.String() != "https://ghe.example.com/api/v3/" {
+		t.Fatalf("Unexpected base URL: %s", got.String())
+	}
+}
+
+func TestInstallationTokenOptions(t *testing.T) {
+	cases := []struct {
+		name      string
+		repoName  string
+		wantRepo  string
+		wantNil   bool
+		wantError bool
+	}{
+		{name: "OK empty", wantNil: true},
+		{name: "OK repo", repoName: "repo", wantRepo: "repo"},
+		{name: "OK owner repo", repoName: "owner/repo", wantRepo: "repo"},
+		{name: "OK trims spaces", repoName: " owner/repo ", wantRepo: "repo"},
+		{name: "NG too many segments", repoName: "a/b/c", wantError: true},
+		{name: "NG empty owner", repoName: "/repo", wantError: true},
+		{name: "NG empty repo", repoName: "owner/", wantError: true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := installationTokenOptions(c.repoName)
+			if c.wantError {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if c.wantNil {
+				if got != nil {
+					t.Fatalf("Expected nil options but got %+v", got)
+				}
+				return
+			}
+			if got == nil || len(got.Repositories) != 1 || got.Repositories[0] != c.wantRepo {
+				t.Fatalf("Unexpected options: %+v", got)
+			}
+		})
+	}
+}
