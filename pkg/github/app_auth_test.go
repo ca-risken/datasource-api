@@ -147,11 +147,11 @@ func TestCreateGitHubAppJWT(t *testing.T) {
 	if claims.Issuer != "12345" {
 		t.Fatalf("Unexpected issuer: %s", claims.Issuer)
 	}
-	if claims.IssuedAt.Time.Unix() != now.Add(-githubAppJWTBackdate).Unix() {
-		t.Fatalf("Unexpected issued_at: %v", claims.IssuedAt.Time)
+	if claims.IssuedAt.Unix() != now.Add(-githubAppJWTBackdate).Unix() {
+		t.Fatalf("Unexpected issued_at: %v", claims.IssuedAt)
 	}
-	if claims.ExpiresAt.Time.Unix() != now.Add(githubAppJWTLifetime).Unix() {
-		t.Fatalf("Unexpected expires_at: %v", claims.ExpiresAt.Time)
+	if claims.ExpiresAt.Unix() != now.Add(githubAppJWTLifetime).Unix() {
+		t.Fatalf("Unexpected expires_at: %v", claims.ExpiresAt)
 	}
 }
 
