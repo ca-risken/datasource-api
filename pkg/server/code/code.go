@@ -365,7 +365,7 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 		return nil, err
 	}
 
-	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusVerified, githubSetting.GitHubUser, time.Now())
+	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())
 	if err != nil {
 		return nil, err
 	}

@@ -483,10 +483,10 @@ func TestPutGitHubSetting(t *testing.T) {
 				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID},
 			},
 			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: "VERIFIED", VerifiedGithubUser: "octocat", VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: "SUCCESS", VerifiedGithubUser: "octocat", VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: "VERIFIED", VerifiedGitHubUser: "octocat", VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: "SUCCESS", VerifiedGitHubUser: "octocat", VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
 			},
 		},
 		{
@@ -560,11 +560,11 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusVerified, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
-			wantStatus: code.GitHubVerificationStatusVerified,
+			wantStatus: code.GitHubVerificationStatusSuccess,
 			want: &code.VerifyGitHubAppInstallationResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusVerified, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 			}},
 		},
 		{

@@ -303,14 +303,18 @@ WHERE project_id = ?
 `
 
 func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
+	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
 		verificationStatus,
 		convertZeroValueToNull(verifiedGitHubUser),
 		verifiedAt,
 		projectID,
 		githubSettingID,
-		code.GitHubAuthModeGitHubApp).Error; err != nil {
-		return nil, err
+		code.GitHubAuthModeGitHubApp)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 	}
 	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
 }

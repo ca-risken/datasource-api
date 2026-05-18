@@ -10,7 +10,7 @@ import (
 const (
 	GitHubAuthModePersonalAccessToken = "PERSONAL_ACCESS_TOKEN"
 	GitHubAuthModeGitHubApp           = "GITHUB_APP"
-	GitHubVerificationStatusVerified  = "VERIFIED"
+	GitHubVerificationStatusSuccess   = "SUCCESS"
 	GitHubVerificationStatusFailed    = "FAILED"
 )
 
