@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -31,8 +32,16 @@ type GitHubRepoService interface {
 	Get(ctx context.Context, owner, repo string) (*github.Repository, *github.Response, error)
 }
 
+type GitHubAppService interface {
+	FindOrganizationInstallation(ctx context.Context, org string) (*github.Installation, *github.Response, error)
+	FindUserInstallation(ctx context.Context, user string) (*github.Installation, *github.Response, error)
+	CreateInstallationToken(ctx context.Context, id int64, opts *github.InstallationTokenOptions) (*github.InstallationToken, *github.Response, error)
+	ListRepos(ctx context.Context, opts *github.ListOptions) (*github.ListRepositories, *github.Response, error)
+}
+
 type GitHubV3Client struct {
 	Repositories GitHubRepoService
+	Apps         GitHubAppService
 	*github.Client
 }
 
@@ -44,21 +53,21 @@ type riskenGitHubClient struct {
 }
 
 func NewGithubClient(defaultToken string, logger logging.Logger) *riskenGitHubClient {
-	return &riskenGitHubClient{
-		defaultToken: defaultToken,
-		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), RETRY_NUM),
-		logger:       logger,
-	}
+	client, _ := NewGithubClientWithAppAuth(defaultToken, nil, logger)
+	return client
 }
 
-func NewGithubClientWithAppAuth(defaultToken string, appAuthConf *AppAuthConfig, logger logging.Logger) (*riskenGitHubClient, error) {
-	appAuth, err := newAppAuth(appAuthConf)
+func NewGithubClientWithAppAuth(defaultToken string, appAuthCfg *AppAuthConfig, logger logging.Logger) (*riskenGitHubClient, error) {
+	appAuth, err := newAppAuth(appAuthCfg)
 	if err != nil {
 		return nil, err
 	}
-	client := NewGithubClient(defaultToken, logger)
-	client.appAuth = appAuth
-	return client, nil
+	return &riskenGitHubClient{
+		defaultToken: defaultToken,
+		appAuth:      appAuth,
+		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), RETRY_NUM),
+		logger:       logger,
+	}, nil
 }
 
 func (g *riskenGitHubClient) newV3Client(ctx context.Context, token, baseURL string) (*GitHubV3Client, error) {
@@ -75,6 +84,7 @@ func (g *riskenGitHubClient) newV3Client(ctx context.Context, token, baseURL str
 	}
 	return &GitHubV3Client{
 		Repositories: client.Repositories,
+		Apps:         client.Apps,
 		Client:       client,
 	}, nil
 }
@@ -106,7 +116,11 @@ func (g *riskenGitHubClient) Clone(ctx context.Context, token string, cloneURL s
 }
 
 func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*github.Repository, error) {
-	client, err := g.newV3Client(ctx, config.PersonalAccessToken, config.BaseUrl)
+	token, err := g.resolveAccessToken(ctx, config, repoName)
+	if err != nil {
+		return nil, err
+	}
+	client, err := g.newV3Client(ctx, token, config.BaseUrl)
 	if err != nil {
 		return nil, fmt.Errorf("create github-v3 client: %w", err)
 	}
@@ -118,6 +132,10 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 			return nil, err
 		}
 		return []*github.Repository{repository}, nil
+	}
+
+	if config.PersonalAccessToken == "" && g.appAuth != nil {
+		return g.listRepositoryForInstallation(ctx, client.Apps, config.TargetResource)
 	}
 
 	// Handle bulk repository scan based on config.Type
@@ -147,6 +165,61 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 	}
 
 	return repos, nil
+}
+
+func (g *riskenGitHubClient) resolveAccessToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
+	if config.PersonalAccessToken != "" {
+		return config.PersonalAccessToken, nil
+	}
+	if g.appAuth != nil {
+		return g.ResolveInstallationToken(ctx, config, repoName)
+	}
+	return g.defaultToken, nil
+}
+
+func (g *riskenGitHubClient) listRepositoryForInstallation(ctx context.Context, appSvc GitHubAppService, targetResource string) ([]*github.Repository, error) {
+	var allRepo []*github.Repository
+	opt := &github.ListOptions{PerPage: 100}
+	for {
+		repositories, resp, err := appSvc.ListRepos(ctx, opt)
+		if err != nil {
+			return nil, err
+		}
+		if resp == nil {
+			return nil, errors.New("github app list repositories response is nil")
+		}
+		repos := []*github.Repository{}
+		if repositories != nil {
+			repos = repositories.Repositories
+		} else {
+			g.logger.Warnf(ctx, "github app list repositories returned nil repositories: target_resource=%s, option=%+v, response=%+v", targetResource, opt, resp)
+		}
+		if targetResource != "" {
+			repos = filterRepositoriesByOwner(repos, targetResource)
+		}
+		allRepo = append(allRepo, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	return allRepo, nil
+}
+
+func filterRepositoriesByOwner(repos []*github.Repository, owner string) []*github.Repository {
+	if owner == "" {
+		return repos
+	}
+	filtered := make([]*github.Repository, 0, len(repos))
+	for _, repo := range repos {
+		if repo == nil || repo.Owner == nil || repo.Owner.Login == nil {
+			continue
+		}
+		if strings.EqualFold(repo.GetOwner().GetLogin(), owner) {
+			filtered = append(filtered, repo)
+		}
+	}
+	return filtered
 }
 
 const (
@@ -235,12 +308,10 @@ func (g *riskenGitHubClient) GetSingleRepository(ctx context.Context, client *Gi
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("invalid repository name format: %s, expected 'owner/repo'", repoName)
 	}
-	owner, repo := parts[0], parts[1]
-
-	// Validate that the repository belongs to the target resource
-	if owner != config.TargetResource {
-		return nil, fmt.Errorf("repository %s does not belong to %s %s", repoName, config.Type.String(), config.TargetResource)
+	if err := validateRepositoryBelongsToTarget(config, repoName); err != nil {
+		return nil, err
 	}
+	owner, repo := parts[0], parts[1]
 
 	repository, _, err := client.Repositories.Get(ctx, owner, repo)
 	if err != nil {
@@ -248,6 +319,18 @@ func (g *riskenGitHubClient) GetSingleRepository(ctx context.Context, client *Gi
 	}
 
 	return repository, nil
+}
+
+func validateRepositoryBelongsToTarget(config *code.GitHubSetting, repoName string) error {
+	parts := strings.Split(repoName, "/")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid repository name format: %s, expected 'owner/repo'", repoName)
+	}
+	owner := parts[0]
+	if !strings.EqualFold(owner, config.TargetResource) {
+		return fmt.Errorf("repository %s does not belong to %s %s", repoName, config.Type.String(), config.TargetResource)
+	}
+	return nil
 }
 
 func (t *riskenGitHubClient) newRetryLogger(ctx context.Context, funcName string) func(error, time.Duration) {
