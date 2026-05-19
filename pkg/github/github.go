@@ -24,6 +24,7 @@ type GithubServiceClient interface {
 	Clone(ctx context.Context, token string, cloneURL string, dstDir string) error
 	SupportsGitHubApp() bool
 	ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error)
+	VerifyInstallation(ctx context.Context, config *code.GitHubSetting) error
 }
 
 type GitHubRepoService interface {

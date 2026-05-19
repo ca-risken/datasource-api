@@ -17,6 +17,8 @@ service CodeService {
       returns (GetGitHubSettingResponse);
   rpc PutGitHubSetting(PutGitHubSettingRequest)
       returns (PutGitHubSettingResponse);
+  rpc VerifyGitHubAppInstallation(VerifyGitHubAppInstallationRequest)
+      returns (VerifyGitHubAppInstallationResponse);
   rpc DeleteGitHubSetting(DeleteGitHubSettingRequest)
       returns (google.protobuf.Empty);
 
@@ -94,6 +96,15 @@ message PutGitHubSettingRequest {
 }
 
 message PutGitHubSettingResponse { GitHubSetting github_setting = 1; }
+
+message VerifyGitHubAppInstallationRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+}
+
+message VerifyGitHubAppInstallationResponse {
+  GitHubSetting github_setting = 1;
+}
 
 message DeleteGitHubSettingRequest {
   uint32 project_id = 1;

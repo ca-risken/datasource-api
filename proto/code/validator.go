@@ -10,6 +10,8 @@ import (
 const (
 	GitHubAuthModePersonalAccessToken = "PERSONAL_ACCESS_TOKEN"
 	GitHubAuthModeGitHubApp           = "GITHUB_APP"
+	GitHubVerificationStatusSuccess   = "SUCCESS"
+	GitHubVerificationStatusFailed    = "FAILED"
 )
 
 // validateRepositoryName validates repository name format (owner/repo)
@@ -47,6 +49,14 @@ func (p *PutGitHubSettingRequest) Validate() error {
 		return err
 	}
 	return p.GithubSetting.Validate()
+}
+
+// Validate VerifyGitHubAppInstallationRequest
+func (v *VerifyGitHubAppInstallationRequest) Validate() error {
+	return validation.ValidateStruct(v,
+		validation.Field(&v.ProjectId, validation.Required),
+		validation.Field(&v.GithubSettingId, validation.Required),
+	)
 }
 
 // Validate DeleteGitHubSettingRequest
