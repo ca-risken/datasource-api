@@ -545,11 +545,14 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 	cases := []struct {
 		name               string
 		input              *code.VerifyGitHubAppInstallationRequest
+		githubRepos        []*ghub.Repository
 		githubClientError  error
 		mockGitHubSetting  *model.CodeGitHubSetting
 		mockGetError       error
 		mockUpdateResponse *model.CodeGitHubSetting
 		mockUpdateError    error
+		mockRepositories   *[]model.GitHubAppSettingRepository
+		mockReplaceError   error
 		want               *code.VerifyGitHubAppInstallationResponse
 		wantErr            bool
 		wantErrMsg         string
@@ -558,15 +561,27 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		{
 			name:  "OK",
 			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
+			githubRepos: []*ghub.Repository{
+				{ID: ghub.Int64(67890), FullName: ghub.String("target/repo2")},
+				{ID: ghub.Int64(12345), FullName: ghub.String("target/repo1")},
+			},
 			mockGitHubSetting: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
+			mockRepositories: &[]model.GitHubAppSettingRepository{
+				{CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "target/repo1", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "target/repo2", CreatedAt: now, UpdatedAt: now},
+			},
 			wantStatus: code.GitHubVerificationStatusSuccess,
 			want: &code.VerifyGitHubAppInstallationResponse{GithubSetting: &code.GitHubSetting{
 				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+					{GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: "target/repo1", CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					{GithubSettingId: 1, GithubRepositoryId: 67890, GithubRepositoryFullName: "target/repo2", CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				},
 			}},
 		},
 		{
@@ -601,10 +616,23 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{err: c.githubClientError}, logger: logging.NewLogger()}
+			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{repos: c.githubRepos, err: c.githubClientError}, logger: logging.NewLogger()}
 
 			if c.mockGitHubSetting != nil || c.mockGetError != nil {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
+			}
+			if c.mockRepositories != nil || c.mockReplaceError != nil {
+				mockDB.On("ReplaceGitHubAppSettingRepositories", mock.Anything, uint32(1), uint32(1), mock.MatchedBy(func(repositories []*code.GitHubAppSettingRepositoryForUpsert) bool {
+					if len(repositories) != 2 {
+						return false
+					}
+					return repositories[0].GithubSettingId == 1 &&
+						repositories[0].GithubRepositoryId == 12345 &&
+						repositories[0].GithubRepositoryFullName == "target/repo1" &&
+						repositories[1].GithubSettingId == 1 &&
+						repositories[1].GithubRepositoryId == 67890 &&
+						repositories[1].GithubRepositoryFullName == "target/repo2"
+				})).Return(c.mockRepositories, c.mockReplaceError).Once()
 			}
 			if c.wantStatus != "" {
 				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, "octocat", mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()

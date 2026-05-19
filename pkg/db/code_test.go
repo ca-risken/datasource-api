@@ -329,6 +329,149 @@ func TestUpdateGitHubAppVerification(t *testing.T) {
 	}
 }
 
+func TestListGitHubAppSettingRepository(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name        string
+		want        *[]model.GitHubAppSettingRepository
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			want: &[]model.GitHubAppSettingRepository{
+				{GitHubAppSettingRepositoryID: 1, CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1", CreatedAt: now, UpdatedAt: now},
+				{GitHubAppSettingRepositoryID: 2, CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2", CreatedAt: now, UpdatedAt: now},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnRows(sqlmock.NewRows([]string{
+					"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint64(12345), "org/repo1", now, now).
+					AddRow(uint32(2), uint32(1), uint64(67890), "org/repo2", now, now))
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.ListGitHubAppSettingRepository(ctx, 1, 1)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
+	now := time.Now()
+	repositories := []*code.GitHubAppSettingRepositoryForUpsert{
+		{GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: "org/repo1"},
+		{GithubSettingId: 1, GithubRepositoryId: 67890, GithubRepositoryFullName: "org/repo2"},
+	}
+	cases := []struct {
+		name         string
+		repositories []*code.GitHubAppSettingRepositoryForUpsert
+		want         *[]model.GitHubAppSettingRepository
+		wantErr      bool
+		mockClosure  func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:         "OK",
+			repositories: repositories,
+			want: &[]model.GitHubAppSettingRepository{
+				{GitHubAppSettingRepositoryID: 1, CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1", CreatedAt: now, UpdatedAt: now},
+				{GitHubAppSettingRepositoryID: 2, CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2", CreatedAt: now, UpdatedAt: now},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(0, 2))
+				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(2, 1))
+				mock.ExpectCommit()
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnRows(sqlmock.NewRows([]string{
+					"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
+					AddRow(uint32(1), uint32(1), uint64(12345), "org/repo1", now, now).
+					AddRow(uint32(2), uint32(1), uint64(67890), "org/repo2", now, now))
+			},
+		},
+		{
+			name:         "OK empty repositories",
+			repositories: []*code.GitHubAppSettingRepositoryForUpsert{},
+			want:         &[]model.GitHubAppSettingRepository{},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(0, 2))
+				mock.ExpectCommit()
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnRows(sqlmock.NewRows([]string{
+					"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}))
+			},
+		},
+		{
+			name:         "NG github app setting not found",
+			repositories: repositories,
+			wantErr:      true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(0))
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name: "NG validation error",
+			repositories: []*code.GitHubAppSettingRepositoryForUpsert{
+				{GithubSettingId: 1, GithubRepositoryFullName: "org/repo1"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(0, 1))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.ReplaceGitHubAppSettingRepositories(ctx, 1, 1, c.repositories)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestDeleteGitHubSetting(t *testing.T) {
 	type args struct {
 		ProjectID           uint32

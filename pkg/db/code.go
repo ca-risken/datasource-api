@@ -21,6 +21,8 @@ type CodeRepoInterface interface {
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
 	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
+	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
+	ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -317,6 +319,94 @@ func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, git
 		return nil, fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 	}
 	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
+}
+
+const selectListGitHubAppSettingRepository = `
+SELECT
+  repo.*
+FROM
+  ghapp_setting_repository repo
+  INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE
+  github.project_id = ?
+  AND repo.code_github_setting_id = ?
+ORDER BY repo.github_repository_full_name
+`
+
+func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	return listGitHubAppSettingRepository(ctx, c.SlaveDB, projectID, githubSettingID)
+}
+
+func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	data := []model.GitHubAppSettingRepository{}
+	if err := db.WithContext(ctx).Raw(selectListGitHubAppSettingRepository, projectID, githubSettingID).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+const selectCountGitHubAppSetting = `
+SELECT COUNT(*)
+FROM code_github_setting
+WHERE project_id = ?
+  AND code_github_setting_id = ?
+  AND auth_mode = ?
+`
+
+const deleteGitHubAppSettingRepository = `
+DELETE repo
+FROM ghapp_setting_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ?
+  AND repo.code_github_setting_id = ?
+  AND github.auth_mode = ?
+`
+
+const upsertGitHubAppSettingRepository = `
+INSERT INTO ghapp_setting_repository (
+  code_github_setting_id,
+  github_repository_id,
+  github_repository_full_name
+)
+VALUES (?, ?, ?)
+ON DUPLICATE KEY UPDATE
+  github_repository_full_name=VALUES(github_repository_full_name)
+`
+
+func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error) {
+	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var count int
+		if err := tx.Raw(selectCountGitHubAppSetting, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Scan(&count).Error; err != nil {
+			return err
+		}
+		if count == 0 {
+			return fmt.Errorf("github app setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+		if err := tx.Exec(deleteGitHubAppSettingRepository, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Error; err != nil {
+			return err
+		}
+		for _, repo := range repositories {
+			if repo == nil {
+				continue
+			}
+			if repo.GithubSettingId != githubSettingID {
+				return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.GithubSettingId)
+			}
+			if err := repo.Validate(); err != nil {
+				return err
+			}
+			if err := tx.Exec(upsertGitHubAppSettingRepository,
+				repo.GithubSettingId,
+				repo.GithubRepositoryId,
+				repo.GithubRepositoryFullName).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return listGitHubAppSettingRepository(ctx, c.MasterDB, projectID, githubSettingID)
 }
 
 func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {

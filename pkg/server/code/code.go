@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -167,6 +168,56 @@ func convertGitHubSetting(
 	}
 	return &convertedGithubSetting
 }
+
+func convertGitHubAppSettingRepository(data *model.GitHubAppSettingRepository) *code.GitHubAppSettingRepository {
+	if data == nil {
+		return &code.GitHubAppSettingRepository{}
+	}
+	return &code.GitHubAppSettingRepository{
+		GithubSettingId:          data.CodeGitHubSettingID,
+		GithubRepositoryId:       data.GitHubRepositoryID,
+		GithubRepositoryFullName: data.GitHubRepositoryFullName,
+		CreatedAt:                data.CreatedAt.Unix(),
+		UpdatedAt:                data.UpdatedAt.Unix(),
+	}
+}
+
+func attachGitHubAppSettingRepositories(gitHubSetting *code.GitHubSetting, repositories *[]model.GitHubAppSettingRepository) {
+	if gitHubSetting == nil || repositories == nil {
+		return
+	}
+	for _, repo := range *repositories {
+		gitHubSetting.GithubAppSettingRepository = append(gitHubSetting.GithubAppSettingRepository, convertGitHubAppSettingRepository(&repo))
+	}
+}
+
+func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]*code.GitHubAppSettingRepositoryForUpsert, error) {
+	repoByID := map[uint64]*code.GitHubAppSettingRepositoryForUpsert{}
+	for _, repo := range repositories {
+		if repo == nil {
+			continue
+		}
+		repoID := repo.GetID()
+		fullName := repo.GetFullName()
+		if repoID <= 0 || fullName == "" {
+			return nil, fmt.Errorf("github app repository has empty required fields: github_setting_id=%d, repository_id=%d, repository_full_name=%s", githubSettingID, repoID, fullName)
+		}
+		repoByID[uint64(repoID)] = &code.GitHubAppSettingRepositoryForUpsert{
+			GithubSettingId:          githubSettingID,
+			GithubRepositoryId:       uint64(repoID),
+			GithubRepositoryFullName: fullName,
+		}
+	}
+	repositoriesForUpsert := make([]*code.GitHubAppSettingRepositoryForUpsert, 0, len(repoByID))
+	for _, repo := range repoByID {
+		repositoriesForUpsert = append(repositoriesForUpsert, repo)
+	}
+	sort.Slice(repositoriesForUpsert, func(i, j int) bool {
+		return repositoriesForUpsert[i].GithubRepositoryFullName < repositoriesForUpsert[j].GithubRepositoryFullName
+	})
+	return repositoriesForUpsert, nil
+}
+
 func convertGitleaksSetting(data *model.CodeGitleaksSetting) *code.GitleaksSetting {
 	var gitleaksSetting code.GitleaksSetting
 	if data == nil {
@@ -317,7 +368,15 @@ func (c *CodeService) GetGitHubSetting(ctx context.Context, req *code.GetGitHubS
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
-	return &code.GetGitHubSettingResponse{GithubSetting: convertGitHubSetting(githubSetting, gitleaksSetting, dependencySetting, codeScanSetting, false)}, nil
+	convertedGitHubSetting := convertGitHubSetting(githubSetting, gitleaksSetting, dependencySetting, codeScanSetting, false)
+	if githubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
+		githubAppSettingRepositories, err := c.repository.ListGitHubAppSettingRepository(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID)
+		if err != nil {
+			return nil, err
+		}
+		attachGitHubAppSettingRepositories(convertedGitHubSetting, githubAppSettingRepositories)
+	}
+	return &code.GetGitHubSettingResponse{GithubSetting: convertedGitHubSetting}, nil
 }
 
 func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubSettingRequest) (*code.PutGitHubSettingResponse, error) {
@@ -365,12 +424,33 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 		}
 		return nil, errors.New("github app installation verification failed")
 	}
+	repositories, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
+	if err != nil {
+		c.logger.Warnf(ctx, "Failed to list github app repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, githubSetting.GitHubUser, time.Now())
+		if updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+		}
+		return nil, errors.New("github app repository synchronization failed")
+	}
+	repositoriesForUpsert, err := buildGitHubAppSettingRepositoryForUpsert(req.GithubSettingId, repositories)
+	if err != nil {
+		c.logger.Warnf(ctx, "Failed to build github app repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		return nil, errors.New("github app repository synchronization failed")
+	}
+	savedRepositories, err := c.repository.ReplaceGitHubAppSettingRepositories(ctx, req.ProjectId, req.GithubSettingId, repositoriesForUpsert)
+	if err != nil {
+		c.logger.Errorf(ctx, "Failed to replace github app repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		return nil, errors.New("github app repository synchronization failed")
+	}
 
 	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())
 	if err != nil {
 		return nil, err
 	}
-	return &code.VerifyGitHubAppInstallationResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)}, nil
+	convertedGitHubSetting := convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)
+	attachGitHubAppSettingRepositories(convertedGitHubSetting, savedRepositories)
+	return &code.VerifyGitHubAppInstallationResponse{GithubSetting: convertedGitHubSetting}, nil
 }
 
 func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteGitHubSettingRequest) (*empty.Empty, error) {
