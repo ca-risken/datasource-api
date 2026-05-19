@@ -358,11 +358,12 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
 	if err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting); err != nil {
+		c.logger.Warnf(ctx, "Failed to verify github app installation: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
 		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, githubSetting.GitHubUser, time.Now())
 		if updateErr != nil {
 			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
 		}
-		return nil, err
+		return nil, errors.New("github app installation verification failed")
 	}
 
 	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())

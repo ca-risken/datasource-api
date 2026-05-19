@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -551,6 +552,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		mockUpdateError    error
 		want               *code.VerifyGitHubAppInstallationResponse
 		wantErr            bool
+		wantErrMsg         string
 		wantStatus         string
 	}{
 		{
@@ -587,12 +589,13 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			mockGitHubSetting: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
 			},
-			githubClientError: errors.New("verify error"),
+			githubClientError: errors.New("find installation: GET /orgs/target/installation: 404 Not Found"),
 			mockUpdateResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
 			},
 			wantStatus: code.GitHubVerificationStatusFailed,
 			wantErr:    true,
+			wantErrMsg: "github app installation verification failed",
 		},
 	}
 	for _, c := range cases {
@@ -612,6 +615,14 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			}
 			if c.wantErr && err == nil {
 				t.Fatalf("Unexpected no error")
+			}
+			if c.wantErrMsg != "" {
+				if err.Error() != c.wantErrMsg {
+					t.Fatalf("Unexpected error: want=%s, got=%v", c.wantErrMsg, err)
+				}
+				if strings.Contains(err.Error(), "/orgs/target/installation") {
+					t.Fatalf("Error exposes GitHub API details: %v", err)
+				}
 			}
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
