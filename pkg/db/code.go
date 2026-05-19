@@ -409,8 +409,24 @@ func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projec
 	return listGitHubAppSettingRepository(ctx, c.MasterDB, projectID, githubSettingID)
 }
 
+const deleteGitHubAppSettingRepositoryBySetting = `
+DELETE repo
+FROM ghapp_setting_repository repo
+INNER JOIN code_github_setting github USING(code_github_setting_id)
+WHERE github.project_id = ?
+  AND repo.code_github_setting_id = ?
+`
+
 func (c *Client) DeleteGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) error {
-	if err := c.MasterDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeGitHubSetting{}).Error; err != nil {
+	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec(deleteGitHubAppSettingRepositoryBySetting, projectID, githubSettingID).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).Delete(&model.CodeGitHubSetting{}).Error; err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
 	return nil

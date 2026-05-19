@@ -490,8 +490,19 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepositoryBySetting)).WillReturnResult(sqlmock.NewResult(0, 1))
 				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "NG child delete DB error",
+			args:    args{ProjectID: 1, CodeGitHubSettingID: 1},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepositoryBySetting)).WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
 			},
 		},
 		{
@@ -500,6 +511,7 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepositoryBySetting)).WillReturnResult(sqlmock.NewResult(0, 1))
 				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnError(errors.New("DB error"))
 				mock.ExpectRollback()
 			},
