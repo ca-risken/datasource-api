@@ -612,6 +612,40 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			wantErr:    true,
 			wantErrMsg: "github app installation verification failed",
 		},
+		{
+			name:  "NG repository build failed",
+			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
+			githubRepos: []*ghub.Repository{
+				{ID: ghub.Int64(0), FullName: ghub.String("target/repo1")},
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+			},
+			wantStatus: code.GitHubVerificationStatusFailed,
+			wantErr:    true,
+			wantErrMsg: "github app repository synchronization failed",
+		},
+		{
+			name:  "NG repository replace failed",
+			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
+			githubRepos: []*ghub.Repository{
+				{ID: ghub.Int64(67890), FullName: ghub.String("target/repo2")},
+				{ID: ghub.Int64(12345), FullName: ghub.String("target/repo1")},
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+			},
+			mockReplaceError: errors.New("replace error"),
+			wantStatus:       code.GitHubVerificationStatusFailed,
+			wantErr:          true,
+			wantErrMsg:       "github app repository synchronization failed",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
