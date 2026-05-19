@@ -190,7 +190,8 @@ func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *cod
 		return fmt.Errorf("find installation: %w", err)
 	}
 	if installation.GetID() != int64(config.InstallationId) {
-		return fmt.Errorf("installation_id mismatch: expected=%d, actual=%d", config.InstallationId, installation.GetID())
+		g.logger.Warnf(ctx, "github app installation_id mismatch: expected=%d, actual=%d", config.InstallationId, installation.GetID())
+		return errors.New("installation_id does not match target resource")
 	}
 	if _, err := g.ResolveInstallationToken(ctx, config, ""); err != nil {
 		return fmt.Errorf("resolve installation token: %w", err)
