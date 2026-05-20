@@ -94,6 +94,7 @@ func TestListDataSource(t *testing.T) {
 
 func TestListGitHubSetting(t *testing.T) {
 	now := time.Now()
+	installationID := uint64(12345)
 	cases := []struct {
 		name                   string
 		input                  *code.ListGitHubSettingRequest
@@ -102,10 +103,12 @@ func TestListGitHubSetting(t *testing.T) {
 		mockGitleaksResponse   *[]model.CodeGitleaksSetting
 		mockDependencyResponse *[]model.CodeDependencySetting
 		mockCodeScanResponse   *[]model.CodeCodeScanSetting
+		mockGitHubAppRepos     *[]model.GitHubAppSettingRepository
 		mockError              error
 		mockGitleaksError      error
 		mockDependencyError    error
 		mockCodeScanError      error
+		mockGitHubAppRepoError error
 		wantErr                bool
 	}{
 		{
@@ -138,6 +141,28 @@ func TestListGitHubSetting(t *testing.T) {
 			mockCodeScanResponse: &[]model.CodeCodeScanSetting{
 				{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 				{CodeGitHubSettingID: 2, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
+			},
+		},
+		{
+			name:  "OK github app repositories",
+			input: &code.ListGitHubSettingRequest{ProjectId: 1},
+			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
+				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				{GithubSettingId: 2, Name: "two", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: 12345, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+					GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+						{GithubSettingId: 2, GithubRepositoryId: 67890, GithubRepositoryFullName: "target/repo2", CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					},
+				},
+			}},
+			mockResponse: &[]model.CodeGitHubSetting{
+				{CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
+				{CodeGitHubSettingID: 2, Name: "two", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationID: &installationID, CreatedAt: now, UpdatedAt: now},
+			},
+			mockGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockDependencyResponse: &[]model.CodeDependencySetting{},
+			mockCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockGitHubAppRepos: &[]model.GitHubAppSettingRepository{
+				{CodeGitHubSettingID: 2, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "target/repo2", CreatedAt: now, UpdatedAt: now},
 			},
 		},
 		{
@@ -242,6 +267,18 @@ func TestListGitHubSetting(t *testing.T) {
 			mockCodeScanError:      gorm.ErrInvalidDB,
 			wantErr:                true,
 		},
+		{
+			name:  "Invalid DB error when listGitHubAppSettingRepository",
+			input: &code.ListGitHubSettingRequest{ProjectId: 1},
+			mockResponse: &[]model.CodeGitHubSetting{
+				{CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp},
+			},
+			mockGitleaksResponse:   &[]model.CodeGitleaksSetting{},
+			mockDependencyResponse: &[]model.CodeDependencySetting{},
+			mockCodeScanResponse:   &[]model.CodeCodeScanSetting{},
+			mockGitHubAppRepoError: gorm.ErrInvalidDB,
+			wantErr:                true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -260,6 +297,9 @@ func TestListGitHubSetting(t *testing.T) {
 			}
 			if c.mockCodeScanResponse != nil || c.mockCodeScanError != nil {
 				mockDB.On("ListCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockCodeScanResponse, c.mockCodeScanError).Once()
+			}
+			if c.mockGitHubAppRepos != nil || c.mockGitHubAppRepoError != nil {
+				mockDB.On("ListGitHubAppSettingRepository", mock.Anything, c.input.ProjectId, c.input.GithubSettingId).Return(c.mockGitHubAppRepos, c.mockGitHubAppRepoError).Once()
 			}
 
 			got, err := svc.ListGitHubSetting(ctx, c.input)

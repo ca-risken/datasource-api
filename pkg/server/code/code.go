@@ -330,6 +330,26 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 	for _, codeScanSetting := range *codeScanSettings {
 		mapCodeScanSetting[codeScanSetting.CodeGitHubSettingID] = codeScanSetting
 	}
+	var githubAppSettingRepositories *[]model.GitHubAppSettingRepository
+	hasGitHubAppSetting := false
+	for _, gitHubSetting := range *gitHubSettings {
+		if gitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
+			hasGitHubAppSetting = true
+			break
+		}
+	}
+	if hasGitHubAppSetting {
+		githubAppSettingRepositories, err = c.repository.ListGitHubAppSettingRepository(ctx, req.ProjectId, req.GithubSettingId)
+		if err != nil {
+			return nil, err
+		}
+	}
+	mapGitHubAppSettingRepository := map[uint32][]model.GitHubAppSettingRepository{}
+	if githubAppSettingRepositories != nil {
+		for _, repo := range *githubAppSettingRepositories {
+			mapGitHubAppSettingRepository[repo.CodeGitHubSettingID] = append(mapGitHubAppSettingRepository[repo.CodeGitHubSettingID], repo)
+		}
+	}
 
 	for _, gitHubSetting := range *gitHubSettings {
 		var gitleaks *model.CodeGitleaksSetting
@@ -347,7 +367,12 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 		if ok {
 			codescan = &valCodeScan
 		}
-		data.GithubSetting = append(data.GithubSetting, convertGitHubSetting(&gitHubSetting, gitleaks, dependency, codescan, true))
+		convertedGitHubSetting := convertGitHubSetting(&gitHubSetting, gitleaks, dependency, codescan, true)
+		if gitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
+			repositories := mapGitHubAppSettingRepository[gitHubSetting.CodeGitHubSettingID]
+			attachGitHubAppSettingRepositories(convertedGitHubSetting, &repositories)
+		}
+		data.GithubSetting = append(data.GithubSetting, convertedGitHubSetting)
 	}
 	return &data, nil
 }

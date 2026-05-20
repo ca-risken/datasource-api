@@ -329,7 +329,9 @@ FROM
   INNER JOIN code_github_setting github USING(code_github_setting_id)
 WHERE
   github.project_id = ?
-  AND repo.code_github_setting_id = ?
+`
+
+const orderListGitHubAppSettingRepository = `
 ORDER BY repo.github_repository_full_name
 `
 
@@ -338,8 +340,16 @@ func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, 
 }
 
 func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	query := selectListGitHubAppSettingRepository
+	params := []interface{}{projectID}
+	if !zero.IsZeroVal(githubSettingID) {
+		query += `  AND repo.code_github_setting_id = ?
+`
+		params = append(params, githubSettingID)
+	}
+	query += orderListGitHubAppSettingRepository
 	data := []model.GitHubAppSettingRepository{}
-	if err := db.WithContext(ctx).Raw(selectListGitHubAppSettingRepository, projectID, githubSettingID).Scan(&data).Error; err != nil {
+	if err := db.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
