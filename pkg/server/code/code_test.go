@@ -103,7 +103,7 @@ func TestListGitHubSetting(t *testing.T) {
 		mockGitleaksResponse   *[]model.CodeGitleaksSetting
 		mockDependencyResponse *[]model.CodeDependencySetting
 		mockCodeScanResponse   *[]model.CodeCodeScanSetting
-		mockGitHubAppRepos     *[]model.GitHubAppSettingRepository
+		mockGitHubAppRepos     []model.GitHubAppSettingRepository
 		mockError              error
 		mockGitleaksError      error
 		mockDependencyError    error
@@ -161,7 +161,7 @@ func TestListGitHubSetting(t *testing.T) {
 			mockGitleaksResponse:   &[]model.CodeGitleaksSetting{},
 			mockDependencyResponse: &[]model.CodeDependencySetting{},
 			mockCodeScanResponse:   &[]model.CodeCodeScanSetting{},
-			mockGitHubAppRepos: &[]model.GitHubAppSettingRepository{
+			mockGitHubAppRepos: []model.GitHubAppSettingRepository{
 				{CodeGitHubSettingID: 2, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "target/repo2", CreatedAt: now, UpdatedAt: now},
 			},
 		},
@@ -591,7 +591,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		mockGetError       error
 		mockUpdateResponse *model.CodeGitHubSetting
 		mockUpdateError    error
-		mockRepositories   *[]model.GitHubAppSettingRepository
+		mockRepositories   []model.GitHubAppSettingRepository
 		mockReplaceError   error
 		want               *code.VerifyGitHubAppInstallationResponse
 		wantErr            bool
@@ -611,7 +611,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			mockUpdateResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
-			mockRepositories: &[]model.GitHubAppSettingRepository{
+			mockRepositories: []model.GitHubAppSettingRepository{
 				{CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "target/repo1", CreatedAt: now, UpdatedAt: now},
 				{CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "target/repo2", CreatedAt: now, UpdatedAt: now},
 			},
@@ -696,16 +696,16 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
 			if c.mockRepositories != nil || c.mockReplaceError != nil {
-				mockDB.On("ReplaceGitHubAppSettingRepositories", mock.Anything, uint32(1), uint32(1), mock.MatchedBy(func(repositories []*code.GitHubAppSettingRepositoryForUpsert) bool {
+				mockDB.On("ReplaceGitHubAppSettingRepositories", mock.Anything, uint32(1), uint32(1), mock.MatchedBy(func(repositories []model.GitHubAppSettingRepositoryForUpsert) bool {
 					if len(repositories) != 2 {
 						return false
 					}
-					return repositories[0].GithubSettingId == 1 &&
-						repositories[0].GithubRepositoryId == 12345 &&
-						repositories[0].GithubRepositoryFullName == "target/repo1" &&
-						repositories[1].GithubSettingId == 1 &&
-						repositories[1].GithubRepositoryId == 67890 &&
-						repositories[1].GithubRepositoryFullName == "target/repo2"
+					return repositories[0].CodeGitHubSettingID == 1 &&
+						repositories[0].GitHubRepositoryID == 12345 &&
+						repositories[0].GitHubRepositoryFullName == "target/repo1" &&
+						repositories[1].CodeGitHubSettingID == 1 &&
+						repositories[1].GitHubRepositoryID == 67890 &&
+						repositories[1].GitHubRepositoryFullName == "target/repo2"
 				})).Return(c.mockRepositories, c.mockReplaceError).Once()
 			}
 			if c.wantStatus != "" {

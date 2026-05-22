@@ -45,6 +45,13 @@ type GitHubAppSettingRepository struct {
 	UpdatedAt                    time.Time
 }
 
+// GitHubAppSettingRepositoryForUpsert is the DB input for replacing GitHub App repositories.
+type GitHubAppSettingRepositoryForUpsert struct {
+	CodeGitHubSettingID      uint32
+	GitHubRepositoryID       uint64
+	GitHubRepositoryFullName string
+}
+
 func (GitHubAppSettingRepository) TableName() string {
 	return "ghapp_setting_repository"
 }

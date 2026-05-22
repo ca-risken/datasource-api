@@ -21,8 +21,8 @@ type CodeRepoInterface interface {
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
 	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
-	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
-	ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error)
+	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error)
+	ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -335,15 +335,15 @@ const orderListGitHubAppSettingRepository = `
 ORDER BY repo.github_repository_full_name
 `
 
-func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
 	return listGitHubAppSettingRepository(ctx, c.SlaveDB, projectID, githubSettingID)
 }
 
-func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
 	query := selectListGitHubAppSettingRepository
 	params := []interface{}{projectID}
-	if !zero.IsZeroVal(githubSettingID) {
-		query += `  AND repo.code_github_setting_id = ?
+	if githubSettingID != 0 {
+		query += ` AND repo.code_github_setting_id = ?
 `
 		params = append(params, githubSettingID)
 	}
@@ -352,7 +352,7 @@ func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID,
 	if err := db.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
-	return &data, nil
+	return data, nil
 }
 
 const selectCountGitHubAppSetting = `
@@ -383,7 +383,7 @@ ON DUPLICATE KEY UPDATE
   github_repository_full_name=VALUES(github_repository_full_name)
 `
 
-func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error) {
+func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error) {
 	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var count int
 		if err := tx.Raw(selectCountGitHubAppSetting, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Scan(&count).Error; err != nil {
@@ -396,19 +396,16 @@ func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projec
 			return err
 		}
 		for _, repo := range repositories {
-			if repo == nil {
-				continue
+			if repo.CodeGitHubSettingID != githubSettingID {
+				return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.CodeGitHubSettingID)
 			}
-			if repo.GithubSettingId != githubSettingID {
-				return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.GithubSettingId)
-			}
-			if err := repo.Validate(); err != nil {
-				return err
+			if repo.GitHubRepositoryID == 0 || repo.GitHubRepositoryFullName == "" || len(repo.GitHubRepositoryFullName) > 255 {
+				return fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", repo.CodeGitHubSettingID, repo.GitHubRepositoryID, repo.GitHubRepositoryFullName)
 			}
 			if err := tx.Exec(upsertGitHubAppSettingRepository,
-				repo.GithubSettingId,
-				repo.GithubRepositoryId,
-				repo.GithubRepositoryFullName).Error; err != nil {
+				repo.CodeGitHubSettingID,
+				repo.GitHubRepositoryID,
+				repo.GitHubRepositoryFullName).Error; err != nil {
 				return err
 			}
 		}

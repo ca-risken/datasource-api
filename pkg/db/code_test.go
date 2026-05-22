@@ -334,14 +334,14 @@ func TestListGitHubAppSettingRepository(t *testing.T) {
 	cases := []struct {
 		name            string
 		githubSettingID uint32
-		want            *[]model.GitHubAppSettingRepository
+		want            []model.GitHubAppSettingRepository
 		wantErr         bool
 		mockClosure     func(mock sqlmock.Sqlmock)
 	}{
 		{
 			name:            "OK by github setting",
 			githubSettingID: 1,
-			want: &[]model.GitHubAppSettingRepository{
+			want: []model.GitHubAppSettingRepository{
 				{GitHubAppSettingRepositoryID: 1, CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1", CreatedAt: now, UpdatedAt: now},
 				{GitHubAppSettingRepositoryID: 2, CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2", CreatedAt: now, UpdatedAt: now},
 			},
@@ -356,7 +356,7 @@ func TestListGitHubAppSettingRepository(t *testing.T) {
 		},
 		{
 			name: "OK by project",
-			want: &[]model.GitHubAppSettingRepository{
+			want: []model.GitHubAppSettingRepository{
 				{GitHubAppSettingRepositoryID: 1, CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1", CreatedAt: now, UpdatedAt: now},
 				{GitHubAppSettingRepositoryID: 2, CodeGitHubSettingID: 2, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2", CreatedAt: now, UpdatedAt: now},
 			},
@@ -403,21 +403,21 @@ func TestListGitHubAppSettingRepository(t *testing.T) {
 
 func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
 	now := time.Now()
-	repositories := []*code.GitHubAppSettingRepositoryForUpsert{
-		{GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: "org/repo1"},
-		{GithubSettingId: 1, GithubRepositoryId: 67890, GithubRepositoryFullName: "org/repo2"},
+	repositories := []model.GitHubAppSettingRepositoryForUpsert{
+		{CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1"},
+		{CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2"},
 	}
 	cases := []struct {
 		name         string
-		repositories []*code.GitHubAppSettingRepositoryForUpsert
-		want         *[]model.GitHubAppSettingRepository
+		repositories []model.GitHubAppSettingRepositoryForUpsert
+		want         []model.GitHubAppSettingRepository
 		wantErr      bool
 		mockClosure  func(mock sqlmock.Sqlmock)
 	}{
 		{
 			name:         "OK",
 			repositories: repositories,
-			want: &[]model.GitHubAppSettingRepository{
+			want: []model.GitHubAppSettingRepository{
 				{GitHubAppSettingRepositoryID: 1, CodeGitHubSettingID: 1, GitHubRepositoryID: 12345, GitHubRepositoryFullName: "org/repo1", CreatedAt: now, UpdatedAt: now},
 				{GitHubAppSettingRepositoryID: 2, CodeGitHubSettingID: 1, GitHubRepositoryID: 67890, GitHubRepositoryFullName: "org/repo2", CreatedAt: now, UpdatedAt: now},
 			},
@@ -436,8 +436,8 @@ func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
 		},
 		{
 			name:         "OK empty repositories",
-			repositories: []*code.GitHubAppSettingRepositoryForUpsert{},
-			want:         &[]model.GitHubAppSettingRepository{},
+			repositories: []model.GitHubAppSettingRepositoryForUpsert{},
+			want:         []model.GitHubAppSettingRepository{},
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
@@ -459,8 +459,8 @@ func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
 		},
 		{
 			name: "NG validation error",
-			repositories: []*code.GitHubAppSettingRepositoryForUpsert{
-				{GithubSettingId: 1, GithubRepositoryFullName: "org/repo1"},
+			repositories: []model.GitHubAppSettingRepositoryForUpsert{
+				{CodeGitHubSettingID: 1, GitHubRepositoryFullName: "org/repo1"},
 			},
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {

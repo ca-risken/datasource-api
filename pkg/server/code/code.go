@@ -182,17 +182,17 @@ func convertGitHubAppSettingRepository(data *model.GitHubAppSettingRepository) *
 	}
 }
 
-func attachGitHubAppSettingRepositories(gitHubSetting *code.GitHubSetting, repositories *[]model.GitHubAppSettingRepository) {
-	if gitHubSetting == nil || repositories == nil {
+func attachGitHubAppSettingRepositories(gitHubSetting *code.GitHubSetting, repositories []model.GitHubAppSettingRepository) {
+	if gitHubSetting == nil {
 		return
 	}
-	for _, repo := range *repositories {
+	for _, repo := range repositories {
 		gitHubSetting.GithubAppSettingRepository = append(gitHubSetting.GithubAppSettingRepository, convertGitHubAppSettingRepository(&repo))
 	}
 }
 
-func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]*code.GitHubAppSettingRepositoryForUpsert, error) {
-	repoByID := map[uint64]*code.GitHubAppSettingRepositoryForUpsert{}
+func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]model.GitHubAppSettingRepositoryForUpsert, error) {
+	repoByID := map[uint64]model.GitHubAppSettingRepositoryForUpsert{}
 	for _, repo := range repositories {
 		if repo == nil {
 			continue
@@ -202,18 +202,18 @@ func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositori
 		if repoID <= 0 || fullName == "" {
 			return nil, fmt.Errorf("github app repository has empty required fields: github_setting_id=%d, repository_id=%d, repository_full_name=%s", githubSettingID, repoID, fullName)
 		}
-		repoByID[uint64(repoID)] = &code.GitHubAppSettingRepositoryForUpsert{
-			GithubSettingId:          githubSettingID,
-			GithubRepositoryId:       uint64(repoID),
-			GithubRepositoryFullName: fullName,
+		repoByID[uint64(repoID)] = model.GitHubAppSettingRepositoryForUpsert{
+			CodeGitHubSettingID:      githubSettingID,
+			GitHubRepositoryID:       uint64(repoID),
+			GitHubRepositoryFullName: fullName,
 		}
 	}
-	repositoriesForUpsert := make([]*code.GitHubAppSettingRepositoryForUpsert, 0, len(repoByID))
+	repositoriesForUpsert := make([]model.GitHubAppSettingRepositoryForUpsert, 0, len(repoByID))
 	for _, repo := range repoByID {
 		repositoriesForUpsert = append(repositoriesForUpsert, repo)
 	}
 	sort.Slice(repositoriesForUpsert, func(i, j int) bool {
-		return repositoriesForUpsert[i].GithubRepositoryFullName < repositoriesForUpsert[j].GithubRepositoryFullName
+		return repositoriesForUpsert[i].GitHubRepositoryFullName < repositoriesForUpsert[j].GitHubRepositoryFullName
 	})
 	return repositoriesForUpsert, nil
 }
@@ -330,7 +330,7 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 	for _, codeScanSetting := range *codeScanSettings {
 		mapCodeScanSetting[codeScanSetting.CodeGitHubSettingID] = codeScanSetting
 	}
-	var githubAppSettingRepositories *[]model.GitHubAppSettingRepository
+	var githubAppSettingRepositories []model.GitHubAppSettingRepository
 	hasGitHubAppSetting := false
 	for _, gitHubSetting := range *gitHubSettings {
 		if gitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
@@ -345,10 +345,8 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 		}
 	}
 	mapGitHubAppSettingRepository := map[uint32][]model.GitHubAppSettingRepository{}
-	if githubAppSettingRepositories != nil {
-		for _, repo := range *githubAppSettingRepositories {
-			mapGitHubAppSettingRepository[repo.CodeGitHubSettingID] = append(mapGitHubAppSettingRepository[repo.CodeGitHubSettingID], repo)
-		}
+	for _, repo := range githubAppSettingRepositories {
+		mapGitHubAppSettingRepository[repo.CodeGitHubSettingID] = append(mapGitHubAppSettingRepository[repo.CodeGitHubSettingID], repo)
 	}
 
 	for _, gitHubSetting := range *gitHubSettings {
@@ -370,7 +368,7 @@ func (c *CodeService) ListGitHubSetting(ctx context.Context, req *code.ListGitHu
 		convertedGitHubSetting := convertGitHubSetting(&gitHubSetting, gitleaks, dependency, codescan, true)
 		if gitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
 			repositories := mapGitHubAppSettingRepository[gitHubSetting.CodeGitHubSettingID]
-			attachGitHubAppSettingRepositories(convertedGitHubSetting, &repositories)
+			attachGitHubAppSettingRepositories(convertedGitHubSetting, repositories)
 		}
 		data.GithubSetting = append(data.GithubSetting, convertedGitHubSetting)
 	}

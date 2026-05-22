@@ -111,23 +111,23 @@ func (_m *CodeRepoInterface) DeleteGitHubSetting(ctx context.Context, projectID 
 }
 
 // ListGitHubAppSettingRepository provides a mock function with given fields: ctx, projectID, githubSettingID
-func (_m *CodeRepoInterface) ListGitHubAppSettingRepository(ctx context.Context, projectID uint32, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+func (_m *CodeRepoInterface) ListGitHubAppSettingRepository(ctx context.Context, projectID uint32, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
 	ret := _m.Called(ctx, projectID, githubSettingID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListGitHubAppSettingRepository")
 	}
 
-	var r0 *[]model.GitHubAppSettingRepository
+	var r0 []model.GitHubAppSettingRepository
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*[]model.GitHubAppSettingRepository, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) ([]model.GitHubAppSettingRepository, error)); ok {
 		return rf(ctx, projectID, githubSettingID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) *[]model.GitHubAppSettingRepository); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) []model.GitHubAppSettingRepository); ok {
 		r0 = rf(ctx, projectID, githubSettingID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*[]model.GitHubAppSettingRepository)
+			r0 = ret.Get(0).([]model.GitHubAppSettingRepository)
 		}
 	}
 
@@ -141,27 +141,27 @@ func (_m *CodeRepoInterface) ListGitHubAppSettingRepository(ctx context.Context,
 }
 
 // ReplaceGitHubAppSettingRepositories provides a mock function with given fields: ctx, projectID, githubSettingID, repositories
-func (_m *CodeRepoInterface) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID uint32, githubSettingID uint32, repositories []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error) {
+func (_m *CodeRepoInterface) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID uint32, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error) {
 	ret := _m.Called(ctx, projectID, githubSettingID, repositories)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ReplaceGitHubAppSettingRepositories")
 	}
 
-	var r0 *[]model.GitHubAppSettingRepository
+	var r0 []model.GitHubAppSettingRepository
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, []*code.GitHubAppSettingRepositoryForUpsert) (*[]model.GitHubAppSettingRepository, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error)); ok {
 		return rf(ctx, projectID, githubSettingID, repositories)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, []*code.GitHubAppSettingRepositoryForUpsert) *[]model.GitHubAppSettingRepository); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, []model.GitHubAppSettingRepositoryForUpsert) []model.GitHubAppSettingRepository); ok {
 		r0 = rf(ctx, projectID, githubSettingID, repositories)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*[]model.GitHubAppSettingRepository)
+			r0 = ret.Get(0).([]model.GitHubAppSettingRepository)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, []*code.GitHubAppSettingRepositoryForUpsert) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, []model.GitHubAppSettingRepositoryForUpsert) error); ok {
 		r1 = rf(ctx, projectID, githubSettingID, repositories)
 	} else {
 		r1 = ret.Error(1)
