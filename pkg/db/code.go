@@ -385,35 +385,57 @@ ON DUPLICATE KEY UPDATE
 
 func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error) {
 	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		var count int
-		if err := tx.Raw(selectCountGitHubAppSetting, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Scan(&count).Error; err != nil {
-			return err
-		}
-		if count == 0 {
-			return fmt.Errorf("github app setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-		}
-		if err := tx.Exec(deleteGitHubAppSettingRepository, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Error; err != nil {
-			return err
-		}
-		for _, repo := range repositories {
-			if repo.CodeGitHubSettingID != githubSettingID {
-				return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.CodeGitHubSettingID)
-			}
-			if repo.GitHubRepositoryID == 0 || repo.GitHubRepositoryFullName == "" || len(repo.GitHubRepositoryFullName) > 255 {
-				return fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", repo.CodeGitHubSettingID, repo.GitHubRepositoryID, repo.GitHubRepositoryFullName)
-			}
-			if err := tx.Exec(upsertGitHubAppSettingRepository,
-				repo.CodeGitHubSettingID,
-				repo.GitHubRepositoryID,
-				repo.GitHubRepositoryFullName).Error; err != nil {
-				return err
-			}
-		}
-		return nil
+		return replaceGitHubAppSettingRepositories(tx, projectID, githubSettingID, repositories)
 	}); err != nil {
 		return nil, err
 	}
 	return listGitHubAppSettingRepository(ctx, c.MasterDB, projectID, githubSettingID)
+}
+
+func replaceGitHubAppSettingRepositories(tx *gorm.DB, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) error {
+	if err := validateGitHubAppSettingExists(tx, projectID, githubSettingID); err != nil {
+		return err
+	}
+	if err := tx.Exec(deleteGitHubAppSettingRepository, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Error; err != nil {
+		return err
+	}
+	for _, repo := range repositories {
+		if err := upsertGitHubAppSettingRepositoryTx(tx, githubSettingID, repo); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateGitHubAppSettingExists(tx *gorm.DB, projectID, githubSettingID uint32) error {
+	var count int
+	if err := tx.Raw(selectCountGitHubAppSetting, projectID, githubSettingID, code.GitHubAuthModeGitHubApp).Scan(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("github app setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+	}
+	return nil
+}
+
+func upsertGitHubAppSettingRepositoryTx(tx *gorm.DB, githubSettingID uint32, repo model.GitHubAppSettingRepositoryForUpsert) error {
+	if err := validateGitHubAppSettingRepositoryForUpsert(githubSettingID, repo); err != nil {
+		return err
+	}
+	return tx.Exec(upsertGitHubAppSettingRepository,
+		repo.CodeGitHubSettingID,
+		repo.GitHubRepositoryID,
+		repo.GitHubRepositoryFullName).Error
+}
+
+func validateGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repo model.GitHubAppSettingRepositoryForUpsert) error {
+	if repo.CodeGitHubSettingID != githubSettingID {
+		return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.CodeGitHubSettingID)
+	}
+	if repo.GitHubRepositoryID == 0 || repo.GitHubRepositoryFullName == "" || len(repo.GitHubRepositoryFullName) > 255 {
+		return fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", repo.CodeGitHubSettingID, repo.GitHubRepositoryID, repo.GitHubRepositoryFullName)
+	}
+	return nil
 }
 
 const deleteGitHubAppSettingRepositoryBySetting = `
