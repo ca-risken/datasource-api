@@ -23,6 +23,7 @@ type CodeRepoInterface interface {
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error)
 	ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error)
+	CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string, verifiedAt time.Time, repositories []model.GitHubAppSettingRepositoryForUpsert) (*model.CodeGitHubSetting, []model.GitHubAppSettingRepository, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -112,8 +113,12 @@ func (c *Client) ListGitHubSetting(ctx context.Context, projectID, githubSetting
 }
 
 func (c *Client) GetGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
+	return getGitHubSetting(ctx, c.SlaveDB, projectID, githubSettingID)
+}
+
+func getGitHubSetting(ctx context.Context, db *gorm.DB, projectID uint32, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
 	var data model.CodeGitHubSetting
-	if err := c.SlaveDB.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
+	if err := db.WithContext(ctx).Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil
@@ -305,7 +310,14 @@ WHERE project_id = ?
 `
 
 func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
-	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
+	if err := updateGitHubAppVerificationTx(c.MasterDB.WithContext(ctx), projectID, githubSettingID, verificationStatus, verifiedGitHubUser, verifiedAt); err != nil {
+		return nil, err
+	}
+	return getGitHubSetting(ctx, c.MasterDB, projectID, githubSettingID)
+}
+
+func updateGitHubAppVerificationTx(tx *gorm.DB, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) error {
+	result := tx.Exec(updateGitHubAppVerification,
 		verificationStatus,
 		convertZeroValueToNull(verifiedGitHubUser),
 		verifiedAt,
@@ -313,12 +325,12 @@ func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, git
 		githubSettingID,
 		code.GitHubAuthModeGitHubApp)
 	if result.Error != nil {
-		return nil, result.Error
+		return result.Error
 	}
 	if result.RowsAffected == 0 {
-		return nil, fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		return fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 	}
-	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
+	return nil
 }
 
 const selectListGitHubAppSettingRepository = `
@@ -390,6 +402,33 @@ func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projec
 		return nil, err
 	}
 	return listGitHubAppSettingRepository(ctx, c.MasterDB, projectID, githubSettingID)
+}
+
+func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string, verifiedAt time.Time, repositories []model.GitHubAppSettingRepositoryForUpsert) (*model.CodeGitHubSetting, []model.GitHubAppSettingRepository, error) {
+	var verifiedGitHubSetting *model.CodeGitHubSetting
+	var savedRepositories []model.GitHubAppSettingRepository
+	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := replaceGitHubAppSettingRepositories(tx, projectID, githubSettingID, repositories); err != nil {
+			return err
+		}
+		if err := updateGitHubAppVerificationTx(tx, projectID, githubSettingID, code.GitHubVerificationStatusSuccess, verifiedGitHubUser, verifiedAt); err != nil {
+			return err
+		}
+		setting, err := getGitHubSetting(ctx, tx, projectID, githubSettingID)
+		if err != nil {
+			return err
+		}
+		saved, err := listGitHubAppSettingRepository(ctx, tx, projectID, githubSettingID)
+		if err != nil {
+			return err
+		}
+		verifiedGitHubSetting = setting
+		savedRepositories = saved
+		return nil
+	}); err != nil {
+		return nil, nil, err
+	}
+	return verifiedGitHubSetting, savedRepositories, nil
 }
 
 func replaceGitHubAppSettingRepositories(tx *gorm.DB, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) error {

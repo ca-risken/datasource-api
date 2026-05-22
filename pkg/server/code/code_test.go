@@ -587,12 +587,13 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		input              *code.VerifyGitHubAppInstallationRequest
 		githubRepos        []*ghub.Repository
 		githubClientError  error
+		githubListError    error
 		mockGitHubSetting  *model.CodeGitHubSetting
 		mockGetError       error
 		mockUpdateResponse *model.CodeGitHubSetting
 		mockUpdateError    error
 		mockRepositories   []model.GitHubAppSettingRepository
-		mockReplaceError   error
+		mockCompleteError  error
 		want               *code.VerifyGitHubAppInstallationResponse
 		wantErr            bool
 		wantErrMsg         string
@@ -653,6 +654,20 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			wantErrMsg: "github app installation verification failed",
 		},
 		{
+			name:  "NG repository list failed",
+			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			githubListError: errors.New("list repositories error"),
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSyncFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+			},
+			wantStatus: code.GitHubVerificationStatusSyncFailed,
+			wantErr:    true,
+			wantErrMsg: "github app repository synchronization failed",
+		},
+		{
 			name:  "NG repository build failed",
 			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
 			githubRepos: []*ghub.Repository{
@@ -662,9 +677,9 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSyncFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
 			},
-			wantStatus: code.GitHubVerificationStatusFailed,
+			wantStatus: code.GitHubVerificationStatusSyncFailed,
 			wantErr:    true,
 			wantErrMsg: "github app repository synchronization failed",
 		},
@@ -679,24 +694,24 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSyncFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
 			},
-			mockReplaceError: errors.New("replace error"),
-			wantStatus:       code.GitHubVerificationStatusFailed,
-			wantErr:          true,
-			wantErrMsg:       "github app repository synchronization failed",
+			mockCompleteError: errors.New("complete error"),
+			wantStatus:        code.GitHubVerificationStatusSyncFailed,
+			wantErr:           true,
+			wantErrMsg:        "github app repository synchronization failed",
 		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{repos: c.githubRepos, err: c.githubClientError}, logger: logging.NewLogger()}
+			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{repos: c.githubRepos, err: c.githubClientError, listErr: c.githubListError}, logger: logging.NewLogger()}
 
 			if c.mockGitHubSetting != nil || c.mockGetError != nil {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
-			if c.mockRepositories != nil || c.mockReplaceError != nil {
-				mockDB.On("ReplaceGitHubAppSettingRepositories", mock.Anything, uint32(1), uint32(1), mock.MatchedBy(func(repositories []model.GitHubAppSettingRepositoryForUpsert) bool {
+			if c.mockRepositories != nil || c.mockCompleteError != nil {
+				mockDB.On("CompleteGitHubAppVerification", mock.Anything, uint32(1), uint32(1), "octocat", mock.AnythingOfType("time.Time"), mock.MatchedBy(func(repositories []model.GitHubAppSettingRepositoryForUpsert) bool {
 					if len(repositories) != 2 {
 						return false
 					}
@@ -706,9 +721,9 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 						repositories[1].CodeGitHubSettingID == 1 &&
 						repositories[1].GitHubRepositoryID == 67890 &&
 						repositories[1].GitHubRepositoryFullName == "target/repo2"
-				})).Return(c.mockRepositories, c.mockReplaceError).Once()
+				})).Return(c.mockUpdateResponse, c.mockRepositories, c.mockCompleteError).Once()
 			}
-			if c.wantStatus != "" {
+			if c.wantErr && c.wantStatus != "" {
 				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, "octocat", mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
 			}
 			got, err := svc.VerifyGitHubAppInstallation(context.Background(), c.input)
@@ -2183,8 +2198,9 @@ func (c *FakeCodeQueue) Send(ctx context.Context, url string, msg interface{}) (
 }
 
 type FakeGithubClient struct {
-	repos []*ghub.Repository
-	err   error
+	repos   []*ghub.Repository
+	err     error
+	listErr error
 }
 
 func newFakeGithubClient(repos []*ghub.Repository, err error) *FakeGithubClient {
@@ -2195,6 +2211,9 @@ func newFakeGithubClient(repos []*ghub.Repository, err error) *FakeGithubClient 
 }
 
 func (g *FakeGithubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*ghub.Repository, error) {
+	if g.listErr != nil {
+		return nil, g.listErr
+	}
 	return g.repos, g.err
 }
 
