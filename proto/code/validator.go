@@ -8,12 +8,10 @@ import (
 )
 
 const (
-	GitHubAuthModePersonalAccessToken         = "PERSONAL_ACCESS_TOKEN"
-	GitHubAuthModeGitHubApp                   = "GITHUB_APP"
-	GitHubVerificationStatusSuccess           = "SUCCESS"
-	GitHubVerificationStatusFailed            = "FAILED"
-	GitHubVerificationStatusSyncFailed        = "SYNC_FAILED"
-	GitHubVerificationStatusPersistenceFailed = "PERSISTENCE_FAILED"
+	GitHubAuthModePersonalAccessToken = "PERSONAL_ACCESS_TOKEN"
+	GitHubAuthModeGitHubApp           = "GITHUB_APP"
+	GitHubVerificationStatusSuccess   = "SUCCESS"
+	GitHubVerificationStatusFailed    = "FAILED"
 )
 
 // validateRepositoryName validates repository name format (owner/repo)

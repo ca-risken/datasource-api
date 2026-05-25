@@ -193,6 +193,12 @@ func attachGitHubAppSettingRepositories(gitHubSetting *code.GitHubSetting, repos
 
 const maxGitHubRepositoryFullNameLength = 255
 
+const (
+	githubAppFailureStatusInstallationFailed = "INSTALLATION_FAILED"
+	githubAppFailureStatusSyncFailed         = "SYNC_FAILED"
+	githubAppFailureStatusPersistenceFailed  = "PERSISTENCE_FAILED"
+)
+
 func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]model.GitHubAppSettingRepositoryForUpsert, error) {
 	repoByID := map[uint64]model.GitHubAppSettingRepositoryForUpsert{}
 	for _, repo := range repositories {
@@ -222,14 +228,6 @@ func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositori
 
 func (c *CodeService) updateGitHubAppVerificationFailed(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string) {
 	c.updateGitHubAppVerificationStatus(ctx, projectID, githubSettingID, code.GitHubVerificationStatusFailed, verifiedGitHubUser)
-}
-
-func (c *CodeService) updateGitHubAppRepositorySyncFailed(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string) {
-	c.updateGitHubAppVerificationStatus(ctx, projectID, githubSettingID, code.GitHubVerificationStatusSyncFailed, verifiedGitHubUser)
-}
-
-func (c *CodeService) updateGitHubAppVerificationPersistenceFailed(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string) {
-	c.updateGitHubAppVerificationStatus(ctx, projectID, githubSettingID, code.GitHubVerificationStatusPersistenceFailed, verifiedGitHubUser)
 }
 
 func (c *CodeService) updateGitHubAppVerificationStatus(ctx context.Context, projectID, githubSettingID uint32, status, verifiedGitHubUser string) {
@@ -461,26 +459,26 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
 	if err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting); err != nil {
-		c.logger.Warnf(ctx, "Failed to verify github app installation: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		c.logger.Warnf(ctx, "Failed to verify github app installation: failure_status=%s, project_id=%d, github_setting_id=%d, err=%+v", githubAppFailureStatusInstallationFailed, req.ProjectId, req.GithubSettingId, err)
 		c.updateGitHubAppVerificationFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
 		return nil, errors.New("github app installation verification failed")
 	}
 	repositories, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
 	if err != nil {
-		c.logger.Warnf(ctx, "Failed to list github app repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-		c.updateGitHubAppRepositorySyncFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
+		c.logger.Warnf(ctx, "Failed to list github app repositories: failure_status=%s, project_id=%d, github_setting_id=%d, err=%+v", githubAppFailureStatusSyncFailed, req.ProjectId, req.GithubSettingId, err)
+		c.updateGitHubAppVerificationFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
 		return nil, errors.New("github app repository synchronization failed")
 	}
 	repositoriesForUpsert, err := buildGitHubAppSettingRepositoryForUpsert(req.GithubSettingId, repositories)
 	if err != nil {
-		c.logger.Warnf(ctx, "Failed to build github app repositories: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-		c.updateGitHubAppRepositorySyncFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
+		c.logger.Warnf(ctx, "Failed to build github app repositories: failure_status=%s, project_id=%d, github_setting_id=%d, err=%+v", githubAppFailureStatusSyncFailed, req.ProjectId, req.GithubSettingId, err)
+		c.updateGitHubAppVerificationFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
 		return nil, errors.New("github app repository synchronization failed")
 	}
 	verifiedGitHubSetting, savedRepositories, err := c.repository.CompleteGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser, time.Now(), repositoriesForUpsert)
 	if err != nil {
-		c.logger.Errorf(ctx, "Failed to complete github app verification: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-		c.updateGitHubAppVerificationPersistenceFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
+		c.logger.Errorf(ctx, "Failed to complete github app verification: failure_status=%s, project_id=%d, github_setting_id=%d, err=%+v", githubAppFailureStatusPersistenceFailed, req.ProjectId, req.GithubSettingId, err)
+		c.updateGitHubAppVerificationFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
 		return nil, errors.New("github app verification persistence failed")
 	}
 	convertedGitHubSetting := convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)
