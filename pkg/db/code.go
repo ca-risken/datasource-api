@@ -348,20 +348,28 @@ ORDER BY repo.github_repository_full_name
 `
 
 func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
-	return listGitHubAppSettingRepository(ctx, c.SlaveDB, projectID, githubSettingID)
+	if githubSettingID == 0 {
+		return listGitHubAppSettingRepositoryByProject(ctx, c.SlaveDB, projectID)
+	}
+	return listGitHubAppSettingRepositoryBySetting(ctx, c.SlaveDB, projectID, githubSettingID)
 }
 
-func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
+func listGitHubAppSettingRepositoryByProject(ctx context.Context, db *gorm.DB, projectID uint32) ([]model.GitHubAppSettingRepository, error) {
 	query := selectListGitHubAppSettingRepository
 	params := []any{projectID}
-	if githubSettingID != 0 {
-		query += ` AND repo.code_github_setting_id = ?
-`
-		params = append(params, githubSettingID)
-	}
 	query += orderListGitHubAppSettingRepository
 	data := []model.GitHubAppSettingRepository{}
 	if err := db.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func listGitHubAppSettingRepositoryBySetting(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
+	query := selectListGitHubAppSettingRepository + ` AND repo.code_github_setting_id = ?
+` + orderListGitHubAppSettingRepository
+	data := []model.GitHubAppSettingRepository{}
+	if err := db.WithContext(ctx).Raw(query, projectID, githubSettingID).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return data, nil
@@ -396,12 +404,21 @@ ON DUPLICATE KEY UPDATE
 `
 
 func (c *Client) ReplaceGitHubAppSettingRepositories(ctx context.Context, projectID, githubSettingID uint32, repositories []model.GitHubAppSettingRepositoryForUpsert) ([]model.GitHubAppSettingRepository, error) {
+	var savedRepositories []model.GitHubAppSettingRepository
 	if err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return replaceGitHubAppSettingRepositories(tx, projectID, githubSettingID, repositories)
+		if err := replaceGitHubAppSettingRepositories(tx, projectID, githubSettingID, repositories); err != nil {
+			return err
+		}
+		saved, err := listGitHubAppSettingRepositoryBySetting(ctx, tx, projectID, githubSettingID)
+		if err != nil {
+			return err
+		}
+		savedRepositories = saved
+		return nil
 	}); err != nil {
 		return nil, err
 	}
-	return listGitHubAppSettingRepository(ctx, c.MasterDB, projectID, githubSettingID)
+	return savedRepositories, nil
 }
 
 func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string, verifiedAt time.Time, repositories []model.GitHubAppSettingRepositoryForUpsert) (*model.CodeGitHubSetting, []model.GitHubAppSettingRepository, error) {
@@ -418,7 +435,7 @@ func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, g
 		if err != nil {
 			return err
 		}
-		saved, err := listGitHubAppSettingRepository(ctx, tx, projectID, githubSettingID)
+		saved, err := listGitHubAppSettingRepositoryBySetting(ctx, tx, projectID, githubSettingID)
 		if err != nil {
 			return err
 		}

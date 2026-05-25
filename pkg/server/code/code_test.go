@@ -709,7 +709,11 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			mockGitHubSetting: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
 			},
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusPersistenceFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+			},
 			mockCompleteError: errors.New("complete error"),
+			wantStatus:        code.GitHubVerificationStatusPersistenceFailed,
 			wantErr:           true,
 			wantErrMsg:        "github app verification persistence failed",
 		},

@@ -228,6 +228,10 @@ func (c *CodeService) updateGitHubAppRepositorySyncFailed(ctx context.Context, p
 	c.updateGitHubAppVerificationStatus(ctx, projectID, githubSettingID, code.GitHubVerificationStatusSyncFailed, verifiedGitHubUser)
 }
 
+func (c *CodeService) updateGitHubAppVerificationPersistenceFailed(ctx context.Context, projectID, githubSettingID uint32, verifiedGitHubUser string) {
+	c.updateGitHubAppVerificationStatus(ctx, projectID, githubSettingID, code.GitHubVerificationStatusPersistenceFailed, verifiedGitHubUser)
+}
+
 func (c *CodeService) updateGitHubAppVerificationStatus(ctx context.Context, projectID, githubSettingID uint32, status, verifiedGitHubUser string) {
 	_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, projectID, githubSettingID, status, verifiedGitHubUser, time.Now())
 	if updateErr != nil {
@@ -476,6 +480,7 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 	verifiedGitHubSetting, savedRepositories, err := c.repository.CompleteGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser, time.Now(), repositoriesForUpsert)
 	if err != nil {
 		c.logger.Errorf(ctx, "Failed to complete github app verification: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		c.updateGitHubAppVerificationPersistenceFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
 		return nil, errors.New("github app verification persistence failed")
 	}
 	convertedGitHubSetting := convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)

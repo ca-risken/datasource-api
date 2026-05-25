@@ -427,11 +427,11 @@ func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
 				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(0, 2))
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(2, 1))
-				mock.ExpectCommit()
 				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnRows(sqlmock.NewRows([]string{
 					"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
 					AddRow(uint32(1), uint32(1), uint64(12345), "org/repo1", now, now).
 					AddRow(uint32(2), uint32(1), uint64(67890), "org/repo2", now, now))
+				mock.ExpectCommit()
 			},
 		},
 		{
@@ -442,9 +442,9 @@ func TestReplaceGitHubAppSettingRepositories(t *testing.T) {
 				mock.ExpectBegin()
 				mock.ExpectQuery(regexp.QuoteMeta(selectCountGitHubAppSetting)).WillReturnRows(sqlmock.NewRows([]string{"COUNT(*)"}).AddRow(1))
 				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).WillReturnResult(sqlmock.NewResult(0, 2))
-				mock.ExpectCommit()
 				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).WillReturnRows(sqlmock.NewRows([]string{
 					"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}))
+				mock.ExpectCommit()
 			},
 		},
 		{
