@@ -353,7 +353,7 @@ func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, 
 
 func listGitHubAppSettingRepository(ctx context.Context, db *gorm.DB, projectID, githubSettingID uint32) ([]model.GitHubAppSettingRepository, error) {
 	query := selectListGitHubAppSettingRepository
-	params := []interface{}{projectID}
+	params := []any{projectID}
 	if githubSettingID != 0 {
 		query += ` AND repo.code_github_setting_id = ?
 `
