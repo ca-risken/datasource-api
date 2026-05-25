@@ -202,7 +202,7 @@ func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositori
 		repoID := repo.GetID()
 		fullName := repo.GetFullName()
 		if repoID <= 0 || fullName == "" || len(fullName) > maxGitHubRepositoryFullNameLength {
-			return nil, fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", githubSettingID, repoID, fullName)
+			return nil, fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name_length=%d", githubSettingID, repoID, len(fullName))
 		}
 		repoByID[uint64(repoID)] = model.GitHubAppSettingRepositoryForUpsert{
 			CodeGitHubSettingID:      githubSettingID,
@@ -476,8 +476,7 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 	verifiedGitHubSetting, savedRepositories, err := c.repository.CompleteGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser, time.Now(), repositoriesForUpsert)
 	if err != nil {
 		c.logger.Errorf(ctx, "Failed to complete github app verification: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
-		c.updateGitHubAppRepositorySyncFailed(ctx, req.ProjectId, req.GithubSettingId, githubSetting.GitHubUser)
-		return nil, errors.New("github app repository synchronization failed")
+		return nil, errors.New("github app verification persistence failed")
 	}
 	convertedGitHubSetting := convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)
 	attachGitHubAppSettingRepositories(convertedGitHubSetting, savedRepositories)

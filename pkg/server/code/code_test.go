@@ -700,7 +700,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			wantErrMsg: "github app repository synchronization failed",
 		},
 		{
-			name:  "NG repository replace failed",
+			name:  "NG verification persistence failed",
 			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
 			githubRepos: []*ghub.Repository{
 				{ID: ghub.Int64(67890), FullName: ghub.String("target/repo2")},
@@ -709,13 +709,9 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			mockGitHubSetting: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
 			},
-			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSyncFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
-			},
 			mockCompleteError: errors.New("complete error"),
-			wantStatus:        code.GitHubVerificationStatusSyncFailed,
 			wantErr:           true,
-			wantErrMsg:        "github app repository synchronization failed",
+			wantErrMsg:        "github app verification persistence failed",
 		},
 	}
 	for _, c := range cases {

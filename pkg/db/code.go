@@ -472,7 +472,7 @@ func validateGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repo mo
 		return fmt.Errorf("github_setting_id mismatch: expected=%d, actual=%d", githubSettingID, repo.CodeGitHubSettingID)
 	}
 	if repo.GitHubRepositoryID == 0 || repo.GitHubRepositoryFullName == "" || len(repo.GitHubRepositoryFullName) > 255 {
-		return fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", repo.CodeGitHubSettingID, repo.GitHubRepositoryID, repo.GitHubRepositoryFullName)
+		return fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name_length=%d", repo.CodeGitHubSettingID, repo.GitHubRepositoryID, len(repo.GitHubRepositoryFullName))
 	}
 	return nil
 }
