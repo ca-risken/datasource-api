@@ -191,6 +191,8 @@ func attachGitHubAppSettingRepositories(gitHubSetting *code.GitHubSetting, repos
 	}
 }
 
+const maxGitHubRepositoryFullNameLength = 255
+
 func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]model.GitHubAppSettingRepositoryForUpsert, error) {
 	repoByID := map[uint64]model.GitHubAppSettingRepositoryForUpsert{}
 	for _, repo := range repositories {
@@ -199,8 +201,8 @@ func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositori
 		}
 		repoID := repo.GetID()
 		fullName := repo.GetFullName()
-		if repoID <= 0 || fullName == "" {
-			return nil, fmt.Errorf("github app repository has empty required fields: github_setting_id=%d, repository_id=%d, repository_full_name=%s", githubSettingID, repoID, fullName)
+		if repoID <= 0 || fullName == "" || len(fullName) > maxGitHubRepositoryFullNameLength {
+			return nil, fmt.Errorf("invalid github app repository: github_setting_id=%d, repository_id=%d, repository_full_name=%s", githubSettingID, repoID, fullName)
 		}
 		repoByID[uint64(repoID)] = model.GitHubAppSettingRepositoryForUpsert{
 			CodeGitHubSettingID:      githubSettingID,

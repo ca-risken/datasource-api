@@ -684,6 +684,22 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			wantErrMsg: "github app repository synchronization failed",
 		},
 		{
+			name:  "NG repository full name too long",
+			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
+			githubRepos: []*ghub.Repository{
+				{ID: ghub.Int64(12345), FullName: ghub.String(strings.Repeat("a", 256))},
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSyncFailed, VerifiedGitHubUser: "octocat", VerifiedAt: now,
+			},
+			wantStatus: code.GitHubVerificationStatusSyncFailed,
+			wantErr:    true,
+			wantErrMsg: "github app repository synchronization failed",
+		},
+		{
 			name:  "NG repository replace failed",
 			input: &code.VerifyGitHubAppInstallationRequest{ProjectId: 1, GithubSettingId: 1},
 			githubRepos: []*ghub.Repository{
