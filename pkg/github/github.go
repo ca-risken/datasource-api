@@ -135,7 +135,7 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 		return []*github.Repository{repository}, nil
 	}
 
-	if config.PersonalAccessToken == "" && g.appAuth != nil {
+	if config.AuthMode == code.GitHubAuthModeGitHubApp {
 		return g.listRepositoryForInstallation(ctx, client.Apps, config.TargetResource)
 	}
 
@@ -169,11 +169,14 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 }
 
 func (g *riskenGitHubClient) resolveAccessToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
+	if config.AuthMode == code.GitHubAuthModeGitHubApp {
+		if g.appAuth == nil {
+			return "", errors.New("github app auth is not configured")
+		}
+		return g.ResolveInstallationToken(ctx, config, repoName)
+	}
 	if config.PersonalAccessToken != "" {
 		return config.PersonalAccessToken, nil
-	}
-	if g.appAuth != nil {
-		return g.ResolveInstallationToken(ctx, config, repoName)
 	}
 	return g.defaultToken, nil
 }

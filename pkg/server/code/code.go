@@ -966,6 +966,36 @@ func (c *CodeService) PutDependencyRepository(ctx context.Context, req *code.Put
 	return &empty.Empty{}, nil
 }
 
+func (c *CodeService) buildGitHubSettingForRepositoryList(ctx context.Context, gitHubSetting *model.CodeGitHubSetting, projectID, githubSettingID uint32) (*code.GitHubSetting, error) {
+	protoGitHubSetting := convertGitHubSetting(gitHubSetting, nil, nil, nil, false)
+	if gitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
+		if gitHubSetting.VerificationStatus != code.GitHubVerificationStatusSuccess {
+			return nil, fmt.Errorf("github app installation is not verified: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+		if !c.githubClient.SupportsGitHubApp() {
+			return nil, fmt.Errorf("github app auth is not configured")
+		}
+		protoGitHubSetting.PersonalAccessToken = ""
+		return protoGitHubSetting, nil
+	}
+
+	if gitHubSetting.PersonalAccessToken == "" {
+		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+		return protoGitHubSetting, nil
+	}
+	decryptedPAT, err := decryptWithBase64(&c.cipherBlock, gitHubSetting.PersonalAccessToken)
+	if err != nil {
+		c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
+		return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
+	}
+	if decryptedPAT == "" {
+		c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		return nil, fmt.Errorf("decrypted PAT is empty")
+	}
+	protoGitHubSetting.PersonalAccessToken = decryptedPAT
+	return protoGitHubSetting, nil
+}
+
 // listGitleaksTargetRepository lists repositories filtered by GitleaksSetting (internal function)
 func (c *CodeService) listGitleaksTargetRepository(ctx context.Context, projectID, githubSettingID uint32) ([]*ghub.Repository, error) {
 	// Get GitHub setting to use for API call
@@ -987,27 +1017,10 @@ func (c *CodeService) listGitleaksTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
-	// Decrypt PAT before using it for GitHub API call
-	decryptedPAT := ""
-	if githubSetting.PersonalAccessToken != "" {
-		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
-		if err != nil {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
-			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
-		}
-		decryptedPAT = decrypted
-		if decryptedPAT == "" {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-			return nil, fmt.Errorf("decrypted PAT is empty")
-		}
-	} else {
-		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	protoGitHubSetting, err := c.buildGitHubSettingForRepositoryList(ctx, githubSetting, projectID, githubSettingID)
+	if err != nil {
+		return nil, err
 	}
-
-	// Convert model to proto for GitHub API call
-	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Override with decrypted PAT
-	protoGitHubSetting.PersonalAccessToken = decryptedPAT
 
 	// Call GitHub API to list repositories
 	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
@@ -1053,27 +1066,10 @@ func (c *CodeService) listDependencyTargetRepository(ctx context.Context, projec
 		return nil, err
 	}
 
-	// Decrypt PAT before using it for GitHub API call
-	decryptedPAT := ""
-	if githubSetting.PersonalAccessToken != "" {
-		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
-		if err != nil {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
-			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
-		}
-		decryptedPAT = decrypted
-		if decryptedPAT == "" {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-			return nil, fmt.Errorf("decrypted PAT is empty")
-		}
-	} else {
-		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	protoGitHubSetting, err := c.buildGitHubSettingForRepositoryList(ctx, githubSetting, projectID, githubSettingID)
+	if err != nil {
+		return nil, err
 	}
-
-	// Convert model to proto for GitHub API call
-	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Override with decrypted PAT
-	protoGitHubSetting.PersonalAccessToken = decryptedPAT
 
 	// Call GitHub API to list repositories
 	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")
@@ -1126,27 +1122,10 @@ func (c *CodeService) listCodescanTargetRepository(ctx context.Context, projectI
 		return nil, err
 	}
 
-	// Decrypt PAT before using it for GitHub API call
-	decryptedPAT := ""
-	if githubSetting.PersonalAccessToken != "" {
-		decrypted, err := decryptWithBase64(&c.cipherBlock, githubSetting.PersonalAccessToken)
-		if err != nil {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: err=%+v", err)
-			return nil, fmt.Errorf("failed to decrypt PAT: %w", err)
-		}
-		decryptedPAT = decrypted
-		if decryptedPAT == "" {
-			c.logger.Errorf(ctx, "Failed to decrypt PAT: decrypted PAT is empty, project_id=%d, github_setting_id=%d", projectID, githubSettingID)
-			return nil, fmt.Errorf("decrypted PAT is empty")
-		}
-	} else {
-		c.logger.Warnf(ctx, "PersonalAccessToken is empty for github_setting_id=%d", githubSettingID)
+	protoGitHubSetting, err := c.buildGitHubSettingForRepositoryList(ctx, githubSetting, projectID, githubSettingID)
+	if err != nil {
+		return nil, err
 	}
-
-	// Convert model to proto for GitHub API call
-	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	// Override with decrypted PAT
-	protoGitHubSetting.PersonalAccessToken = decryptedPAT
 
 	// Call GitHub API to list repositories
 	repos, err := c.githubClient.ListRepository(ctx, protoGitHubSetting, "")

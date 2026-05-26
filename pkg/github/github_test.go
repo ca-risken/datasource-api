@@ -171,6 +171,71 @@ func Test_listRepositoryForOrgWithOption(t *testing.T) {
 	}
 }
 
+func TestResolveAccessTokenAuthMode(t *testing.T) {
+	client := NewGithubClient("default-token", logging.NewLogger())
+	cases := []struct {
+		name        string
+		config      *code.GitHubSetting
+		want        string
+		wantErr     bool
+		wantErrText string
+	}{
+		{
+			name:   "PAT mode uses personal access token",
+			config: &code.GitHubSetting{AuthMode: code.GitHubAuthModePersonalAccessToken, PersonalAccessToken: "pat-token"},
+			want:   "pat-token",
+		},
+		{
+			name:   "empty auth mode falls back to default token",
+			config: &code.GitHubSetting{},
+			want:   "default-token",
+		},
+		{
+			name:        "GitHub App mode requires configured app auth",
+			config:      &code.GitHubSetting{AuthMode: code.GitHubAuthModeGitHubApp, PersonalAccessToken: "pat-token", InstallationId: 12345},
+			wantErr:     true,
+			wantErrText: "github app auth is not configured",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := client.resolveAccessToken(context.Background(), c.config, "")
+			if c.wantErr {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				if c.wantErrText != "" && !strings.Contains(err.Error(), c.wantErrText) {
+					t.Fatalf("Unexpected error: want contains=%q, got=%q", c.wantErrText, err.Error())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error occurred: %+v", err)
+			}
+			if got != c.want {
+				t.Fatalf("Unexpected token: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
+func TestListRepositoryGitHubAppWithoutAppAuth(t *testing.T) {
+	client := NewGithubClient("default-token", logging.NewLogger())
+	_, err := client.ListRepository(context.Background(), &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "ca-risken",
+		InstallationId: 12345,
+	}, "")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if !strings.Contains(err.Error(), "github app auth is not configured") {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
 func TestGetSingleRepository(t *testing.T) {
 	cases := []struct {
 		name          string

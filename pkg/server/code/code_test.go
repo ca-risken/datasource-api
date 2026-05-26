@@ -1503,6 +1503,128 @@ func TestInvokeScan(t *testing.T) {
 	}
 }
 
+func TestBuildGitHubSettingForRepositoryList(t *testing.T) {
+	now := time.Now()
+	installationID := uint64(12345)
+	block, err := aes.NewCipher([]byte("1234567890123456"))
+	if err != nil {
+		t.Fatalf("failed to create cipher: %+v", err)
+	}
+	encryptedPAT, err := encryptWithBase64(&block, "plain-token")
+	if err != nil {
+		t.Fatalf("failed to encrypt token: %+v", err)
+	}
+
+	cases := []struct {
+		name              string
+		input             *model.CodeGitHubSetting
+		supportsGitHubApp bool
+		wantPAT           string
+		wantErr           bool
+	}{
+		{
+			name: "OK PAT decrypts token",
+			input: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				Type:                "ORGANIZATION",
+				TargetResource:      "ca-risken",
+				PersonalAccessToken: encryptedPAT,
+				AuthMode:            code.GitHubAuthModePersonalAccessToken,
+				CreatedAt:           now,
+				UpdatedAt:           now,
+			},
+			wantPAT: "plain-token",
+		},
+		{
+			name: "OK GitHub App clears PAT and keeps installation id",
+			input: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				Type:                "ORGANIZATION",
+				TargetResource:      "ca-risken",
+				PersonalAccessToken: "stale-pat",
+				InstallationID:      &installationID,
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusSuccess,
+				CreatedAt:           now,
+				UpdatedAt:           now,
+			},
+			supportsGitHubApp: true,
+			wantPAT:           "",
+		},
+		{
+			name: "NG GitHub App unverified",
+			input: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				Type:                "ORGANIZATION",
+				TargetResource:      "ca-risken",
+				InstallationID:      &installationID,
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusFailed,
+				CreatedAt:           now,
+				UpdatedAt:           now,
+			},
+			supportsGitHubApp: true,
+			wantErr:           true,
+		},
+		{
+			name: "NG GitHub App auth is not configured",
+			input: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				Type:                "ORGANIZATION",
+				TargetResource:      "ca-risken",
+				InstallationID:      &installationID,
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusSuccess,
+				CreatedAt:           now,
+				UpdatedAt:           now,
+			},
+			wantErr: true,
+		},
+		{
+			name: "OK empty PAT keeps existing default-token path",
+			input: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				Type:                "ORGANIZATION",
+				TargetResource:      "ca-risken",
+				AuthMode:            code.GitHubAuthModePersonalAccessToken,
+				CreatedAt:           now,
+				UpdatedAt:           now,
+			},
+			wantPAT: "",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			client := newFakeGithubClient(nil, nil)
+			client.supportsGitHubApp = c.supportsGitHubApp
+			svc := CodeService{logger: logging.NewLogger(), githubClient: client, cipherBlock: block}
+
+			got, err := svc.buildGitHubSettingForRepositoryList(context.Background(), c.input, c.input.ProjectID, c.input.CodeGitHubSettingID)
+			if c.wantErr {
+				if err == nil {
+					t.Fatalf("Unexpected no error")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if got.PersonalAccessToken != c.wantPAT {
+				t.Fatalf("unexpected personal access token: want=%q, got=%q", c.wantPAT, got.PersonalAccessToken)
+			}
+			if c.input.AuthMode == code.GitHubAuthModeGitHubApp && got.InstallationId != installationID {
+				t.Fatalf("unexpected installation id: want=%d, got=%d", installationID, got.InstallationId)
+			}
+		})
+	}
+}
+
 func TestInvokeScanDependency(t *testing.T) {
 	now := time.Now()
 	cases := []struct {
@@ -2081,8 +2203,11 @@ func (c *FakeCodeQueue) Send(ctx context.Context, url string, msg interface{}) (
 }
 
 type FakeGithubClient struct {
-	repos []*ghub.Repository
-	err   error
+	repos             []*ghub.Repository
+	err               error
+	supportsGitHubApp bool
+	gotConfig         *code.GitHubSetting
+	gotRepoName       string
 }
 
 func newFakeGithubClient(repos []*ghub.Repository, err error) *FakeGithubClient {
@@ -2093,6 +2218,8 @@ func newFakeGithubClient(repos []*ghub.Repository, err error) *FakeGithubClient 
 }
 
 func (g *FakeGithubClient) ListRepository(ctx context.Context, config *code.GitHubSetting, repoName string) ([]*ghub.Repository, error) {
+	g.gotConfig = config
+	g.gotRepoName = repoName
 	return g.repos, g.err
 }
 
@@ -2101,7 +2228,7 @@ func (g *FakeGithubClient) Clone(ctx context.Context, token string, cloneURL str
 }
 
 func (g *FakeGithubClient) SupportsGitHubApp() bool {
-	return false
+	return g.supportsGitHubApp
 }
 
 func (g *FakeGithubClient) ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error) {
