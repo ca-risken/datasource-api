@@ -174,10 +174,11 @@ func Test_listRepositoryForOrgWithOption(t *testing.T) {
 func TestResolveAccessTokenAuthMode(t *testing.T) {
 	client := NewGithubClient("default-token", logging.NewLogger())
 	cases := []struct {
-		name    string
-		config  *code.GitHubSetting
-		want    string
-		wantErr bool
+		name        string
+		config      *code.GitHubSetting
+		want        string
+		wantErr     bool
+		wantErrText string
 	}{
 		{
 			name:   "PAT mode uses personal access token",
@@ -190,9 +191,10 @@ func TestResolveAccessTokenAuthMode(t *testing.T) {
 			want:   "default-token",
 		},
 		{
-			name:    "GitHub App mode does not fall back to PAT or default token",
-			config:  &code.GitHubSetting{AuthMode: code.GitHubAuthModeGitHubApp, PersonalAccessToken: "pat-token", InstallationId: 12345},
-			wantErr: true,
+			name:        "GitHub App mode requires configured app auth",
+			config:      &code.GitHubSetting{AuthMode: code.GitHubAuthModeGitHubApp, PersonalAccessToken: "pat-token", InstallationId: 12345},
+			wantErr:     true,
+			wantErrText: "github app auth is not configured",
 		},
 	}
 
@@ -203,6 +205,9 @@ func TestResolveAccessTokenAuthMode(t *testing.T) {
 				if err == nil {
 					t.Fatal("Expected error but got none")
 				}
+				if c.wantErrText != "" && !strings.Contains(err.Error(), c.wantErrText) {
+					t.Fatalf("Unexpected error: want contains=%q, got=%q", c.wantErrText, err.Error())
+				}
 				return
 			}
 			if err != nil {
@@ -212,6 +217,22 @@ func TestResolveAccessTokenAuthMode(t *testing.T) {
 				t.Fatalf("Unexpected token: want=%s, got=%s", c.want, got)
 			}
 		})
+	}
+}
+
+func TestListRepositoryGitHubAppWithoutAppAuth(t *testing.T) {
+	client := NewGithubClient("default-token", logging.NewLogger())
+	_, err := client.ListRepository(context.Background(), &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "ca-risken",
+		InstallationId: 12345,
+	}, "")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if !strings.Contains(err.Error(), "github app auth is not configured") {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }
 
