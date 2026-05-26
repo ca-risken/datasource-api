@@ -27,6 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.20.8
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.9
 	github.com/ca-risken/common/pkg/database v0.0.0-20230719091915-496f0dc45899
+	github.com/ca-risken/common/pkg/githubappauth v0.0.0-20260526083813-abb480971dcf
 	github.com/ca-risken/common/pkg/logging v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b

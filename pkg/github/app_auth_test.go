@@ -12,12 +12,9 @@ import (
 	"net/url"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/code"
-	jwt "github.com/golang-jwt/jwt/v5"
-	"golang.org/x/oauth2"
 )
 
 func generateRSAPrivateKeyPEM(t *testing.T) (*rsa.PrivateKey, string) {
@@ -31,6 +28,15 @@ func generateRSAPrivateKeyPEM(t *testing.T) (*rsa.PrivateKey, string) {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 	return privateKey, string(pem.EncodeToMemory(block))
+}
+
+func useTestGitHubAppTransport(t *testing.T, server *httptest.Server) {
+	t.Helper()
+	origTransport := http.DefaultTransport
+	http.DefaultTransport = server.Client().Transport
+	t.Cleanup(func() {
+		http.DefaultTransport = origTransport
+	})
 }
 
 func TestNewGithubClientWithAppAuth(t *testing.T) {
@@ -89,74 +95,6 @@ func TestNewGithubClientWithAppAuth(t *testing.T) {
 	}
 }
 
-func TestParseGitHubAppPrivateKey(t *testing.T) {
-	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
-	escapedPEM := strings.ReplaceAll(privateKeyPEM, "\n", `\n`)
-	cases := []struct {
-		name      string
-		input     string
-		wantError bool
-	}{
-		{name: "OK raw pem", input: privateKeyPEM},
-		{name: "OK escaped pem", input: escapedPEM},
-		{name: "NG invalid pem", input: "invalid", wantError: true},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got, err := parseGitHubAppPrivateKey(c.input)
-			if c.wantError {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-			if got == nil {
-				t.Fatal("Expected private key but got nil")
-			}
-		})
-	}
-}
-
-func TestCreateGitHubAppJWT(t *testing.T) {
-	privateKey, privateKeyPEM := generateRSAPrivateKeyPEM(t)
-	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{AppID: "12345", PrivateKey: privateKeyPEM}, logging.NewLogger())
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	now := time.Now().Truncate(time.Second)
-	tokenString, err := client.createGitHubAppJWT(now)
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	claims := &jwt.RegisteredClaims{}
-	parsed, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != jwt.SigningMethodRS256 {
-			t.Fatalf("Unexpected signing method: %v", token.Method.Alg())
-		}
-		return &privateKey.PublicKey, nil
-	})
-	if err != nil {
-		t.Fatalf("Unexpected parse error: %v", err)
-	}
-	if !parsed.Valid {
-		t.Fatal("Expected valid token")
-	}
-	if claims.Issuer != "12345" {
-		t.Fatalf("Unexpected issuer: %s", claims.Issuer)
-	}
-	if claims.IssuedAt.Unix() != now.Add(-githubAppJWTBackdate).Unix() {
-		t.Fatalf("Unexpected issued_at: %v", claims.IssuedAt)
-	}
-	if claims.ExpiresAt.Unix() != now.Add(githubAppJWTLifetime).Unix() {
-		t.Fatalf("Unexpected expires_at: %v", claims.ExpiresAt)
-	}
-}
-
 func TestResolveInstallationToken(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	var gotAuthorization string
@@ -186,18 +124,7 @@ func TestResolveInstallationToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse test server URL: %v", err)
 	}
-	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
-	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
-		client := server.Client()
-		client.Transport = &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(token),
-			Base:   client.Transport,
-		}
-		return client
-	}
-	defer func() {
-		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
-	}()
+	useTestGitHubAppTransport(t, server)
 
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
 		AppID:               "12345",
@@ -276,18 +203,7 @@ func TestVerifyInstallation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse test server URL: %v", err)
 	}
-	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
-	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
-		client := server.Client()
-		client.Transport = &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(token),
-			Base:   client.Transport,
-		}
-		return client
-	}
-	defer func() {
-		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
-	}()
+	useTestGitHubAppTransport(t, server)
 
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
 		AppID:               "12345",
@@ -329,18 +245,7 @@ func TestVerifyInstallationReturnsAbstractMismatchError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse test server URL: %v", err)
 	}
-	origNewGitHubAppHTTPClient := newGitHubAppHTTPClient
-	newGitHubAppHTTPClient = func(ctx context.Context, token *oauth2.Token) *http.Client {
-		client := server.Client()
-		client.Transport = &oauth2.Transport{
-			Source: oauth2.StaticTokenSource(token),
-			Base:   client.Transport,
-		}
-		return client
-	}
-	defer func() {
-		newGitHubAppHTTPClient = origNewGitHubAppHTTPClient
-	}()
+	useTestGitHubAppTransport(t, server)
 
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
 		AppID:               "12345",
@@ -377,7 +282,7 @@ func TestResolveInstallationTokenAllowsConfiguredBaseURLHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if _, err := client.appAuth.validateBaseURL("https://ghe.example.com/api/v3/"); err != nil {
+	if _, err := client.appAuth.ValidateBaseURL("https://ghe.example.com/api/v3/"); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 }
@@ -392,53 +297,11 @@ func TestValidateGitHubAppBaseURLAddsTrailingSlash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	got, err := client.appAuth.validateBaseURL("https://ghe.example.com/api/v3")
+	got, err := client.appAuth.ValidateBaseURL("https://ghe.example.com/api/v3")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if got.String() != "https://ghe.example.com/api/v3/" {
 		t.Fatalf("Unexpected base URL: %s", got.String())
-	}
-}
-
-func TestInstallationTokenOptions(t *testing.T) {
-	cases := []struct {
-		name      string
-		repoName  string
-		wantRepo  string
-		wantNil   bool
-		wantError bool
-	}{
-		{name: "OK empty", wantNil: true},
-		{name: "OK repo", repoName: "repo", wantRepo: "repo"},
-		{name: "OK owner repo", repoName: "owner/repo", wantRepo: "repo"},
-		{name: "OK trims spaces", repoName: " owner/repo ", wantRepo: "repo"},
-		{name: "NG too many segments", repoName: "a/b/c", wantError: true},
-		{name: "NG empty owner", repoName: "/repo", wantError: true},
-		{name: "NG empty repo", repoName: "owner/", wantError: true},
-	}
-
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			got, err := installationTokenOptions(c.repoName)
-			if c.wantError {
-				if err == nil {
-					t.Fatal("Expected error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-			if c.wantNil {
-				if got != nil {
-					t.Fatalf("Expected nil options but got %+v", got)
-				}
-				return
-			}
-			if got == nil || len(got.Repositories) != 1 || got.Repositories[0] != c.wantRepo {
-				t.Fatalf("Unexpected options: %+v", got)
-			}
-		})
 	}
 }
