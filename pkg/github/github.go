@@ -136,9 +136,6 @@ func (g *riskenGitHubClient) ListRepository(ctx context.Context, config *code.Gi
 	}
 
 	if config.AuthMode == code.GitHubAuthModeGitHubApp {
-		if g.appAuth == nil {
-			return nil, errors.New("github app auth is not configured")
-		}
 		return g.listRepositoryForInstallation(ctx, client.Apps, config.TargetResource)
 	}
 
