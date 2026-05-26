@@ -171,6 +171,50 @@ func Test_listRepositoryForOrgWithOption(t *testing.T) {
 	}
 }
 
+func TestResolveAccessTokenAuthMode(t *testing.T) {
+	client := NewGithubClient("default-token", logging.NewLogger())
+	cases := []struct {
+		name    string
+		config  *code.GitHubSetting
+		want    string
+		wantErr bool
+	}{
+		{
+			name:   "PAT mode uses personal access token",
+			config: &code.GitHubSetting{AuthMode: code.GitHubAuthModePersonalAccessToken, PersonalAccessToken: "pat-token"},
+			want:   "pat-token",
+		},
+		{
+			name:   "empty auth mode falls back to default token",
+			config: &code.GitHubSetting{},
+			want:   "default-token",
+		},
+		{
+			name:    "GitHub App mode does not fall back to PAT or default token",
+			config:  &code.GitHubSetting{AuthMode: code.GitHubAuthModeGitHubApp, PersonalAccessToken: "pat-token", InstallationId: 12345},
+			wantErr: true,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := client.resolveAccessToken(context.Background(), c.config, "")
+			if c.wantErr {
+				if err == nil {
+					t.Fatal("Expected error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error occurred: %+v", err)
+			}
+			if got != c.want {
+				t.Fatalf("Unexpected token: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
 func TestGetSingleRepository(t *testing.T) {
 	cases := []struct {
 		name          string
