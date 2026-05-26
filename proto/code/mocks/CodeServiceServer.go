@@ -677,6 +677,36 @@ func (_m *CodeServiceServer) PutGitleaksSetting(_a0 context.Context, _a1 *code.P
 	return r0, r1
 }
 
+// VerifyGitHubAppInstallation provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) VerifyGitHubAppInstallation(_a0 context.Context, _a1 *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppInstallation")
+	}
+
+	var r0 *code.VerifyGitHubAppInstallationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) *code.VerifyGitHubAppInstallationResponse); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppInstallationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewCodeServiceServer creates a new instance of CodeServiceServer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewCodeServiceServer(t interface {

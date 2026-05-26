@@ -833,6 +833,43 @@ func (_m *CodeServiceClient) PutGitleaksSetting(ctx context.Context, in *code.Pu
 	return r0, r1
 }
 
+// VerifyGitHubAppInstallation provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) VerifyGitHubAppInstallation(ctx context.Context, in *code.VerifyGitHubAppInstallationRequest, opts ...grpc.CallOption) (*code.VerifyGitHubAppInstallationResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppInstallation")
+	}
+
+	var r0 *code.VerifyGitHubAppInstallationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) (*code.VerifyGitHubAppInstallationResponse, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) *code.VerifyGitHubAppInstallationResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppInstallationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewCodeServiceClient creates a new instance of CodeServiceClient. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewCodeServiceClient(t interface {
