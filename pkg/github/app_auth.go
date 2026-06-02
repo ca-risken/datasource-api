@@ -128,37 +128,45 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 		return "", err
 	}
 	login := user.GetLogin()
-	if err := g.verifyGitHubUserPermission(ctx, token, config, login); err != nil {
+	repositories, err := g.ListRepository(ctx, config, "")
+	if err != nil {
+		return login, fmt.Errorf("list github app repositories: %w", err)
+	}
+	if err := g.verifyGitHubUserRepositoryAdmin(ctx, token, repositories, login); err != nil {
 		return login, err
 	}
 	return login, nil
 }
 
-func (g *riskenGitHubClient) verifyGitHubUserPermission(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) error {
-	switch config.Type {
-	case code.Type_USER:
-		if !strings.EqualFold(login, config.TargetResource) {
-			return errors.New("authenticated github user does not match target user")
-		}
-		return nil
-	case code.Type_ORGANIZATION:
-		return g.verifyOrganizationOwner(ctx, token, config.TargetResource, login)
-	default:
-		return fmt.Errorf("unknown github type: type=%s", config.Type.String())
+func (g *riskenGitHubClient) verifyGitHubUserRepositoryAdmin(ctx context.Context, token *oauth2.Token, repositories []*ghub.Repository, login string) error {
+	if len(repositories) == 0 {
+		return errors.New("github app repository is required")
 	}
-}
-
-func (g *riskenGitHubClient) verifyOrganizationOwner(ctx context.Context, token *oauth2.Token, org, login string) error {
 	client, err := g.userOAuth.NewUserClient(ctx, token)
 	if err != nil {
 		return err
 	}
-	membership, _, err := client.Organizations.GetOrgMembership(ctx, login, org)
-	if err != nil {
-		return fmt.Errorf("get organization membership: %w", err)
-	}
-	if membership == nil || membership.GetRole() != "admin" || membership.GetState() != "active" {
-		return errors.New("authenticated github user is not organization owner")
+	for _, repository := range repositories {
+		repositoryFullName := repository.GetFullName()
+		owner, repo, err := splitRepositoryFullName(repositoryFullName)
+		if err != nil {
+			return err
+		}
+		permission, _, err := client.Repositories.GetPermissionLevel(ctx, owner, repo, login)
+		if err != nil {
+			return fmt.Errorf("get repository permission: repository_full_name=%s: %w", repositoryFullName, err)
+		}
+		if permission.GetPermission() != "admin" {
+			return fmt.Errorf("authenticated github user is not repository admin: repository_full_name=%s", repositoryFullName)
+		}
 	}
 	return nil
+}
+
+func splitRepositoryFullName(repositoryFullName string) (string, string, error) {
+	parts := strings.Split(repositoryFullName, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("invalid repository name format: %s, expected 'owner/repo'", repositoryFullName)
+	}
+	return parts[0], parts[1], nil
 }
