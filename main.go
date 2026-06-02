@@ -68,6 +68,7 @@ type AppConf struct {
 	GithubAppOAuthClientID       string   `split_words:"true"`                                                // code
 	GithubAppOAuthClientSecret   string   `split_words:"true"`                                                // code
 	GithubAppOAuthBaseURL        string   `split_words:"true"`                                                // code
+	GithubAppAPIBaseURL          string   `split_words:"true"`                                                // code
 	GithubAppOAuthScopes         []string `split_words:"true" default:"read:org"`                             // code
 	GithubAppOAuthAllowedHosts   []string `split_words:"true"`                                                // code
 	SlackAPIToken                string   `split_words:"true"`                                                // slack
@@ -191,6 +192,7 @@ func main() {
 			ClientID:                 conf.GithubAppOAuthClientID,
 			ClientSecret:             conf.GithubAppOAuthClientSecret,
 			OAuthBaseURL:             conf.GithubAppOAuthBaseURL,
+			APIBaseURL:               conf.GithubAppAPIBaseURL,
 			Scopes:                   conf.GithubAppOAuthScopes,
 			AllowedOAuthBaseURLHosts: conf.GithubAppOAuthAllowedHosts,
 			AllowedAPIBaseURLHosts:   conf.GithubAppAllowedBaseURLHosts,
