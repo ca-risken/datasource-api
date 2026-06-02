@@ -157,7 +157,7 @@ func (g *riskenGitHubClient) verifyOrganizationOwner(ctx context.Context, token 
 	if err != nil {
 		return fmt.Errorf("get organization membership: %w", err)
 	}
-	if membership == nil || membership.GetRole() != "admin" {
+	if membership == nil || membership.GetRole() != "admin" || membership.GetState() != "active" {
 		return errors.New("authenticated github user is not organization owner")
 	}
 	return nil

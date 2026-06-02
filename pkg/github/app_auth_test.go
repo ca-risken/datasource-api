@@ -437,6 +437,58 @@ func TestVerifyUserToServerRejectsNonOwner(t *testing.T) {
 	}
 }
 
+func TestVerifyUserToServerRejectsPendingAdminMembership(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			if _, err := w.Write([]byte(`{"access_token":"user-token","token_type":"bearer"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			if _, err := w.Write([]byte(`{"login":"octocat"}`)); err != nil {
+				t.Fatalf("write user response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/memberships/octocat":
+			if _, err := w.Write([]byte(`{"role":"admin","state":"pending"}`)); err != nil {
+				t.Fatalf("write membership response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", nil, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	_, err = client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "target",
+	}, "oauth-code")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if err.Error() != "authenticated github user is not organization owner" {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
 func TestResolveInstallationTokenAllowsConfiguredBaseURLHost(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
