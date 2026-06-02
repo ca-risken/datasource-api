@@ -25,6 +25,7 @@ type GithubServiceClient interface {
 	SupportsGitHubApp() bool
 	ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error)
 	VerifyInstallation(ctx context.Context, config *code.GitHubSetting) error
+	VerifyUserToServer(ctx context.Context, config *code.GitHubSetting, oauthCode string) (string, error)
 }
 
 type GitHubRepoService interface {
@@ -49,6 +50,7 @@ type GitHubV3Client struct {
 type riskenGitHubClient struct {
 	defaultToken string
 	appAuth      *appAuth
+	userOAuth    *userOAuth
 	retryer      backoff.BackOff
 	logger       logging.Logger
 }
@@ -59,13 +61,22 @@ func NewGithubClient(defaultToken string, logger logging.Logger) *riskenGitHubCl
 }
 
 func NewGithubClientWithAppAuth(defaultToken string, appAuthCfg *AppAuthConfig, logger logging.Logger) (*riskenGitHubClient, error) {
+	return NewGithubClientWithGitHubAppAuth(defaultToken, appAuthCfg, nil, logger)
+}
+
+func NewGithubClientWithGitHubAppAuth(defaultToken string, appAuthCfg *AppAuthConfig, oauthCfg *OAuthConfig, logger logging.Logger) (*riskenGitHubClient, error) {
 	appAuth, err := newAppAuth(appAuthCfg)
+	if err != nil {
+		return nil, err
+	}
+	userOAuth, err := newUserOAuth(oauthCfg)
 	if err != nil {
 		return nil, err
 	}
 	return &riskenGitHubClient{
 		defaultToken: defaultToken,
 		appAuth:      appAuth,
+		userOAuth:    userOAuth,
 		retryer:      backoff.WithMaxRetries(backoff.NewExponentialBackOff(), RETRY_NUM),
 		logger:       logger,
 	}, nil

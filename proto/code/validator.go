@@ -59,6 +59,15 @@ func (v *VerifyGitHubAppInstallationRequest) Validate() error {
 	)
 }
 
+// Validate VerifyGitHubAppUserRequest
+func (v *VerifyGitHubAppUserRequest) Validate() error {
+	return validation.ValidateStruct(v,
+		validation.Field(&v.ProjectId, validation.Required),
+		validation.Field(&v.GithubSettingId, validation.Required),
+		validation.Field(&v.Code, validation.Required, validation.Length(0, 1024)),
+	)
+}
+
 // Validate DeleteGitHubSettingRequest
 func (d *DeleteGitHubSettingRequest) Validate() error {
 	return validation.ValidateStruct(d,

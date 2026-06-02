@@ -176,6 +176,44 @@ func TestValidate_VerifyGitHubAppInstallationRequest(t *testing.T) {
 	}
 }
 
+func TestValidate_VerifyGitHubAppUserRequest(t *testing.T) {
+	cases := []struct {
+		name    string
+		input   *VerifyGitHubAppUserRequest
+		wantErr bool
+	}{
+		{
+			name:  "OK",
+			input: &VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+		},
+		{
+			name:    "NG Required(project_id)",
+			input:   &VerifyGitHubAppUserRequest{GithubSettingId: 1, Code: "oauth-code"},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(github_setting_id)",
+			input:   &VerifyGitHubAppUserRequest{ProjectId: 1, Code: "oauth-code"},
+			wantErr: true,
+		},
+		{
+			name:    "NG Required(code)",
+			input:   &VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := c.input.Validate()
+			if c.wantErr && err == nil {
+				t.Fatal("Unexpected no error")
+			} else if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: wantErr=%t, err=%+v", c.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestValidate_DeleteGitHubSettingRequest(t *testing.T) {
 	cases := []struct {
 		name    string

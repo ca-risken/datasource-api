@@ -1503,6 +1503,99 @@ func TestInvokeScan(t *testing.T) {
 	}
 }
 
+func TestVerifyGitHubAppUser(t *testing.T) {
+	now := time.Now()
+	installationID := uint64(12345)
+	cases := []struct {
+		name               string
+		input              *code.VerifyGitHubAppUserRequest
+		githubClientError  error
+		verifiedUser       string
+		mockGitHubSetting  *model.CodeGitHubSetting
+		mockGetError       error
+		mockUpdateResponse *model.CodeGitHubSetting
+		mockUpdateError    error
+		want               *code.VerifyGitHubAppUserResponse
+		wantErr            bool
+		wantErrMsg         string
+		wantStatus         string
+		wantVerifiedUser   string
+	}{
+		{
+			name:         "OK",
+			input:        &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+			verifiedUser: "octocat",
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
+			},
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			wantStatus:       code.GitHubVerificationStatusSuccess,
+			wantVerifiedUser: "octocat",
+			want: &code.VerifyGitHubAppUserResponse{GithubSetting: &code.GitHubSetting{
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+			}},
+		},
+		{
+			name:              "NG invalid param",
+			input:             &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr:           true,
+			githubClientError: errors.New("should not be called"),
+		},
+		{
+			name:  "NG not github app auth mode",
+			input: &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModePersonalAccessToken,
+			},
+			wantErr: true,
+		},
+		{
+			name:         "NG user verification failed",
+			input:        &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+			verifiedUser: "octocat",
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			githubClientError: errors.New("get organization membership: 404 Not Found"),
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedAt: now,
+			},
+			wantStatus:       code.GitHubVerificationStatusFailed,
+			wantVerifiedUser: "octocat",
+			wantErr:          true,
+			wantErrMsg:       "github app user verification failed",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mocks.NewCodeRepoInterface(t)
+			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{err: c.githubClientError, verifiedUser: c.verifiedUser}, logger: logging.NewLogger()}
+
+			if c.mockGitHubSetting != nil || c.mockGetError != nil {
+				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
+			}
+			if c.wantStatus != "" {
+				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
+			}
+			got, err := svc.VerifyGitHubAppUser(context.Background(), c.input)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
+			}
+			if c.wantErrMsg != "" && err.Error() != c.wantErrMsg {
+				t.Fatalf("Unexpected error: want=%s, got=%v", c.wantErrMsg, err)
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
 func TestBuildGitHubSettingForRepositoryList(t *testing.T) {
 	now := time.Now()
 	installationID := uint64(12345)
@@ -2206,6 +2299,7 @@ type FakeGithubClient struct {
 	repos             []*ghub.Repository
 	err               error
 	supportsGitHubApp bool
+	verifiedUser      string
 	gotConfig         *code.GitHubSetting
 	gotRepoName       string
 }
@@ -2237,6 +2331,10 @@ func (g *FakeGithubClient) ResolveInstallationToken(ctx context.Context, config 
 
 func (g *FakeGithubClient) VerifyInstallation(ctx context.Context, config *code.GitHubSetting) error {
 	return g.err
+}
+
+func (g *FakeGithubClient) VerifyUserToServer(ctx context.Context, config *code.GitHubSetting, oauthCode string) (string, error) {
+	return g.verifiedUser, g.err
 }
 
 func TestBuildCodeQueueMessage(t *testing.T) {
