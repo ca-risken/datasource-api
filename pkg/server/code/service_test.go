@@ -35,7 +35,7 @@ func TestNewCodeService(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := NewCodeService(c.dataKey, c.appAuth, nil, &queue.Client{}, nil, 0, logging.NewLogger())
+			got, err := NewCodeService(c.dataKey, c.appAuth, nil, nil, &queue.Client{}, nil, 0, logging.NewLogger())
 			if c.wantError != "" {
 				if err == nil {
 					t.Fatal("Expected error but got none")

@@ -15,6 +15,7 @@ import (
 
 	"github.com/ca-risken/common/pkg/logging"
 	"github.com/ca-risken/datasource-api/proto/code"
+	"golang.org/x/oauth2"
 )
 
 func generateRSAPrivateKeyPEM(t *testing.T) (*rsa.PrivateKey, string) {
@@ -269,6 +270,170 @@ func TestVerifyInstallationReturnsAbstractMismatchError(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "99999") || strings.Contains(err.Error(), "12345") {
 		t.Fatalf("Error exposes installation_id: %v", err)
+	}
+}
+
+func TestVerifyUserToServer(t *testing.T) {
+	var gotCode string
+	var gotUser bool
+	var gotMembership bool
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			if err := r.ParseForm(); err != nil {
+				t.Fatalf("parse form: %v", err)
+			}
+			gotCode = r.Form.Get("code")
+			if _, err := w.Write([]byte(`{"access_token":"user-token","token_type":"bearer"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			gotUser = true
+			if _, err := w.Write([]byte(`{"login":"octocat"}`)); err != nil {
+				t.Fatalf("write user response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/memberships/octocat":
+			gotMembership = true
+			if _, err := w.Write([]byte(`{"role":"admin","state":"active"}`)); err != nil {
+				t.Fatalf("write membership response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", nil, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	got, err := client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "target",
+	}, "oauth-code")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if got != "octocat" {
+		t.Fatalf("Unexpected verified user: %s", got)
+	}
+	if gotCode != "oauth-code" || !gotUser || !gotMembership {
+		t.Fatalf("Expected oauth/user/membership calls, gotCode=%s, gotUser=%t, gotMembership=%t", gotCode, gotUser, gotMembership)
+	}
+}
+
+func TestVerifyUserToServerUserType(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			if _, err := w.Write([]byte(`{"access_token":"user-token","token_type":"bearer"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			if _, err := w.Write([]byte(`{"login":"octocat"}`)); err != nil {
+				t.Fatalf("write user response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", nil, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	got, err := client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_USER,
+		TargetResource: "octocat",
+	}, "oauth-code")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if got != "octocat" {
+		t.Fatalf("Unexpected verified user: %s", got)
+	}
+}
+
+func TestVerifyUserToServerRejectsNonOwner(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			if _, err := w.Write([]byte(`{"access_token":"user-token","token_type":"bearer"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			if _, err := w.Write([]byte(`{"login":"octocat"}`)); err != nil {
+				t.Fatalf("write user response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/memberships/octocat":
+			if _, err := w.Write([]byte(`{"role":"member","state":"active"}`)); err != nil {
+				t.Fatalf("write membership response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", nil, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	_, err = client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "target",
+	}, "oauth-code")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if err.Error() != "authenticated github user is not organization owner" {
+		t.Fatalf("Unexpected error: %v", err)
 	}
 }
 

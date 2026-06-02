@@ -49,6 +49,7 @@ type Server struct {
 	googleCredentialPath  string
 	dataKey               string
 	githubAppAuth         *github.AppAuthConfig
+	githubAppOAuth        *github.OAuthConfig
 	db                    *db.Client
 	queue                 *queue.Client
 	baseURL               string
@@ -58,7 +59,7 @@ type Server struct {
 	logger                logging.Logger
 }
 
-func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, githubAppAuth *github.AppAuthConfig, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, limitRepositorySizeKb int, logger logging.Logger) *Server {
+func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey string, githubAppAuth *github.AppAuthConfig, githubAppOAuth *github.OAuthConfig, db *db.Client, q *queue.Client, url, defaultLocale, slackAPIToken string, limitRepositorySizeKb int, logger logging.Logger) *Server {
 	return &Server{
 		port:                  port,
 		coreSvcAddr:           coreSvcAddr,
@@ -66,6 +67,7 @@ func NewServer(port, coreSvcAddr, awsRegion, googleCredentialPath, dataKey strin
 		googleCredentialPath:  googleCredentialPath,
 		dataKey:               dataKey,
 		githubAppAuth:         githubAppAuth,
+		githubAppOAuth:        githubAppOAuth,
 		db:                    db,
 		queue:                 q,
 		baseURL:               url,
@@ -102,7 +104,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	awsSvc := awsServer.NewAWSService(s.db, s.queue, pjClient, s.logger)
 	googleSvc := googleServer.NewGoogleService(ctx, gcpClient, s.db, s.queue, pjClient, s.logger)
-	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.githubAppAuth, s.db, s.queue, pjClient, s.limitRepositorySizeKb, s.logger)
+	codeSvc, err := codeServer.NewCodeService(s.dataKey, s.githubAppAuth, s.githubAppOAuth, s.db, s.queue, pjClient, s.limitRepositorySizeKb, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create code service: %w", err)
 	}

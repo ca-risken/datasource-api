@@ -373,6 +373,36 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 	return &code.VerifyGitHubAppInstallationResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)}, nil
 }
 
+func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyGitHubAppUserRequest) (*code.VerifyGitHubAppUserResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	githubSetting, err := c.repository.GetGitHubSetting(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
+		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
+
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	verifiedUser, err := c.githubClient.VerifyUserToServer(ctx, protoGitHubSetting, req.Code)
+	if err != nil {
+		c.logger.Warnf(ctx, "Failed to verify github app user: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
+		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, verifiedUser, time.Now())
+		if updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update github app user verification failure: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
+		}
+		return nil, errors.New("github app user verification failed")
+	}
+
+	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusSuccess, verifiedUser, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	return &code.VerifyGitHubAppUserResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, true)}, nil
+}
+
 func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteGitHubSettingRequest) (*empty.Empty, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
