@@ -128,6 +128,25 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 		return "", err
 	}
 	login := user.GetLogin()
+	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)
+	if err != nil {
+		return login, fmt.Errorf("create github app client: %w", err)
+	}
+	installation, _, err := findInstallation(ctx, client.Apps, config)
+	if err != nil {
+		return login, fmt.Errorf("find installation: %w", err)
+	}
+	if installation.GetID() != int64(config.InstallationId) {
+		g.logger.Warnf(ctx, "github app installation_id mismatch: expected=%d, actual=%d", config.InstallationId, installation.GetID())
+		return login, errors.New("installation_id does not match target resource")
+	}
+	if installation.GetRepositorySelection() == "all" {
+		if err := g.verifyGitHubUserInstallationAdmin(ctx, token, config, login); err != nil {
+			return login, err
+		}
+		return login, nil
+	}
+
 	repositories, err := g.ListRepository(ctx, config, "")
 	if err != nil {
 		return login, fmt.Errorf("list github app repositories: %w", err)
@@ -136,6 +155,31 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 		return login, err
 	}
 	return login, nil
+}
+
+func (g *riskenGitHubClient) verifyGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) error {
+	client, err := g.userOAuth.NewUserClient(ctx, token)
+	if err != nil {
+		return err
+	}
+	switch config.Type {
+	case code.Type_ORGANIZATION:
+		membership, _, err := client.Organizations.GetOrgMembership(ctx, login, config.TargetResource)
+		if err != nil {
+			return fmt.Errorf("get organization membership: organization=%s: %w", config.TargetResource, err)
+		}
+		if membership.GetState() != "active" || membership.GetRole() != "admin" {
+			return fmt.Errorf("authenticated github user is not organization admin: organization=%s", config.TargetResource)
+		}
+		return nil
+	case code.Type_USER:
+		if !strings.EqualFold(login, config.TargetResource) {
+			return fmt.Errorf("authenticated github user does not match target user: target_user=%s", config.TargetResource)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown github type: type=%s", config.Type.String())
+	}
 }
 
 func (g *riskenGitHubClient) verifyGitHubUserRepositoryAdmin(ctx context.Context, token *oauth2.Token, repositories []*ghub.Repository, login string) error {

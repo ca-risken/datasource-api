@@ -1576,6 +1576,21 @@ func TestVerifyGitHubAppUser(t *testing.T) {
 			wantErr:          true,
 			wantErrMsg:       "github app user verification failed",
 		},
+		{
+			name:  "NG user verification failed before resolving authenticated user",
+			input: &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerifiedGitHubUser: "previous-user",
+			},
+			githubClientError: errors.New("exchange oauth code: 400 Bad Request"),
+			mockUpdateResponse: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "previous-user", VerifiedAt: now,
+			},
+			wantStatus:       code.GitHubVerificationStatusFailed,
+			wantVerifiedUser: "previous-user",
+			wantErr:          true,
+			wantErrMsg:       "github app user verification failed",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
