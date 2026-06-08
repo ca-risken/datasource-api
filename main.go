@@ -69,7 +69,7 @@ type AppConf struct {
 	GithubAppOAuthClientSecret   string   `split_words:"true"`                                                // code
 	GithubAppOAuthBaseURL        string   `split_words:"true"`                                                // code
 	GithubAppAPIBaseURL          string   `split_words:"true"`                                                // code
-	GithubAppOAuthScopes         []string `split_words:"true" default:"read:org"`                             // code
+	GithubAppOAuthScopes         []string `split_words:"true"`                                                // code
 	GithubAppOAuthAllowedHosts   []string `split_words:"true"`                                                // code
 	SlackAPIToken                string   `split_words:"true"`                                                // slack
 	AzureClientID                string   `split_words:"true"`                                                // azure
