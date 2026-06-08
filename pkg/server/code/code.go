@@ -384,6 +384,9 @@ func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyG
 	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
 		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
 	}
+	if githubSetting.InstallationID == nil || *githubSetting.InstallationID == 0 {
+		return nil, fmt.Errorf("installation_id is required: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
 
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
 	verifiedUser, err := c.githubClient.VerifyUserToServer(ctx, protoGitHubSetting, req.Code)

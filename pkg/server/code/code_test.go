@@ -1552,6 +1552,15 @@ func TestVerifyGitHubAppUser(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:  "NG installation id is required",
+			input: &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp,
+			},
+			wantErr:    true,
+			wantErrMsg: "installation_id is required: project_id=1, github_setting_id=1",
+		},
+		{
 			name:         "NG user verification failed",
 			input:        &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
 			verifiedUser: "octocat",
