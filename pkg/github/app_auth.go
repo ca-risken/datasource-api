@@ -158,12 +158,12 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 }
 
 func (g *riskenGitHubClient) verifyGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) error {
-	client, err := g.userOAuth.NewUserClient(ctx, token)
-	if err != nil {
-		return err
-	}
 	switch config.Type {
 	case code.Type_ORGANIZATION:
+		client, err := g.userOAuth.NewUserClient(ctx, token)
+		if err != nil {
+			return err
+		}
 		membership, _, err := client.Organizations.GetOrgMembership(ctx, login, config.TargetResource)
 		if err != nil {
 			return fmt.Errorf("get organization membership: organization=%s: %w", config.TargetResource, err)
