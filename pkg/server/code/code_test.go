@@ -554,6 +554,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		wantErr            bool
 		wantErrMsg         string
 		wantStatus         string
+		wantVerifiedUser   string
 	}{
 		{
 			name:  "OK",
@@ -564,7 +565,8 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			mockUpdateResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
-			wantStatus: code.GitHubVerificationStatusSuccess,
+			wantStatus:       code.GitHubVerificationStatusSuccess,
+			wantVerifiedUser: "octocat",
 			want: &code.VerifyGitHubAppInstallationResponse{GithubSetting: &code.GitHubSetting{
 				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 			}},
@@ -607,7 +609,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
 			if c.wantStatus != "" {
-				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, "octocat", mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
+				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
 			}
 			got, err := svc.VerifyGitHubAppInstallation(context.Background(), c.input)
 			if !c.wantErr && err != nil {
