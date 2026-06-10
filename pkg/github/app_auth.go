@@ -125,9 +125,15 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 	}
 	user, err := g.userOAuth.GetAuthenticatedUser(ctx, token)
 	if err != nil {
+		if err.Error() == "authenticated github user login is empty" {
+			return "", errors.New("authenticated github user login is empty")
+		}
 		return "", errors.New("get authenticated github user failed")
 	}
 	login := user.GetLogin()
+	if login == "" {
+		return "", errors.New("authenticated github user login is empty")
+	}
 	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)
 	if err != nil {
 		return login, fmt.Errorf("create github app client: %w", err)
