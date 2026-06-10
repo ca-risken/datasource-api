@@ -121,11 +121,11 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 	}
 	token, err := g.userOAuth.ExchangeCode(ctx, oauthCode)
 	if err != nil {
-		return "", err
+		return "", errors.New("exchange github app oauth code failed")
 	}
 	user, err := g.userOAuth.GetAuthenticatedUser(ctx, token)
 	if err != nil {
-		return "", err
+		return "", errors.New("get authenticated github user failed")
 	}
 	login := user.GetLogin()
 	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)

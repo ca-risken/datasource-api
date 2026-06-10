@@ -428,6 +428,120 @@ func TestVerifyUserToServerAllRepositoriesVerifiesOrganizationAdmin(t *testing.T
 	}
 }
 
+func TestVerifyUserToServerReturnsAbstractOAuthExchangeError(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			w.WriteHeader(http.StatusBadRequest)
+			if _, err := w.Write([]byte(`{"error":"bad_verification_code","error_description":"secret-oauth-code should not be logged"}`)); err != nil {
+				t.Fatalf("write token error response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{serverURL.Hostname()},
+	}, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	_, err = client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "owner",
+		BaseUrl:        server.URL + "/",
+		InstallationId: 12345,
+	}, "secret-oauth-code")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if err.Error() != "exchange github app oauth code failed" {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if strings.Contains(err.Error(), "secret-oauth-code") || strings.Contains(err.Error(), "bad_verification_code") {
+		t.Fatalf("Error exposes oauth response detail: %v", err)
+	}
+}
+
+func TestVerifyUserToServerReturnsAbstractAuthenticatedUserError(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/login/oauth/access_token":
+			if _, err := w.Write([]byte(`{"access_token":"secret-user-token","token_type":"bearer"}`)); err != nil {
+				t.Fatalf("write token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/user":
+			w.WriteHeader(http.StatusInternalServerError)
+			if _, err := w.Write([]byte(`{"message":"secret-user-token should not be logged"}`)); err != nil {
+				t.Fatalf("write user error response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithGitHubAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{serverURL.Hostname()},
+	}, &OAuthConfig{
+		ClientID:                 "client-id",
+		ClientSecret:             "client-secret",
+		OAuthBaseURL:             server.URL,
+		APIBaseURL:               server.URL,
+		AllowedOAuthBaseURLHosts: []string{serverURL.Hostname()},
+		AllowedAPIBaseURLHosts:   []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, server.Client())
+	_, err = client.VerifyUserToServer(ctx, &code.GitHubSetting{
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "owner",
+		BaseUrl:        server.URL + "/",
+		InstallationId: 12345,
+	}, "oauth-code")
+	if err == nil {
+		t.Fatal("Expected error but got none")
+	}
+	if err.Error() != "get authenticated github user failed" {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if strings.Contains(err.Error(), "secret-user-token") {
+		t.Fatalf("Error exposes oauth response detail: %v", err)
+	}
+}
+
 func TestVerifyUserToServerUserTypeUsesRepositoryPermission(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
