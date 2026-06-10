@@ -164,7 +164,7 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 
 	isInstallationAdmin, err := g.hasGitHubUserInstallationAdmin(ctx, token, config, login)
 	if err != nil {
-		return login, err
+		g.logger.Warnf(ctx, "Failed to verify github app installation admin; fallback to repository admin check: target_resource=%s, github_user=%s, err=%+v", config.TargetResource, login, err)
 	}
 	if isInstallationAdmin {
 		return login, nil
