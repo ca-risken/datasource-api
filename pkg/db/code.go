@@ -295,7 +295,7 @@ const updateGitHubAppVerification = `
 UPDATE code_github_setting
 SET
 	verification_status = ?,
-	verified_github_user = ?,
+	verified_github_user = CASE WHEN ? = ? THEN ? ELSE verified_github_user END,
 	verified_at = ?
 WHERE project_id = ?
 	AND code_github_setting_id = ?
@@ -305,6 +305,8 @@ WHERE project_id = ?
 func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
 	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
 		verificationStatus,
+		verificationStatus,
+		code.GitHubVerificationStatusSuccess,
 		convertZeroValueToNull(verifiedGitHubUser),
 		verifiedAt,
 		projectID,

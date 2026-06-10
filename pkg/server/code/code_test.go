@@ -1565,16 +1565,15 @@ func TestVerifyGitHubAppUser(t *testing.T) {
 			input:        &code.VerifyGitHubAppUserRequest{ProjectId: 1, GithubSettingId: 1, Code: "oauth-code"},
 			verifiedUser: "octocat",
 			mockGitHubSetting: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp,
+				CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerifiedGitHubUser: "previous-user",
 			},
 			githubClientError: errors.New("get organization membership: 404 Not Found"),
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedAt: now,
+				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "previous-user", VerifiedAt: now,
 			},
-			wantStatus:       code.GitHubVerificationStatusFailed,
-			wantVerifiedUser: "octocat",
-			wantErr:          true,
-			wantErrMsg:       "github app user verification failed",
+			wantStatus: code.GitHubVerificationStatusFailed,
+			wantErr:    true,
+			wantErrMsg: "github app user verification failed",
 		},
 		{
 			name:  "NG user verification failed before resolving authenticated user",
@@ -1586,10 +1585,9 @@ func TestVerifyGitHubAppUser(t *testing.T) {
 			mockUpdateResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, ProjectID: 1, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusFailed, VerifiedGitHubUser: "previous-user", VerifiedAt: now,
 			},
-			wantStatus:       code.GitHubVerificationStatusFailed,
-			wantVerifiedUser: "previous-user",
-			wantErr:          true,
-			wantErrMsg:       "github app user verification failed",
+			wantStatus: code.GitHubVerificationStatusFailed,
+			wantErr:    true,
+			wantErrMsg: "github app user verification failed",
 		},
 	}
 	for _, c := range cases {

@@ -394,9 +394,10 @@ func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyG
 		c.logger.Warnf(ctx, "Failed to verify github app user: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
 		if verifiedUser == "" {
 			c.logger.Warnf(ctx, "GitHub App user verification failed before resolving authenticated github user: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
-			verifiedUser = githubSetting.VerifiedGitHubUser
+		} else {
+			c.logger.Warnf(ctx, "GitHub App user verification failed after resolving authenticated github user: project_id=%d, github_setting_id=%d, github_user=%s", req.ProjectId, req.GithubSettingId, verifiedUser)
 		}
-		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, verifiedUser, time.Now())
+		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, "", time.Now())
 		if updateErr != nil {
 			c.logger.Errorf(ctx, "Failed to update github app user verification failure: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, updateErr)
 		}
