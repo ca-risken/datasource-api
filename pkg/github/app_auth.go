@@ -157,41 +157,62 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 	if err != nil {
 		return login, fmt.Errorf("list github app repositories: %w", err)
 	}
+	if len(repositories) == 0 {
+		return login, errors.New("github app repository is required")
+	}
+
+	isInstallationAdmin, err := g.hasGitHubUserInstallationAdmin(ctx, token, config, login)
+	if err != nil {
+		return login, err
+	}
+	if isInstallationAdmin {
+		return login, nil
+	}
+
 	if err := g.verifyGitHubUserRepositoryAdmin(ctx, token, repositories, login); err != nil {
 		return login, err
 	}
 	return login, nil
 }
 
-func (g *riskenGitHubClient) verifyGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) error {
+func (g *riskenGitHubClient) hasGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) (bool, error) {
 	switch config.Type {
 	case code.Type_ORGANIZATION:
 		client, err := g.userOAuth.NewUserClient(ctx, token)
 		if err != nil {
-			return err
+			return false, err
 		}
 		membership, _, err := client.Organizations.GetOrgMembership(ctx, login, config.TargetResource)
 		if err != nil {
-			return fmt.Errorf("get organization membership: organization=%s: %w", config.TargetResource, err)
+			return false, fmt.Errorf("get organization membership: organization=%s: %w", config.TargetResource, err)
 		}
-		if membership.GetState() != "active" || membership.GetRole() != "admin" {
-			return fmt.Errorf("authenticated github user is not organization admin: organization=%s", config.TargetResource)
-		}
-		return nil
+		return membership.GetState() == "active" && membership.GetRole() == "admin", nil
 	case code.Type_USER:
-		if !strings.EqualFold(login, config.TargetResource) {
-			return fmt.Errorf("authenticated github user does not match target user: target_user=%s", config.TargetResource)
-		}
+		return strings.EqualFold(login, config.TargetResource), nil
+	default:
+		return false, fmt.Errorf("unknown github type: type=%s", config.Type.String())
+	}
+}
+
+func (g *riskenGitHubClient) verifyGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) error {
+	isInstallationAdmin, err := g.hasGitHubUserInstallationAdmin(ctx, token, config, login)
+	if err != nil {
+		return err
+	}
+	if isInstallationAdmin {
 		return nil
+	}
+	switch config.Type {
+	case code.Type_ORGANIZATION:
+		return fmt.Errorf("authenticated github user is not organization admin: organization=%s", config.TargetResource)
+	case code.Type_USER:
+		return fmt.Errorf("authenticated github user does not match target user: target_user=%s", config.TargetResource)
 	default:
 		return fmt.Errorf("unknown github type: type=%s", config.Type.String())
 	}
 }
 
 func (g *riskenGitHubClient) verifyGitHubUserRepositoryAdmin(ctx context.Context, token *oauth2.Token, repositories []*ghub.Repository, login string) error {
-	if len(repositories) == 0 {
-		return errors.New("github app repository is required")
-	}
 	client, err := g.userOAuth.NewUserClient(ctx, token)
 	if err != nil {
 		return err
