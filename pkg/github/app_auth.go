@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/ca-risken/common/pkg/githubappauth"
@@ -184,6 +185,10 @@ func (g *riskenGitHubClient) hasGitHubUserInstallationAdmin(ctx context.Context,
 		}
 		membership, _, err := client.Organizations.GetOrgMembership(ctx, login, config.TargetResource)
 		if err != nil {
+			var ghErr *ghub.ErrorResponse
+			if errors.As(err, &ghErr) && ghErr.Response != nil && ghErr.Response.StatusCode == http.StatusNotFound {
+				return false, nil
+			}
 			return false, fmt.Errorf("get organization membership: organization=%s: %w", config.TargetResource, err)
 		}
 		return membership.GetState() == "active" && membership.GetRole() == "admin", nil
