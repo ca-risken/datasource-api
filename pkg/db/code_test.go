@@ -286,7 +286,9 @@ func TestUpdateGitHubAppVerification(t *testing.T) {
 				VerifiedAt:          now,
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).
+					WithArgs(code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "project_id", "auth_mode", "verification_status", "verified_github_user", "verified_at"}).
 					AddRow(uint32(1), uint32(1), code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusSuccess, "octocat", now))
@@ -296,14 +298,18 @@ func TestUpdateGitHubAppVerification(t *testing.T) {
 			name:    "NG no rows updated",
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).WillReturnResult(sqlmock.NewResult(1, 0))
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).
+					WithArgs(code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 0))
 			},
 		},
 		{
 			name:    "NG DB error",
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).WillReturnError(errors.New("DB error"))
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppVerification)).
+					WithArgs(code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnError(errors.New("DB error"))
 			},
 		},
 	}
