@@ -90,9 +90,10 @@ func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *cod
 	if resolvedInstallationID <= 0 {
 		return 0, errors.New("installation_id is required")
 	}
-	resolvedConfig := *config
-	resolvedConfig.InstallationId = uint64(resolvedInstallationID)
-	if _, err := g.ResolveInstallationToken(ctx, &resolvedConfig, ""); err != nil {
+	if _, err := g.appAuth.ResolveInstallationToken(ctx, &githubappauth.InstallationTokenConfig{
+		BaseURL:        config.BaseUrl,
+		InstallationID: uint64(resolvedInstallationID),
+	}, ""); err != nil {
 		return 0, fmt.Errorf("resolve installation token: %w", err)
 	}
 	return uint64(resolvedInstallationID), nil
