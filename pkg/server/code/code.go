@@ -338,7 +338,28 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 	if err != nil {
 		return nil, err
 	}
+	if registeredGitHubSetting.AuthMode == code.GitHubAuthModeGitHubApp {
+		registeredGitHubSetting, err = c.updateGitHubAppInstallationVerification(ctx, registeredGitHubSetting)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &code.PutGitHubSettingResponse{GithubSetting: convertGitHubSetting(registeredGitHubSetting, nil, nil, nil, true)}, nil
+}
+
+func (c *CodeService) updateGitHubAppInstallationVerification(ctx context.Context, githubSetting *model.CodeGitHubSetting) (*model.CodeGitHubSetting, error) {
+	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
+	installationID, err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting)
+	if err != nil {
+		c.logger.Warnf(ctx, "Failed to verify github app installation: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, err)
+		failedGitHubSetting, updateErr := c.repository.UpdateGitHubAppVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, code.GitHubVerificationStatusFailed, "", time.Now())
+		if updateErr != nil {
+			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, updateErr)
+			return nil, updateErr
+		}
+		return failedGitHubSetting, nil
+	}
+	return c.repository.UpdateGitHubAppInstallationVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, installationID, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())
 }
 
 func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error) {
