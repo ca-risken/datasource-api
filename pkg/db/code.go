@@ -21,6 +21,7 @@ type CodeRepoInterface interface {
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
 	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
+	UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -302,6 +303,18 @@ WHERE project_id = ?
 	AND auth_mode = ?
 `
 
+const updateGitHubAppInstallationVerification = `
+UPDATE code_github_setting
+SET
+	installation_id = ?,
+	verification_status = ?,
+	verified_github_user = CASE WHEN ? = ? THEN ? ELSE verified_github_user END,
+	verified_at = ?
+WHERE project_id = ?
+	AND code_github_setting_id = ?
+	AND auth_mode = ?
+`
+
 func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
 	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
 		verificationStatus,
@@ -317,6 +330,29 @@ func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, git
 	}
 	if result.RowsAffected == 0 {
 		return nil, fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+	}
+	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
+}
+
+func (c *Client) UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
+	if installationID == 0 {
+		return nil, errors.New("installation_id is required")
+	}
+	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppInstallationVerification,
+		installationID,
+		verificationStatus,
+		verificationStatus,
+		code.GitHubVerificationStatusSuccess,
+		convertZeroValueToNull(verifiedGitHubUser),
+		verifiedAt,
+		projectID,
+		githubSettingID,
+		code.GitHubAuthModeGitHubApp)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, fmt.Errorf("github app installation verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 	}
 	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
 }

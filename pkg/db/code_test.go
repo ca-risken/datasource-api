@@ -205,6 +205,21 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			},
 		},
 		{
+			name: "OK github app without installation id",
+			args: args{
+				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", AuthMode: code.GitHubAuthModeGitHubApp},
+			},
+			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now},
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				query := strings.Replace(upsertGitHubAppAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, ?, NULL, ?", 1)
+				mock.ExpectExec(regexp.QuoteMeta(query)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "auth_mode", "created_at", "updated_at"}).
+					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", code.GitHubAuthModeGitHubApp, now, now))
+			},
+		},
+		{
 			name: "OK personal access token auth mode",
 			args: args{
 				data: &code.GitHubSettingForUpsert{GithubSettingId: 1, Name: "name", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", AuthMode: code.GitHubAuthModePersonalAccessToken},
@@ -322,6 +337,86 @@ func TestUpdateGitHubAppVerification(t *testing.T) {
 			}
 			c.mockClosure(mock)
 			got, err := db.UpdateGitHubAppVerification(ctx, 1, 1, code.GitHubVerificationStatusSuccess, "octocat", now)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestUpdateGitHubAppInstallationVerification(t *testing.T) {
+	now := time.Now()
+	installationID := uint64(12345)
+	cases := []struct {
+		name        string
+		want        *model.CodeGitHubSetting
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			want: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 1,
+				ProjectID:           1,
+				InstallationID:      &installationID,
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusSuccess,
+				VerifiedGitHubUser:  "octocat",
+				VerifiedAt:          now,
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
+					WithArgs(installationID, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
+					"code_github_setting_id", "project_id", "installation_id", "auth_mode", "verification_status", "verified_github_user", "verified_at"}).
+					AddRow(uint32(1), uint32(1), installationID, code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusSuccess, "octocat", now))
+			},
+		},
+		{
+			name:    "NG installation_id is zero",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+			},
+		},
+		{
+			name:    "NG no rows updated",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
+					WithArgs(installationID, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 0))
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
+					WithArgs(installationID, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			inputInstallationID := installationID
+			if c.name == "NG installation_id is zero" {
+				inputInstallationID = 0
+			}
+			got, err := db.UpdateGitHubAppInstallationVerification(ctx, 1, 1, inputInstallationID, code.GitHubVerificationStatusSuccess, "octocat", now)
 			if err != nil && !c.wantErr {
 				t.Fatalf("Unexpected error: %+v", err)
 			}

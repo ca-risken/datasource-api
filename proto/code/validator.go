@@ -213,7 +213,6 @@ func (g *GitHubSettingForUpsert) Validate() error {
 		validation.Field(&g.AuthMode, validation.Length(0, 32), validation.In("", GitHubAuthModePersonalAccessToken, GitHubAuthModeGitHubApp)),
 		validation.Field(
 			&g.InstallationId,
-			validation.When(g.AuthMode == GitHubAuthModeGitHubApp, validation.Required),
 			validation.When(g.AuthMode == "" || g.AuthMode == GitHubAuthModePersonalAccessToken, validation.Empty),
 		),
 	)

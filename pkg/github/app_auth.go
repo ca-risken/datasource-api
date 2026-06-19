@@ -71,32 +71,31 @@ func (g *riskenGitHubClient) ResolveInstallationToken(ctx context.Context, confi
 	}, repoName)
 }
 
-func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *code.GitHubSetting) error {
+func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *code.GitHubSetting) (uint64, error) {
 	if g.appAuth == nil {
-		return errors.New("github app auth is not configured")
+		return 0, errors.New("github app auth is not configured")
 	}
 	if config == nil {
-		return errors.New("github setting is required")
-	}
-	if config.InstallationId == 0 {
-		return errors.New("installation_id is required")
+		return 0, errors.New("github setting is required")
 	}
 	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)
 	if err != nil {
-		return fmt.Errorf("create github app client: %w", err)
+		return 0, fmt.Errorf("create github app client: %w", err)
 	}
 	installation, _, err := findInstallation(ctx, client.Apps, config)
 	if err != nil {
-		return fmt.Errorf("find installation: %w", err)
+		return 0, fmt.Errorf("find installation: %w", err)
 	}
-	if installation.GetID() != int64(config.InstallationId) {
-		g.logger.Warnf(ctx, "github app installation_id mismatch: expected=%d, actual=%d", config.InstallationId, installation.GetID())
-		return errors.New("installation_id does not match target resource")
+	resolvedInstallationID := installation.GetID()
+	if resolvedInstallationID <= 0 {
+		return 0, errors.New("installation_id is required")
 	}
-	if _, err := g.ResolveInstallationToken(ctx, config, ""); err != nil {
-		return fmt.Errorf("resolve installation token: %w", err)
+	resolvedConfig := *config
+	resolvedConfig.InstallationId = uint64(resolvedInstallationID)
+	if _, err := g.ResolveInstallationToken(ctx, &resolvedConfig, ""); err != nil {
+		return 0, fmt.Errorf("resolve installation token: %w", err)
 	}
-	return nil
+	return uint64(resolvedInstallationID), nil
 }
 
 func findInstallation(ctx context.Context, appSvc GitHubAppService, config *code.GitHubSetting) (*ghub.Installation, *ghub.Response, error) {

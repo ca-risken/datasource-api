@@ -352,12 +352,10 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
 		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
 	}
-	if githubSetting.InstallationID == nil || *githubSetting.InstallationID == 0 {
-		return nil, fmt.Errorf("installation_id is required: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
-	}
 
 	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, false)
-	if err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting); err != nil {
+	installationID, err := c.githubClient.VerifyInstallation(ctx, protoGitHubSetting)
+	if err != nil {
 		c.logger.Warnf(ctx, "Failed to verify github app installation: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
 		_, updateErr := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusFailed, "", time.Now())
 		if updateErr != nil {
@@ -366,7 +364,7 @@ func (c *CodeService) VerifyGitHubAppInstallation(ctx context.Context, req *code
 		return nil, errors.New("github app installation verification failed")
 	}
 
-	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppVerification(ctx, req.ProjectId, req.GithubSettingId, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())
+	verifiedGitHubSetting, err := c.repository.UpdateGitHubAppInstallationVerification(ctx, req.ProjectId, req.GithubSettingId, installationID, code.GitHubVerificationStatusSuccess, githubSetting.GitHubUser, time.Now())
 	if err != nil {
 		return nil, err
 	}
