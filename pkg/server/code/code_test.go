@@ -261,6 +261,9 @@ func TestListGitHubSetting(t *testing.T) {
 			if c.mockCodeScanResponse != nil || c.mockCodeScanError != nil {
 				mockDB.On("ListCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockCodeScanResponse, c.mockCodeScanError).Once()
 			}
+			if c.mockResponse != nil && len(*c.mockResponse) > 0 && c.mockGitleaksError == nil && c.mockDependencyError == nil && c.mockCodeScanError == nil {
+				mockDB.On("ListGitHubAppSettingRepository", test.RepeatMockAnything(3)...).Return(&[]model.GitHubAppSettingRepository{}, nil).Once()
+			}
 
 			got, err := svc.ListGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -436,6 +439,12 @@ func TestGetGitHubSetting(t *testing.T) {
 			if c.mockCodeScanResponse != nil || c.mockCodeScanError != nil {
 				mockDB.On("GetCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockCodeScanResponse, c.mockCodeScanError).Once()
 			}
+			if c.mockResponse != nil &&
+				(c.mockGitleaksError == nil || errors.Is(c.mockGitleaksError, gorm.ErrRecordNotFound)) &&
+				(c.mockDependencyError == nil || errors.Is(c.mockDependencyError, gorm.ErrRecordNotFound)) &&
+				(c.mockCodeScanError == nil || errors.Is(c.mockCodeScanError, gorm.ErrRecordNotFound)) {
+				mockDB.On("ListGitHubAppSettingRepository", test.RepeatMockAnything(3)...).Return(&[]model.GitHubAppSettingRepository{}, nil).Once()
+			}
 
 			got, err := svc.GetGitHubSetting(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -467,6 +476,7 @@ func TestPutGitHubSetting(t *testing.T) {
 		githubClientError      error
 		resolvedInstallationID uint64
 		mockUpdateResponse     *model.CodeGitHubSetting
+		mockRepositoryResponse *[]model.GitHubAppSettingRepository
 		mockUpdateError        error
 		wantStatus             string
 		wantVerifiedUser       string
@@ -572,7 +582,11 @@ func TestPutGitHubSetting(t *testing.T) {
 			}
 			if c.wantStatus != "" {
 				if c.wantStatus == code.GitHubVerificationStatusSuccess {
-					mockDB.On("UpdateGitHubAppInstallationVerification", mock.Anything, uint32(1), uint32(1), c.resolvedInstallationID, c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
+					repositories := c.mockRepositoryResponse
+					if repositories == nil {
+						repositories = &[]model.GitHubAppSettingRepository{}
+					}
+					mockDB.On("CompleteGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.resolvedInstallationID, mock.Anything, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, repositories, c.mockUpdateError).Once()
 				} else {
 					mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
 				}
@@ -601,6 +615,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 		mockGitHubSetting      *model.CodeGitHubSetting
 		mockGetError           error
 		mockUpdateResponse     *model.CodeGitHubSetting
+		mockRepositoryResponse *[]model.GitHubAppSettingRepository
 		mockUpdateError        error
 		resolvedInstallationID uint64
 		want                   *code.VerifyGitHubAppInstallationResponse
@@ -680,7 +695,11 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 			}
 			if c.wantStatus != "" {
 				if c.wantStatus == code.GitHubVerificationStatusSuccess {
-					mockDB.On("UpdateGitHubAppInstallationVerification", mock.Anything, uint32(1), uint32(1), c.resolvedInstallationID, c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
+					repositories := c.mockRepositoryResponse
+					if repositories == nil {
+						repositories = &[]model.GitHubAppSettingRepository{}
+					}
+					mockDB.On("CompleteGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.resolvedInstallationID, mock.Anything, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, repositories, c.mockUpdateError).Once()
 				} else {
 					mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
 				}
@@ -699,6 +718,58 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				if strings.Contains(err.Error(), "/orgs/target/installation") {
 					t.Fatalf("Error exposes GitHub API details: %v", err)
 				}
+			}
+			if !reflect.DeepEqual(c.want, got) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+		})
+	}
+}
+
+func TestBuildGitHubAppSettingRepositoryForUpsert(t *testing.T) {
+	cases := []struct {
+		name            string
+		githubSettingID uint32
+		repositories    []*ghub.Repository
+		want            []*code.GitHubAppSettingRepositoryForUpsert
+		wantErr         bool
+	}{
+		{
+			name:            "OK",
+			githubSettingID: 1,
+			repositories: []*ghub.Repository{
+				{ID: ghub.Int64(12345), FullName: ghub.String("owner/repo")},
+				nil,
+			},
+			want: []*code.GitHubAppSettingRepositoryForUpsert{
+				{GithubSettingId: 1, GithubRepositoryId: 12345, GithubRepositoryFullName: "owner/repo"},
+			},
+		},
+		{
+			name:            "NG repository id is empty",
+			githubSettingID: 1,
+			repositories: []*ghub.Repository{
+				{FullName: ghub.String("owner/repo")},
+			},
+			wantErr: true,
+		},
+		{
+			name:            "NG repository full name is empty",
+			githubSettingID: 1,
+			repositories: []*ghub.Repository{
+				{ID: ghub.Int64(12345)},
+			},
+			wantErr: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := buildGitHubAppSettingRepositoryForUpsert(c.githubSettingID, c.repositories)
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error occured: %+v", err)
+			}
+			if c.wantErr && err == nil {
+				t.Fatalf("Unexpected no error")
 			}
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
