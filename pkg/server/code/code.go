@@ -395,6 +395,10 @@ func (c *CodeService) updateGitHubAppInstallationVerification(ctx context.Contex
 			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, updateErr)
 			return nil, nil, updateErr
 		}
+		if deleteErr := c.repository.DeleteGitHubAppSettingRepository(ctx, githubSetting.CodeGitHubSettingID); deleteErr != nil {
+			c.logger.Errorf(ctx, "Failed to delete github app setting repositories after verification failure: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, deleteErr)
+			return nil, nil, deleteErr
+		}
 		return failedGitHubSetting, nil, nil
 	}
 	return verifiedGitHubSetting, gitHubAppRepositories, nil
@@ -479,7 +483,11 @@ func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyG
 		return nil, fmt.Errorf("installation_id is required: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
 	}
 
-	protoGitHubSetting := convertGitHubSetting(githubSetting, nil, nil, nil, nil, false)
+	gitHubAppRepositories, err := c.repository.ListGitHubAppSettingRepositoryImmediately(ctx, req.ProjectId, req.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	protoGitHubSetting := convertGitHubSetting(githubSetting, gitHubAppRepositories, nil, nil, nil, false)
 	verifiedUser, err := c.githubClient.VerifyUserToServer(ctx, protoGitHubSetting, req.Code)
 	if err != nil {
 		c.logger.Warnf(ctx, "Failed to verify github app user: project_id=%d, github_setting_id=%d, err=%+v", req.ProjectId, req.GithubSettingId, err)
@@ -499,7 +507,7 @@ func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyG
 	if err != nil {
 		return nil, err
 	}
-	return &code.VerifyGitHubAppUserResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, nil, nil, nil, nil, true)}, nil
+	return &code.VerifyGitHubAppUserResponse{GithubSetting: convertGitHubSetting(verifiedGitHubSetting, gitHubAppRepositories, nil, nil, nil, true)}, nil
 }
 
 func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteGitHubSettingRequest) (*empty.Empty, error) {

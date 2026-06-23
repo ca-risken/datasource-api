@@ -24,6 +24,7 @@ type CodeRepoInterface interface {
 	UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error)
 	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
+	ListGitHubAppSettingRepositoryImmediately(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
 	DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
@@ -423,6 +424,14 @@ func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, g
 }
 
 func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	return c.listGitHubAppSettingRepository(ctx, projectID, githubSettingID, c.SlaveDB)
+}
+
+func (c *Client) ListGitHubAppSettingRepositoryImmediately(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	return c.listGitHubAppSettingRepository(ctx, projectID, githubSettingID, c.MasterDB)
+}
+
+func (c *Client) listGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32, db *gorm.DB) (*[]model.GitHubAppSettingRepository, error) {
 	query := selectListGitHubAppSettingRepository
 	params := []any{projectID}
 	if githubSettingID != 0 {
@@ -430,7 +439,7 @@ func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, 
 		params = append(params, githubSettingID)
 	}
 	data := []model.GitHubAppSettingRepository{}
-	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+	if err := db.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
 		return nil, err
 	}
 	return &data, nil

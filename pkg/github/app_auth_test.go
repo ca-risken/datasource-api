@@ -339,7 +339,6 @@ func TestVerifyUserToServer(t *testing.T) {
 	var gotCode string
 	var gotUser bool
 	var gotInstallation bool
-	var gotRepos bool
 	var gotMembership bool
 	var gotPermission bool
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -366,11 +365,6 @@ func TestVerifyUserToServer(t *testing.T) {
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			gotRepos = true
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"owner/repo","owner":{"login":"owner"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/owner/memberships/octocat":
 			gotMembership = true
@@ -415,6 +409,9 @@ func TestVerifyUserToServer(t *testing.T) {
 		TargetResource: "owner",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "owner/repo"},
+		},
 	}, "oauth-code")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -422,8 +419,8 @@ func TestVerifyUserToServer(t *testing.T) {
 	if got != "octocat" {
 		t.Fatalf("Unexpected verified user: %s", got)
 	}
-	if gotCode != "oauth-code" || !gotUser || !gotInstallation || !gotRepos || !gotMembership || !gotPermission {
-		t.Fatalf("Expected oauth/user/installation/repos/membership/permission calls, gotCode=%s, gotUser=%t, gotInstallation=%t, gotRepos=%t, gotMembership=%t, gotPermission=%t", gotCode, gotUser, gotInstallation, gotRepos, gotMembership, gotPermission)
+	if gotCode != "oauth-code" || !gotUser || !gotInstallation || !gotMembership || !gotPermission {
+		t.Fatalf("Expected oauth/user/installation/membership/permission calls, gotCode=%s, gotUser=%t, gotInstallation=%t, gotMembership=%t, gotPermission=%t", gotCode, gotUser, gotInstallation, gotMembership, gotPermission)
 	}
 }
 
@@ -686,10 +683,6 @@ func TestVerifyUserToServerUserTypeSkipsRepositoryPermissionWhenLoginMatches(t *
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
 			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"octocat/repo","owner":{"login":"octocat"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
-			}
 		case r.Method == http.MethodGet && r.URL.Path == "/repos/octocat/repo/collaborators/octocat/permission":
 			gotPermission = true
 			if _, err := w.Write([]byte(`{"permission":"admin"}`)); err != nil {
@@ -728,6 +721,9 @@ func TestVerifyUserToServerUserTypeSkipsRepositoryPermissionWhenLoginMatches(t *
 		TargetResource: "octocat",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "octocat/repo"},
+		},
 	}, "oauth-code")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -762,10 +758,6 @@ func TestVerifyUserToServerSelectedRepositoriesVerifiesOrganizationAdmin(t *test
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"owner/repo","owner":{"login":"owner"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/owner/memberships/octocat":
 			gotMembership = true
@@ -810,6 +802,9 @@ func TestVerifyUserToServerSelectedRepositoriesVerifiesOrganizationAdmin(t *test
 		TargetResource: "owner",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "owner/repo"},
+		},
 	}, "oauth-code")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -846,10 +841,6 @@ func TestVerifyUserToServerSelectedRepositoriesFallsBackToRepositoryAdminWhenOrg
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"owner/repo","owner":{"login":"owner"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/owner/memberships/octocat":
 			w.WriteHeader(http.StatusNotFound)
@@ -894,6 +885,9 @@ func TestVerifyUserToServerSelectedRepositoriesFallsBackToRepositoryAdminWhenOrg
 		TargetResource: "owner",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "owner/repo"},
+		},
 	}, "oauth-code")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -927,10 +921,6 @@ func TestVerifyUserToServerSelectedRepositoriesFallsBackToRepositoryAdminWhenOrg
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"owner/repo","owner":{"login":"owner"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/owner/memberships/octocat":
 			w.WriteHeader(http.StatusForbidden)
@@ -975,6 +965,9 @@ func TestVerifyUserToServerSelectedRepositoriesFallsBackToRepositoryAdminWhenOrg
 		TargetResource: "owner",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "owner/repo"},
+		},
 	}, "oauth-code")
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -1007,10 +1000,6 @@ func TestVerifyUserToServerRejectsNonRepositoryAdmin(t *testing.T) {
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":1,"repositories":[{"full_name":"owner/repo","owner":{"login":"owner"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		case r.Method == http.MethodGet && r.URL.Path == "/orgs/owner/memberships/octocat":
 			if _, err := w.Write([]byte(`{"state":"active","role":"member"}`)); err != nil {
@@ -1053,6 +1042,9 @@ func TestVerifyUserToServerRejectsNonRepositoryAdmin(t *testing.T) {
 		TargetResource: "owner",
 		BaseUrl:        server.URL + "/",
 		InstallationId: 12345,
+		GithubAppSettingRepository: []*code.GitHubAppSettingRepository{
+			{GithubRepositoryFullName: "owner/repo"},
+		},
 	}, "oauth-code")
 	if err == nil {
 		t.Fatal("Expected error but got none")
@@ -1082,10 +1074,6 @@ func TestVerifyUserToServerRejectsMissingRepository(t *testing.T) {
 		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
 			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
 				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			if _, err := w.Write([]byte(`{"total_count":0,"repositories":[]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
 			}
 		default:
 			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)

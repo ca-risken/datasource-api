@@ -154,12 +154,9 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 		return login, nil
 	}
 
-	repositories, err := g.ListRepository(ctx, config, "")
+	repositories, err := buildGitHubRepositoriesFromSetting(config.GetGithubAppSettingRepository())
 	if err != nil {
-		return login, fmt.Errorf("list github app repositories: %w", err)
-	}
-	if len(repositories) == 0 {
-		return login, errors.New("github app repository is required")
+		return login, err
 	}
 
 	isInstallationAdmin, err := g.hasGitHubUserInstallationAdmin(ctx, token, config, login)
@@ -174,6 +171,24 @@ func (g *riskenGitHubClient) VerifyUserToServer(ctx context.Context, config *cod
 		return login, err
 	}
 	return login, nil
+}
+
+func buildGitHubRepositoriesFromSetting(repositories []*code.GitHubAppSettingRepository) ([]*ghub.Repository, error) {
+	if len(repositories) == 0 {
+		return nil, errors.New("github app repository is required")
+	}
+	ghubRepositories := make([]*ghub.Repository, 0, len(repositories))
+	for _, repo := range repositories {
+		if repo == nil {
+			return nil, errors.New("github app repository is required")
+		}
+		fullName := repo.GetGithubRepositoryFullName()
+		if fullName == "" {
+			return nil, errors.New("github repository full name is required")
+		}
+		ghubRepositories = append(ghubRepositories, &ghub.Repository{FullName: ghub.String(fullName)})
+	}
+	return ghubRepositories, nil
 }
 
 func (g *riskenGitHubClient) hasGitHubUserInstallationAdmin(ctx context.Context, token *oauth2.Token, config *code.GitHubSetting, login string) (bool, error) {
