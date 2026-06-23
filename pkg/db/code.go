@@ -22,6 +22,9 @@ type CodeRepoInterface interface {
 	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
+	CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error)
+	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
+	DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -315,6 +318,30 @@ WHERE project_id = ?
 	AND auth_mode = ?
 `
 
+const deleteGitHubAppSettingRepository = `
+DELETE FROM ghapp_setting_repository
+WHERE code_github_setting_id = ?
+`
+
+const insertGitHubAppSettingRepository = `
+INSERT INTO ghapp_setting_repository (
+  code_github_setting_id,
+  github_repository_id,
+  github_repository_full_name
+)
+VALUES (?, ?, ?)
+`
+
+const selectListGitHubAppSettingRepository = `
+select
+  repo.*
+from
+  ghapp_setting_repository repo
+  inner join code_github_setting github using(code_github_setting_id)
+where
+  github.project_id = ?
+`
+
 func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {
 	result := c.MasterDB.WithContext(ctx).Exec(updateGitHubAppVerification,
 		verificationStatus,
@@ -332,6 +359,88 @@ func (c *Client) UpdateGitHubAppVerification(ctx context.Context, projectID, git
 		return nil, fmt.Errorf("github app verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
 	}
 	return c.GetGitHubSetting(ctx, projectID, githubSettingID)
+}
+
+func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error) {
+	if installationID == 0 {
+		return nil, nil, errors.New("installation_id is required")
+	}
+	for _, repo := range repositories {
+		if repo == nil {
+			return nil, nil, errors.New("github app setting repository is required")
+		}
+		if repo.GithubSettingId != githubSettingID {
+			return nil, nil, fmt.Errorf("github setting id does not match: github_setting_id=%d, repository_github_setting_id=%d", githubSettingID, repo.GithubSettingId)
+		}
+		if err := repo.Validate(); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var gitHubSetting model.CodeGitHubSetting
+	var gitHubAppRepositories []model.GitHubAppSettingRepository
+	err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		result := tx.Exec(updateGitHubAppInstallationVerification,
+			installationID,
+			code.GitHubVerificationStatusSuccess,
+			code.GitHubVerificationStatusSuccess,
+			code.GitHubVerificationStatusSuccess,
+			convertZeroValueToNull(verifiedGitHubUser),
+			verifiedAt,
+			projectID,
+			githubSettingID,
+			code.GitHubAuthModeGitHubApp)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("github app installation verification was not updated: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+		if err := tx.Exec(deleteGitHubAppSettingRepository, githubSettingID).Error; err != nil {
+			return err
+		}
+		for _, repo := range repositories {
+			if err := tx.Exec(insertGitHubAppSettingRepository,
+				repo.GithubSettingId,
+				repo.GithubRepositoryId,
+				repo.GithubRepositoryFullName).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).First(&gitHubSetting).Error; err != nil {
+			return err
+		}
+		query := selectListGitHubAppSettingRepository + " and repo.code_github_setting_id = ?"
+		if err := tx.Raw(query, projectID, githubSettingID).Scan(&gitHubAppRepositories).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return &gitHubSetting, &gitHubAppRepositories, nil
+}
+
+func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	query := selectListGitHubAppSettingRepository
+	params := []any{projectID}
+	if githubSettingID != 0 {
+		query += " and repo.code_github_setting_id = ?"
+		params = append(params, githubSettingID)
+	}
+	data := []model.GitHubAppSettingRepository{}
+	if err := c.SlaveDB.WithContext(ctx).Raw(query, params...).Scan(&data).Error; err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (c *Client) DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Where("code_github_setting_id = ?", githubSettingID).Delete(&model.GitHubAppSettingRepository{}).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {

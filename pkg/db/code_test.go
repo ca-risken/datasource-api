@@ -430,6 +430,245 @@ func TestUpdateGitHubAppInstallationVerification(t *testing.T) {
 	}
 }
 
+func TestCompleteGitHubAppVerification(t *testing.T) {
+	now := time.Now()
+	installationID := uint64(12345)
+	repositories := []*code.GitHubAppSettingRepositoryForUpsert{
+		{GithubSettingId: 1, GithubRepositoryId: 67890, GithubRepositoryFullName: "owner/repo"},
+	}
+	wantSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		InstallationID:      &installationID,
+		AuthMode:            code.GitHubAuthModeGitHubApp,
+		VerificationStatus:  code.GitHubVerificationStatusSuccess,
+		VerifiedGitHubUser:  "octocat",
+		VerifiedAt:          now,
+	}
+	wantRepositories := &[]model.GitHubAppSettingRepository{
+		{
+			GitHubAppSettingRepositoryID: 10,
+			CodeGitHubSettingID:          1,
+			GitHubRepositoryID:           67890,
+			GitHubRepositoryFullName:     "owner/repo",
+			CreatedAt:                    now,
+			UpdatedAt:                    now,
+		},
+	}
+	cases := []struct {
+		name        string
+		inputRepos  []*code.GitHubAppSettingRepositoryForUpsert
+		wantSetting *model.CodeGitHubSetting
+		wantRepos   *[]model.GitHubAppSettingRepository
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:        "OK",
+			inputRepos:  repositories,
+			wantSetting: wantSetting,
+			wantRepos:   wantRepositories,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
+					WithArgs(installationID, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).
+					WithArgs(uint32(1)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(insertGitHubAppSettingRepository)).
+					WithArgs(uint32(1), uint64(67890), "owner/repo").
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"code_github_setting_id", "project_id", "installation_id", "auth_mode", "verification_status", "verified_github_user", "verified_at"}).
+						AddRow(uint32(1), uint32(1), installationID, code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusSuccess, "octocat", now))
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository+" and repo.code_github_setting_id = ?")).
+					WithArgs(uint32(1), uint32(1)).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
+						AddRow(uint32(10), uint32(1), uint64(67890), "owner/repo", now, now))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:       "NG installation_id is zero",
+			inputRepos: repositories,
+			wantErr:    true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+			},
+		},
+		{
+			name: "NG github setting id mismatch",
+			inputRepos: []*code.GitHubAppSettingRepositoryForUpsert{
+				{GithubSettingId: 2, GithubRepositoryId: 67890, GithubRepositoryFullName: "owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+			},
+		},
+		{
+			name:       "NG no rows updated",
+			inputRepos: repositories,
+			wantErr:    true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
+					WithArgs(installationID, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WillReturnResult(sqlmock.NewResult(1, 0))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			inputInstallationID := installationID
+			if c.name == "NG installation_id is zero" {
+				inputInstallationID = 0
+			}
+			gotSetting, gotRepos, err := db.CompleteGitHubAppVerification(ctx, 1, 1, inputInstallationID, c.inputRepos, "octocat", now)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(gotSetting, c.wantSetting) {
+				t.Fatalf("Unexpected setting mapping: want=%+v, got=%+v", c.wantSetting, gotSetting)
+			}
+			if !reflect.DeepEqual(gotRepos, c.wantRepos) {
+				t.Fatalf("Unexpected repository mapping: want=%+v, got=%+v", c.wantRepos, gotRepos)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestListGitHubAppSettingRepository(t *testing.T) {
+	now := time.Now()
+	cases := []struct {
+		name            string
+		githubSettingID uint32
+		want            *[]model.GitHubAppSettingRepository
+		wantErr         bool
+		mockClosure     func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK list all repositories in project",
+			want: &[]model.GitHubAppSettingRepository{
+				{
+					GitHubAppSettingRepositoryID: 10,
+					CodeGitHubSettingID:          1,
+					GitHubRepositoryID:           67890,
+					GitHubRepositoryFullName:     "owner/repo",
+					CreatedAt:                    now,
+					UpdatedAt:                    now,
+				},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).
+					WithArgs(uint32(1)).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
+						AddRow(uint32(10), uint32(1), uint64(67890), "owner/repo", now, now))
+			},
+		},
+		{
+			name:            "OK list repositories by github setting",
+			githubSettingID: 1,
+			want:            &[]model.GitHubAppSettingRepository{},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository+" and repo.code_github_setting_id = ?")).
+					WithArgs(uint32(1), uint32(1)).
+					WillReturnRows(sqlmock.NewRows([]string{
+						"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}))
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository)).
+					WithArgs(uint32(1)).
+					WillReturnError(errors.New("DB error"))
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			got, err := db.ListGitHubAppSettingRepository(ctx, 1, c.githubSettingID)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestDeleteGitHubAppSettingRepository(t *testing.T) {
+	cases := []struct {
+		name        string
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK",
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `ghapp_setting_repository` WHERE code_github_setting_id = ?")).
+					WithArgs(uint32(1)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `ghapp_setting_repository` WHERE code_github_setting_id = ?")).
+					WithArgs(uint32(1)).
+					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			err = db.DeleteGitHubAppSettingRepository(ctx, 1)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestDeleteGitHubSetting(t *testing.T) {
 	type args struct {
 		ProjectID           uint32

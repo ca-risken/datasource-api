@@ -110,6 +110,24 @@ func (_m *CodeRepoInterface) DeleteGitHubSetting(ctx context.Context, projectID 
 	return r0
 }
 
+// DeleteGitHubAppSettingRepository provides a mock function with given fields: ctx, githubSettingID
+func (_m *CodeRepoInterface) DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error {
+	ret := _m.Called(ctx, githubSettingID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteGitHubAppSettingRepository")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = rf(ctx, githubSettingID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteGitleaksCache provides a mock function with given fields: ctx, githubSettingID
 func (_m *CodeRepoInterface) DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error {
 	ret := _m.Called(ctx, githubSettingID)
@@ -307,6 +325,36 @@ func (_m *CodeRepoInterface) GetGitHubSetting(ctx context.Context, projectID uin
 
 	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
 		r1 = rf(ctx, projectID, GitHubSettingID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListGitHubAppSettingRepository provides a mock function with given fields: ctx, projectID, githubSettingID
+func (_m *CodeRepoInterface) ListGitHubAppSettingRepository(ctx context.Context, projectID uint32, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListGitHubAppSettingRepository")
+	}
+
+	var r0 *[]model.GitHubAppSettingRepository
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) (*[]model.GitHubAppSettingRepository, error)); ok {
+		return rf(ctx, projectID, githubSettingID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32) *[]model.GitHubAppSettingRepository); ok {
+		r0 = rf(ctx, projectID, githubSettingID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*[]model.GitHubAppSettingRepository)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32) error); ok {
+		r1 = rf(ctx, projectID, githubSettingID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -966,6 +1014,45 @@ func (_m *CodeRepoInterface) UpdateGitHubAppInstallationVerification(ctx context
 	}
 
 	return r0, r1
+}
+
+// CompleteGitHubAppVerification provides a mock function with given fields: ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt
+func (_m *CodeRepoInterface) CompleteGitHubAppVerification(ctx context.Context, projectID uint32, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error) {
+	ret := _m.Called(ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CompleteGitHubAppVerification")
+	}
+
+	var r0 *model.CodeGitHubSetting
+	var r1 *[]model.GitHubAppSettingRepository
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, uint64, []*code.GitHubAppSettingRepositoryForUpsert, string, time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error)); ok {
+		return rf(ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, uint64, []*code.GitHubAppSettingRepositoryForUpsert, string, time.Time) *model.CodeGitHubSetting); ok {
+		r0 = rf(ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.CodeGitHubSetting)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uint32, uint32, uint64, []*code.GitHubAppSettingRepositoryForUpsert, string, time.Time) *[]model.GitHubAppSettingRepository); ok {
+		r1 = rf(ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*[]model.GitHubAppSettingRepository)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, uint32, uint32, uint64, []*code.GitHubAppSettingRepositoryForUpsert, string, time.Time) error); ok {
+		r2 = rf(ctx, projectID, githubSettingID, installationID, repositories, verifiedGitHubUser, verifiedAt)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }
 
 // UpsertGitleaksCache provides a mock function with given fields: ctx, projectID, data
