@@ -621,6 +621,39 @@ func TestListGitHubAppSettingRepository(t *testing.T) {
 	}
 }
 
+func TestListGitHubAppSettingRepositoryImmediately(t *testing.T) {
+	now := time.Now()
+	ctx := context.Background()
+	db, mock, err := newDBMock()
+	if err != nil {
+		t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+	}
+	mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository+" and repo.code_github_setting_id = ?")).
+		WithArgs(uint32(1), uint32(1)).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"ghapp_setting_repository_id", "code_github_setting_id", "github_repository_id", "github_repository_full_name", "created_at", "updated_at"}).
+			AddRow(uint32(10), uint32(1), uint64(67890), "owner/repo", now, now))
+
+	got, err := db.ListGitHubAppSettingRepositoryImmediately(ctx, 1, 1)
+	if err != nil {
+		t.Fatalf("Unexpected error: %+v", err)
+	}
+	want := &[]model.GitHubAppSettingRepository{{
+		GitHubAppSettingRepositoryID: 10,
+		CodeGitHubSettingID:          1,
+		GitHubRepositoryID:           67890,
+		GitHubRepositoryFullName:     "owner/repo",
+		CreatedAt:                    now,
+		UpdatedAt:                    now,
+	}}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("Unexpected mapping: want=%+v, got=%+v", want, got)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
 func TestDeleteGitHubAppSettingRepository(t *testing.T) {
 	cases := []struct {
 		name        string

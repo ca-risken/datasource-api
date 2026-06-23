@@ -589,6 +589,9 @@ func TestPutGitHubSetting(t *testing.T) {
 					mockDB.On("CompleteGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.resolvedInstallationID, mock.Anything, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, repositories, c.mockUpdateError).Once()
 				} else {
 					mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()
+					if c.mockUpdateError == nil {
+						mockDB.On("DeleteGitHubAppSettingRepository", mock.Anything, uint32(1)).Return(nil).Once()
+					}
 				}
 			}
 			got, err := svc.PutGitHubSetting(ctx, c.input)
@@ -1810,7 +1813,7 @@ func TestVerifyGitHubAppUser(t *testing.T) {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
 			if c.mockGitHubAppRepositories != nil || c.mockGitHubAppRepositoryError != nil {
-				mockDB.On("ListGitHubAppSettingRepository", test.RepeatMockAnything(3)...).Return(c.mockGitHubAppRepositories, c.mockGitHubAppRepositoryError).Once()
+				mockDB.On("ListGitHubAppSettingRepositoryImmediately", test.RepeatMockAnything(3)...).Return(c.mockGitHubAppRepositories, c.mockGitHubAppRepositoryError).Once()
 			}
 			if c.wantStatus != "" {
 				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(1), c.wantStatus, c.wantVerifiedUser, mock.AnythingOfType("time.Time")).Return(c.mockUpdateResponse, c.mockUpdateError).Once()

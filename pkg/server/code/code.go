@@ -395,6 +395,10 @@ func (c *CodeService) updateGitHubAppInstallationVerification(ctx context.Contex
 			c.logger.Errorf(ctx, "Failed to update github app verification failure: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, updateErr)
 			return nil, nil, updateErr
 		}
+		if deleteErr := c.repository.DeleteGitHubAppSettingRepository(ctx, githubSetting.CodeGitHubSettingID); deleteErr != nil {
+			c.logger.Errorf(ctx, "Failed to delete github app setting repositories after verification failure: project_id=%d, github_setting_id=%d, err=%+v", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, deleteErr)
+			return nil, nil, deleteErr
+		}
 		return failedGitHubSetting, nil, nil
 	}
 	return verifiedGitHubSetting, gitHubAppRepositories, nil
@@ -479,7 +483,7 @@ func (c *CodeService) VerifyGitHubAppUser(ctx context.Context, req *code.VerifyG
 		return nil, fmt.Errorf("installation_id is required: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
 	}
 
-	gitHubAppRepositories, err := c.repository.ListGitHubAppSettingRepository(ctx, req.ProjectId, req.GithubSettingId)
+	gitHubAppRepositories, err := c.repository.ListGitHubAppSettingRepositoryImmediately(ctx, req.ProjectId, req.GithubSettingId)
 	if err != nil {
 		return nil, err
 	}
