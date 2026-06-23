@@ -24,6 +24,7 @@ type CodeRepoInterface interface {
 	UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error)
 	ListGitHubAppSettingRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.GitHubAppSettingRepository, error)
+	DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error
 	DeleteGitHubSetting(ctx context.Context, projectID uint32, GitHubSettingID uint32) error
 
 	// code_gitleaks_setting
@@ -433,6 +434,13 @@ func (c *Client) ListGitHubAppSettingRepository(ctx context.Context, projectID, 
 		return nil, err
 	}
 	return &data, nil
+}
+
+func (c *Client) DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error {
+	if err := c.MasterDB.WithContext(ctx).Where("code_github_setting_id = ?", githubSettingID).Delete(&model.GitHubAppSettingRepository{}).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error) {

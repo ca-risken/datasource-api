@@ -518,6 +518,9 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 	if err := c.repository.DeleteCodeScanSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}
+	if err := c.repository.DeleteGitHubAppSettingRepository(ctx, req.GithubSettingId); err != nil {
+		return nil, err
+	}
 	if err := c.repository.DeleteGitHubSetting(ctx, req.ProjectId, req.GithubSettingId); err != nil {
 		return nil, err
 	}

@@ -110,6 +110,24 @@ func (_m *CodeRepoInterface) DeleteGitHubSetting(ctx context.Context, projectID 
 	return r0
 }
 
+// DeleteGitHubAppSettingRepository provides a mock function with given fields: ctx, githubSettingID
+func (_m *CodeRepoInterface) DeleteGitHubAppSettingRepository(ctx context.Context, githubSettingID uint32) error {
+	ret := _m.Called(ctx, githubSettingID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteGitHubAppSettingRepository")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32) error); ok {
+		r0 = rf(ctx, githubSettingID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // DeleteGitleaksCache provides a mock function with given fields: ctx, githubSettingID
 func (_m *CodeRepoInterface) DeleteGitleaksCache(ctx context.Context, githubSettingID uint32) error {
 	ret := _m.Called(ctx, githubSettingID)

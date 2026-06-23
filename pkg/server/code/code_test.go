@@ -796,6 +796,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 		callDeleteCodeScan     bool
 		mockDeleteCodeScanResp error
 
+		callDeleteGitHubAppSettingRepository     bool
+		mockDeleteGitHubAppSettingRepositoryResp error
+
 		callDeleteGithubSetting     bool
 		mockDeleteGithubSettingResp error
 	}{
@@ -815,6 +818,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 
 			callDeleteCodeScan:     true,
 			mockDeleteCodeScanResp: nil,
+
+			callDeleteGitHubAppSettingRepository:     true,
+			mockDeleteGitHubAppSettingRepositoryResp: nil,
 
 			callDeleteGithubSetting:     true,
 			mockDeleteGithubSettingResp: nil,
@@ -891,8 +897,31 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			callDeleteCodeScan:     true,
 			mockDeleteCodeScanResp: nil,
 
+			callDeleteGitHubAppSettingRepository:     true,
+			mockDeleteGitHubAppSettingRepositoryResp: nil,
+
 			callDeleteGithubSetting:     true,
 			mockDeleteGithubSettingResp: errors.New("something error"),
+		},
+		{
+			name:    "NG DB error (delete github app setting repository)",
+			input:   &code.DeleteGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
+			wantErr: true,
+
+			callDeleteGitleaksCache:     true,
+			mockDeleteGitleaksCacheResp: nil,
+
+			callDeleteGitleaks:     true,
+			mockDeleteGitleaksResp: nil,
+
+			callDeleteDependency:     true,
+			mockDeleteDependencyResp: nil,
+
+			callDeleteCodeScan:     true,
+			mockDeleteCodeScanResp: nil,
+
+			callDeleteGitHubAppSettingRepository:     true,
+			mockDeleteGitHubAppSettingRepositoryResp: errors.New("something error"),
 		},
 	}
 	for _, c := range cases {
@@ -912,6 +941,9 @@ func TestDeleteGitHubSetting(t *testing.T) {
 			}
 			if c.callDeleteCodeScan {
 				mockDB.On("DeleteCodeScanSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteCodeScanResp).Once()
+			}
+			if c.callDeleteGitHubAppSettingRepository {
+				mockDB.On("DeleteGitHubAppSettingRepository", test.RepeatMockAnything(2)...).Return(c.mockDeleteGitHubAppSettingRepositoryResp).Once()
 			}
 			if c.callDeleteGithubSetting {
 				mockDB.On("DeleteGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockDeleteGithubSettingResp).Once()

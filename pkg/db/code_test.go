@@ -621,6 +621,54 @@ func TestListGitHubAppSettingRepository(t *testing.T) {
 	}
 }
 
+func TestDeleteGitHubAppSettingRepository(t *testing.T) {
+	cases := []struct {
+		name        string
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:    "OK",
+			wantErr: false,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `ghapp_setting_repository` WHERE code_github_setting_id = ?")).
+					WithArgs(uint32(1)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "NG DB error",
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta("DELETE FROM `ghapp_setting_repository` WHERE code_github_setting_id = ?")).
+					WithArgs(uint32(1)).
+					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+			}
+			c.mockClosure(mock)
+			err = db.DeleteGitHubAppSettingRepository(ctx, 1)
+			if err != nil && !c.wantErr {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestDeleteGitHubSetting(t *testing.T) {
 	type args struct {
 		ProjectID           uint32
