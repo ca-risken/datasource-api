@@ -62,16 +62,16 @@ type AppConf struct {
 	// datasource
 	GoogleCredentialPath         string   `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
 	CodeDataKey                  string   `split_words:"true" required:"true"`                                // code
-	GithubAppID                  string   `split_words:"true"`                                                // code
-	GithubAppPrivateKey          string   `split_words:"true"`                                                // code
-	GithubAppAllowedBaseURLHosts []string `split_words:"true"`                                                // code
-	GithubAppOAuthClientID       string   `split_words:"true"`                                                // code
-	GithubAppOAuthClientSecret   string   `split_words:"true"`                                                // code
-	GithubAppOAuthBaseURL        string   `split_words:"true"`                                                // code
-	GithubAppAPIBaseURL          string   `split_words:"true"`                                                // code
-	GithubAppOAuthRedirectURL    string   `split_words:"true"`                                                // code
-	GithubAppOAuthScopes         []string `split_words:"true"`                                                // code
-	GithubAppOAuthAllowedHosts   []string `split_words:"true"`                                                // code
+	GithubAppID                  string   `envconfig:"GITHUB_APP_ID"`                                         // code
+	GithubAppPrivateKey          string   `envconfig:"GITHUB_APP_PRIVATE_KEY"`                                // code
+	GithubAppAllowedBaseURLHosts []string `envconfig:"GITHUB_APP_ALLOWED_BASE_URL_HOSTS"`                     // code
+	GithubAppOAuthClientID       string   `envconfig:"GITHUB_APP_OAUTH_CLIENT_ID"`                            // code
+	GithubAppOAuthClientSecret   string   `envconfig:"GITHUB_APP_OAUTH_CLIENT_SECRET"`                        // code
+	GithubAppOAuthBaseURL        string   `envconfig:"GITHUB_APP_OAUTH_BASE_URL"`                             // code
+	GithubAppAPIBaseURL          string   `envconfig:"GITHUB_APP_API_BASE_URL"`                               // code
+	GithubAppOAuthRedirectURL    string   `envconfig:"GITHUB_APP_OAUTH_REDIRECT_URL"`                         // code
+	GithubAppOAuthScopes         []string `envconfig:"GITHUB_APP_OAUTH_SCOPES"`                               // code
+	GithubAppOAuthAllowedHosts   []string `envconfig:"GITHUB_APP_OAUTH_ALLOWED_HOSTS"`                        // code
 	SlackAPIToken                string   `split_words:"true"`                                                // slack
 	AzureClientID                string   `split_words:"true"`                                                // azure
 	AzureTenantID                string   `split_words:"true"`                                                // azure
