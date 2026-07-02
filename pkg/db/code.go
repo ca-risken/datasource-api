@@ -383,8 +383,8 @@ func (c *Client) CompleteGitHubAppVerification(ctx context.Context, projectID, g
 	err := c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.Exec(updateGitHubAppInstallationVerification,
 			installationID,
-			code.GitHubVerificationStatusSuccess,
-			code.GitHubVerificationStatusSuccess,
+			code.GitHubVerificationStatusPendingUserVerification,
+			code.GitHubVerificationStatusPendingUserVerification,
 			code.GitHubVerificationStatusSuccess,
 			convertZeroValueToNull(verifiedGitHubUser),
 			verifiedAt,
