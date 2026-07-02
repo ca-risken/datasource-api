@@ -441,7 +441,7 @@ func TestCompleteGitHubAppVerification(t *testing.T) {
 		ProjectID:           1,
 		InstallationID:      &installationID,
 		AuthMode:            code.GitHubAuthModeGitHubApp,
-		VerificationStatus:  code.GitHubVerificationStatusInstallationVerified,
+		VerificationStatus:  code.GitHubVerificationStatusPendingUserVerification,
 		VerifiedAt:          now,
 	}
 	wantRepositories := &[]model.GitHubAppSettingRepository{
@@ -470,7 +470,7 @@ func TestCompleteGitHubAppVerification(t *testing.T) {
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
-					WithArgs(installationID, code.GitHubVerificationStatusInstallationVerified, code.GitHubVerificationStatusInstallationVerified, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WithArgs(installationID, code.GitHubVerificationStatusPendingUserVerification, code.GitHubVerificationStatusPendingUserVerification, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(deleteGitHubAppSettingRepository)).
 					WithArgs(uint32(1)).
@@ -481,7 +481,7 @@ func TestCompleteGitHubAppVerification(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE project_id = ? AND code_github_setting_id = ?")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "project_id", "installation_id", "auth_mode", "verification_status", "verified_github_user", "verified_at"}).
-						AddRow(uint32(1), uint32(1), installationID, code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusInstallationVerified, "", now))
+						AddRow(uint32(1), uint32(1), installationID, code.GitHubAuthModeGitHubApp, code.GitHubVerificationStatusPendingUserVerification, "", now))
 				mock.ExpectQuery(regexp.QuoteMeta(selectListGitHubAppSettingRepository+" and repo.code_github_setting_id = ?")).
 					WithArgs(uint32(1), uint32(1)).
 					WillReturnRows(sqlmock.NewRows([]string{
@@ -513,7 +513,7 @@ func TestCompleteGitHubAppVerification(t *testing.T) {
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(updateGitHubAppInstallationVerification)).
-					WithArgs(installationID, code.GitHubVerificationStatusInstallationVerified, code.GitHubVerificationStatusInstallationVerified, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
+					WithArgs(installationID, code.GitHubVerificationStatusPendingUserVerification, code.GitHubVerificationStatusPendingUserVerification, code.GitHubVerificationStatusSuccess, "octocat", now, uint32(1), uint32(1), code.GitHubAuthModeGitHubApp).
 					WillReturnResult(sqlmock.NewResult(1, 0))
 				mock.ExpectRollback()
 			},
