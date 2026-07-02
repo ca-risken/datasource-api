@@ -419,7 +419,7 @@ func (c *CodeService) completeGitHubAppInstallationVerification(ctx context.Cont
 	if err != nil {
 		return nil, nil, err
 	}
-	return c.repository.CompleteGitHubAppVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, installationID, repositoriesForUpsert, githubSetting.GitHubUser, time.Now())
+	return c.repository.CompleteGitHubAppVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, installationID, repositoriesForUpsert, "", time.Now())
 }
 
 func buildGitHubAppSettingRepositoryForUpsert(githubSettingID uint32, repositories []*ghub.Repository) ([]*code.GitHubAppSettingRepositoryForUpsert, error) {
