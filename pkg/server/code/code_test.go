@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/aes"
 	"errors"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -773,12 +774,28 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:           code.Type_ORGANIZATION,
 				TargetResource: "target",
 			},
-			clientErr: &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}},
+			clientErr: fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			want: &code.GetGitHubAppInstallationStatusResponse{
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource: "target",
 					Installed:      false,
 					Reason:         code.GitHubAppInstallationReasonNotInstalled,
+				},
+			},
+		},
+		{
+			name: "OK repository check not found is check failed",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:      1,
+				Type:           code.Type_ORGANIZATION,
+				TargetResource: "target",
+			},
+			clientErr: fmt.Errorf("list github app repositories: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			want: &code.GetGitHubAppInstallationStatusResponse{
+				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
+					TargetResource: "target",
+					Installed:      false,
+					Reason:         code.GitHubAppInstallationReasonCheckFailed,
 				},
 			},
 		},
