@@ -126,7 +126,6 @@ func (g *riskenGitHubClient) GetGitHubAppInstallationStatus(ctx context.Context,
 	return &code.GitHubAppInstallationStatus{
 		TargetResource:      config.TargetResource,
 		Installed:           true,
-		InstallationId:      uint64(installationID),
 		RepositorySelection: installation.GetRepositorySelection(),
 		RepositoryCount:     uint32(len(repositories)),
 		Reason:              "",

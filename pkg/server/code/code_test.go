@@ -747,7 +747,6 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			clientStatus: &code.GitHubAppInstallationStatus{
 				TargetResource:      "target",
 				Installed:           true,
-				InstallationId:      12345,
 				RepositorySelection: "selected",
 				RepositoryCount:     2,
 			},
@@ -755,7 +754,6 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource:      "target",
 					Installed:           true,
-					InstallationId:      12345,
 					RepositorySelection: "selected",
 					RepositoryCount:     2,
 					Reason:              code.GitHubAppInstallationReasonInstalled,

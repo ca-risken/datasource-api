@@ -403,7 +403,7 @@ func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *c
 		if isGitHubAppInstallationNotFound(err) {
 			reason = code.GitHubAppInstallationReasonNotInstalled
 		}
-		c.logger.Warnf(ctx, "Failed to get github app installation status: project_id=%d, target_resource=%s, reason=%s, err=%+v", req.ProjectId, req.TargetResource, reason, err)
+		c.logger.Warnf(ctx, "Failed to get github app installation status: project_id=%d, target_resource=%q, reason=%s", req.ProjectId, req.TargetResource, reason)
 		return &code.GetGitHubAppInstallationStatusResponse{
 			GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 				TargetResource: req.TargetResource,

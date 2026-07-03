@@ -388,7 +388,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 	if !gotFindInstallation || !gotCreateToken || !gotListRepos {
 		t.Fatalf("Expected installation status calls, gotFindInstallation=%t, gotCreateToken=%t, gotListRepos=%t", gotFindInstallation, gotCreateToken, gotListRepos)
 	}
-	if !status.GetInstalled() || status.GetInstallationId() != 12345 || status.GetRepositorySelection() != "selected" || status.GetRepositoryCount() != 2 {
+	if !status.GetInstalled() || status.GetRepositorySelection() != "selected" || status.GetRepositoryCount() != 2 {
 		t.Fatalf("Unexpected status: %+v", status)
 	}
 }
