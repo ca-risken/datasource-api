@@ -500,16 +500,16 @@ func TestPutGitHubSetting(t *testing.T) {
 				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID},
 			},
 			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: "SUCCESS", VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: "SUCCESS", VerifiedGitHubUser: "octocat", VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
 			},
 			resolvedInstallationID: installationID,
-			wantStatus:             code.GitHubVerificationStatusSuccess,
+			wantStatus:             code.GitHubVerificationStatusPendingUserVerification,
 		},
 		{
 			name: "OK github app without installation id",
@@ -517,16 +517,16 @@ func TestPutGitHubSetting(t *testing.T) {
 				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp},
 			},
 			want: &code.PutGitHubSettingResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: "SUCCESS", VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: verifiedAt.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			},
 			mockResponse: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: verifiedAt, CreatedAt: now, UpdatedAt: now,
 			},
 			resolvedInstallationID: installationID,
-			wantStatus:             code.GitHubVerificationStatusSuccess,
+			wantStatus:             code.GitHubVerificationStatusPendingUserVerification,
 		},
 		{
 			name: "OK github app verification failed",
@@ -581,7 +581,7 @@ func TestPutGitHubSetting(t *testing.T) {
 				mockDB.On("UpsertGitHubSetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
 			}
 			if c.wantStatus != "" {
-				if c.wantStatus == code.GitHubVerificationStatusSuccess {
+				if c.wantStatus == code.GitHubVerificationStatusSuccess || c.wantStatus == code.GitHubVerificationStatusPendingUserVerification {
 					repositories := c.mockRepositoryResponse
 					if repositories == nil {
 						repositories = &[]model.GitHubAppSettingRepository{}
@@ -634,13 +634,12 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 			resolvedInstallationID: installationID,
-			wantStatus:             code.GitHubVerificationStatusSuccess,
-			wantVerifiedUser:       "octocat",
+			wantStatus:             code.GitHubVerificationStatusPendingUserVerification,
 			want: &code.VerifyGitHubAppInstallationResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 			}},
 		},
 		{
@@ -650,13 +649,12 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now,
 			},
 			mockUpdateResponse: &model.CodeGitHubSetting{
-				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGitHubUser: "octocat", VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, Name: "one", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "octocat", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: now, CreatedAt: now, UpdatedAt: now,
 			},
 			resolvedInstallationID: installationID,
-			wantStatus:             code.GitHubVerificationStatusSuccess,
-			wantVerifiedUser:       "octocat",
+			wantStatus:             code.GitHubVerificationStatusPendingUserVerification,
 			want: &code.VerifyGitHubAppInstallationResponse{GithubSetting: &code.GitHubSetting{
-				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusSuccess, VerifiedGithubUser: "octocat", VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+				GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "octocat", AuthMode: code.GitHubAuthModeGitHubApp, InstallationId: installationID, VerificationStatus: code.GitHubVerificationStatusPendingUserVerification, VerifiedAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 			}},
 		},
 		{
@@ -697,7 +695,7 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 				mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
 			if c.wantStatus != "" {
-				if c.wantStatus == code.GitHubVerificationStatusSuccess {
+				if c.wantStatus == code.GitHubVerificationStatusSuccess || c.wantStatus == code.GitHubVerificationStatusPendingUserVerification {
 					repositories := c.mockRepositoryResponse
 					if repositories == nil {
 						repositories = &[]model.GitHubAppSettingRepository{}
