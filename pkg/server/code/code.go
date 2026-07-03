@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -384,6 +385,36 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 		}
 	}
 	return &code.PutGitHubSettingResponse{GithubSetting: convertGitHubSetting(registeredGitHubSetting, gitHubAppRepositories, nil, nil, nil, true)}, nil
+}
+
+func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *code.GetGitHubAppInstallationStatusRequest) (*code.GetGitHubAppInstallationStatusResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	status, err := c.githubClient.GetGitHubAppInstallationStatus(ctx, &code.GitHubSetting{
+		ProjectId:      req.ProjectId,
+		Type:           req.Type,
+		BaseUrl:        req.BaseUrl,
+		TargetResource: req.TargetResource,
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+	})
+	if err != nil {
+		reason := code.GitHubAppInstallationReasonCheckFailed
+		var ghErr *ghub.ErrorResponse
+		if errors.As(err, &ghErr) && ghErr.Response != nil && ghErr.Response.StatusCode == http.StatusNotFound {
+			reason = code.GitHubAppInstallationReasonNotInstalled
+		}
+		c.logger.Warnf(ctx, "Failed to get github app installation status: project_id=%d, target_resource=%s, reason=%s, err=%+v", req.ProjectId, req.TargetResource, reason, err)
+		return &code.GetGitHubAppInstallationStatusResponse{
+			GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
+				TargetResource: req.TargetResource,
+				Installed:      false,
+				Reason:         reason,
+			},
+		}, nil
+	}
+	status.Reason = code.GitHubAppInstallationReasonInstalled
+	return &code.GetGitHubAppInstallationStatusResponse{GithubAppInstallationStatus: status}, nil
 }
 
 func (c *CodeService) updateGitHubAppInstallationVerification(ctx context.Context, githubSetting *model.CodeGitHubSetting) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error) {

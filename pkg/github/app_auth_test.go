@@ -334,6 +334,65 @@ func TestVerifyInstallationUsesResolvedInstallationID(t *testing.T) {
 	}
 }
 
+func TestGetGitHubAppInstallationStatus(t *testing.T) {
+	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
+	var gotFindInstallation bool
+	var gotCreateToken bool
+	var gotListRepos bool
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/installation":
+			gotFindInstallation = true
+			if _, err := w.Write([]byte(`{"id":12345,"repository_selection":"selected"}`)); err != nil {
+				t.Fatalf("write installation response: %v", err)
+			}
+		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
+			gotCreateToken = true
+			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
+				t.Fatalf("write installation token response: %v", err)
+			}
+		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
+			gotListRepos = true
+			if _, err := w.Write([]byte(`{"total_count":2,"repositories":[{"id":1,"full_name":"target/repo1","owner":{"login":"target"}},{"id":2,"full_name":"target/repo2","owner":{"login":"target"}}]}`)); err != nil {
+				t.Fatalf("write repositories response: %v", err)
+			}
+		default:
+			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test server URL: %v", err)
+	}
+	useTestGitHubAppTransport(t, server)
+
+	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+		AppID:               "12345",
+		PrivateKey:          privateKeyPEM,
+		AllowedBaseURLHosts: []string{serverURL.Hostname()},
+	}, logging.NewLogger())
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	status, err := client.GetGitHubAppInstallationStatus(context.Background(), &code.GitHubSetting{
+		Type:           code.Type_ORGANIZATION,
+		TargetResource: "target",
+		BaseUrl:        server.URL + "/",
+		AuthMode:       code.GitHubAuthModeGitHubApp,
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !gotFindInstallation || !gotCreateToken || !gotListRepos {
+		t.Fatalf("Expected installation status calls, gotFindInstallation=%t, gotCreateToken=%t, gotListRepos=%t", gotFindInstallation, gotCreateToken, gotListRepos)
+	}
+	if !status.GetInstalled() || status.GetInstallationId() != 12345 || status.GetRepositorySelection() != "selected" || status.GetRepositoryCount() != 2 {
+		t.Fatalf("Unexpected status: %+v", status)
+	}
+}
+
 func TestVerifyUserToServer(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
 	var gotCode string

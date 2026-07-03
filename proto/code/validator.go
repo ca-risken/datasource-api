@@ -13,6 +13,9 @@ const (
 	GitHubVerificationStatusPendingUserVerification = "PENDING_USER_VERIFICATION"
 	GitHubVerificationStatusSuccess                 = "SUCCESS"
 	GitHubVerificationStatusFailed                  = "FAILED"
+	GitHubAppInstallationReasonInstalled            = "INSTALLED"
+	GitHubAppInstallationReasonNotInstalled         = "NOT_INSTALLED"
+	GitHubAppInstallationReasonCheckFailed          = "CHECK_FAILED"
 )
 
 // validateRepositoryName validates repository name format (owner/repo)
@@ -50,6 +53,16 @@ func (p *PutGitHubSettingRequest) Validate() error {
 		return err
 	}
 	return p.GithubSetting.Validate()
+}
+
+// Validate GetGitHubAppInstallationStatusRequest
+func (g *GetGitHubAppInstallationStatusRequest) Validate() error {
+	return validation.ValidateStruct(g,
+		validation.Field(&g.ProjectId, validation.Required),
+		validation.Field(&g.Type, validation.Required, validation.In(Type_ORGANIZATION, Type_USER)),
+		validation.Field(&g.BaseUrl, validation.Length(0, 128), is.URL),
+		validation.Field(&g.TargetResource, validation.Required, validation.Length(0, 128)),
+	)
 }
 
 // Validate VerifyGitHubAppInstallationRequest
