@@ -356,7 +356,6 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				TargetResource:      "target",
 				Installed:           true,
 				RepositorySelection: "selected",
-				RepositoryCount:     2,
 			},
 		},
 		{
@@ -370,7 +369,6 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				TargetResource:      "octocat",
 				Installed:           true,
 				RepositorySelection: "all",
-				RepositoryCount:     1,
 			},
 		},
 	}
@@ -430,8 +428,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			}
 			if got.GetTargetResource() != c.want.GetTargetResource() ||
 				got.GetInstalled() != c.want.GetInstalled() ||
-				got.GetRepositorySelection() != c.want.GetRepositorySelection() ||
-				got.GetRepositoryCount() != c.want.GetRepositoryCount() {
+				got.GetRepositorySelection() != c.want.GetRepositorySelection() {
 				t.Fatalf("Unexpected status: want=%+v, got=%+v", c.want, got)
 			}
 		})

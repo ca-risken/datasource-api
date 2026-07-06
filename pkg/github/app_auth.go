@@ -119,15 +119,13 @@ func (g *riskenGitHubClient) GetGitHubAppInstallationStatus(ctx context.Context,
 		return nil, errors.New("installation_id is required")
 	}
 	config.InstallationId = uint64(installationID)
-	repositories, err := g.ListRepository(ctx, config, "")
-	if err != nil {
+	if _, err := g.ListRepository(ctx, config, ""); err != nil {
 		return nil, fmt.Errorf("list github app repositories: %w", err)
 	}
 	return &code.GitHubAppInstallationStatus{
 		TargetResource:      config.TargetResource,
 		Installed:           true,
 		RepositorySelection: installation.GetRepositorySelection(),
-		RepositoryCount:     uint32(len(repositories)),
 		Reason:              "",
 	}, nil
 }

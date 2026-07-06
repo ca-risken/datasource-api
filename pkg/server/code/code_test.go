@@ -758,14 +758,12 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				TargetResource:      "target",
 				Installed:           true,
 				RepositorySelection: "selected",
-				RepositoryCount:     2,
 			},
 			want: &code.GetGitHubAppInstallationStatusResponse{
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource:      "target",
 					Installed:           true,
 					RepositorySelection: "selected",
-					RepositoryCount:     2,
 					Reason:              code.GitHubAppInstallationReasonInstalled,
 				},
 			},
