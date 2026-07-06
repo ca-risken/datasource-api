@@ -336,60 +336,105 @@ func TestVerifyInstallationUsesResolvedInstallationID(t *testing.T) {
 
 func TestGetGitHubAppInstallationStatus(t *testing.T) {
 	_, privateKeyPEM := generateRSAPrivateKeyPEM(t)
-	var gotFindInstallation bool
-	var gotCreateToken bool
-	var gotListRepos bool
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/orgs/target/installation":
-			gotFindInstallation = true
-			if _, err := w.Write([]byte(`{"id":12345,"repository_selection":"selected"}`)); err != nil {
-				t.Fatalf("write installation response: %v", err)
-			}
-		case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
-			gotCreateToken = true
-			if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
-				t.Fatalf("write installation token response: %v", err)
-			}
-		case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
-			gotListRepos = true
-			if _, err := w.Write([]byte(`{"total_count":2,"repositories":[{"id":1,"full_name":"target/repo1","owner":{"login":"target"}},{"id":2,"full_name":"target/repo2","owner":{"login":"target"}}]}`)); err != nil {
-				t.Fatalf("write repositories response: %v", err)
-			}
-		default:
-			t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
-		}
-	}))
-	defer server.Close()
-	serverURL, err := url.Parse(server.URL)
-	if err != nil {
-		t.Fatalf("parse test server URL: %v", err)
+	cases := []struct {
+		name                string
+		githubType          code.Type
+		targetResource      string
+		installationPath    string
+		repositorySelection string
+		repositoriesBody    string
+		want                *code.GitHubAppInstallationStatus
+	}{
+		{
+			name:                "organization selected repositories",
+			githubType:          code.Type_ORGANIZATION,
+			targetResource:      "target",
+			installationPath:    "/orgs/target/installation",
+			repositorySelection: "selected",
+			repositoriesBody:    `{"total_count":2,"repositories":[{"id":1,"full_name":"target/repo1","owner":{"login":"target"}},{"id":2,"full_name":"target/repo2","owner":{"login":"target"}}]}`,
+			want: &code.GitHubAppInstallationStatus{
+				TargetResource:      "target",
+				Installed:           true,
+				RepositorySelection: "selected",
+				RepositoryCount:     2,
+			},
+		},
+		{
+			name:                "user all repositories",
+			githubType:          code.Type_USER,
+			targetResource:      "octocat",
+			installationPath:    "/users/octocat/installation",
+			repositorySelection: "all",
+			repositoriesBody:    `{"total_count":1,"repositories":[{"id":1,"full_name":"octocat/repo","owner":{"login":"octocat"}}]}`,
+			want: &code.GitHubAppInstallationStatus{
+				TargetResource:      "octocat",
+				Installed:           true,
+				RepositorySelection: "all",
+				RepositoryCount:     1,
+			},
+		},
 	}
-	useTestGitHubAppTransport(t, server)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var gotFindInstallation bool
+			var gotCreateToken bool
+			var gotListRepos bool
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case r.Method == http.MethodGet && r.URL.Path == c.installationPath:
+					gotFindInstallation = true
+					if _, err := w.Write([]byte(`{"id":12345,"repository_selection":"` + c.repositorySelection + `"}`)); err != nil {
+						t.Fatalf("write installation response: %v", err)
+					}
+				case r.Method == http.MethodPost && r.URL.Path == "/app/installations/12345/access_tokens":
+					gotCreateToken = true
+					if _, err := w.Write([]byte(`{"token":"installation-token"}`)); err != nil {
+						t.Fatalf("write installation token response: %v", err)
+					}
+				case r.Method == http.MethodGet && r.URL.Path == "/installation/repositories":
+					gotListRepos = true
+					if _, err := w.Write([]byte(c.repositoriesBody)); err != nil {
+						t.Fatalf("write repositories response: %v", err)
+					}
+				default:
+					t.Fatalf("Unexpected request: method=%s path=%s", r.Method, r.URL.Path)
+				}
+			}))
+			defer server.Close()
+			serverURL, err := url.Parse(server.URL)
+			if err != nil {
+				t.Fatalf("parse test server URL: %v", err)
+			}
+			useTestGitHubAppTransport(t, server)
 
-	client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
-		AppID:               "12345",
-		PrivateKey:          privateKeyPEM,
-		AllowedBaseURLHosts: []string{serverURL.Hostname()},
-	}, logging.NewLogger())
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	status, err := client.GetGitHubAppInstallationStatus(context.Background(), &code.GitHubSetting{
-		Type:           code.Type_ORGANIZATION,
-		TargetResource: "target",
-		BaseUrl:        server.URL + "/",
-		AuthMode:       code.GitHubAuthModeGitHubApp,
-	})
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if !gotFindInstallation || !gotCreateToken || !gotListRepos {
-		t.Fatalf("Expected installation status calls, gotFindInstallation=%t, gotCreateToken=%t, gotListRepos=%t", gotFindInstallation, gotCreateToken, gotListRepos)
-	}
-	if !status.GetInstalled() || status.GetRepositorySelection() != "selected" || status.GetRepositoryCount() != 2 {
-		t.Fatalf("Unexpected status: %+v", status)
+			client, err := NewGithubClientWithAppAuth("default-token", &AppAuthConfig{
+				AppID:               "12345",
+				PrivateKey:          privateKeyPEM,
+				AllowedBaseURLHosts: []string{serverURL.Hostname()},
+			}, logging.NewLogger())
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			got, err := client.GetGitHubAppInstallationStatus(context.Background(), &code.GitHubSetting{
+				Type:           c.githubType,
+				TargetResource: c.targetResource,
+				BaseUrl:        server.URL + "/",
+				AuthMode:       code.GitHubAuthModeGitHubApp,
+			})
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if !gotFindInstallation || !gotCreateToken || !gotListRepos {
+				t.Fatalf("Expected installation status calls, gotFindInstallation=%t, gotCreateToken=%t, gotListRepos=%t", gotFindInstallation, gotCreateToken, gotListRepos)
+			}
+			if got.GetTargetResource() != c.want.GetTargetResource() ||
+				got.GetInstalled() != c.want.GetInstalled() ||
+				got.GetRepositorySelection() != c.want.GetRepositorySelection() ||
+				got.GetRepositoryCount() != c.want.GetRepositoryCount() {
+				t.Fatalf("Unexpected status: want=%+v, got=%+v", c.want, got)
+			}
+		})
 	}
 }
 
