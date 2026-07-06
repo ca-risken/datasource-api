@@ -106,6 +106,7 @@ message GetGitHubAppInstallationStatusRequest {
   Type type = 2;
   string base_url = 3;
   string target_resource = 4;
+  uint32 github_setting_id = 5;
 }
 
 message GetGitHubAppInstallationStatusResponse {

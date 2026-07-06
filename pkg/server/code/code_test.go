@@ -730,19 +730,29 @@ func TestVerifyGitHubAppInstallation(t *testing.T) {
 
 func TestGetGitHubAppInstallationStatus(t *testing.T) {
 	cases := []struct {
-		name         string
-		input        *code.GetGitHubAppInstallationStatusRequest
-		clientStatus *code.GitHubAppInstallationStatus
-		clientErr    error
-		want         *code.GetGitHubAppInstallationStatusResponse
-		wantErr      bool
+		name              string
+		input             *code.GetGitHubAppInstallationStatusRequest
+		mockGitHubSetting *model.CodeGitHubSetting
+		mockGetError      error
+		clientStatus      *code.GitHubAppInstallationStatus
+		clientErr         error
+		want              *code.GetGitHubAppInstallationStatusResponse
+		wantConfig        *code.GitHubSetting
+		wantErr           bool
 	}{
 		{
 			name: "OK installed",
 			input: &code.GetGitHubAppInstallationStatusRequest{
-				ProjectId:      1,
-				Type:           code.Type_ORGANIZATION,
-				TargetResource: "target",
+				ProjectId:       1,
+				GithubSettingId: 10,
+				TargetResource:  "attacker",
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
 			},
 			clientStatus: &code.GitHubAppInstallationStatus{
 				TargetResource:      "target",
@@ -759,6 +769,14 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 					Reason:              code.GitHubAppInstallationReasonInstalled,
 				},
 			},
+			wantConfig: &code.GitHubSetting{
+				ProjectId:       1,
+				GithubSettingId: 10,
+				Type:            code.Type_ORGANIZATION,
+				BaseUrl:         "https://api.github.com/",
+				TargetResource:  "target",
+				AuthMode:        code.GitHubAuthModeGitHubApp,
+			},
 		},
 		{
 			name:    "NG invalid param",
@@ -766,11 +784,26 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "NG db error",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGetError: errors.New("db error"),
+			wantErr:      true,
+		},
+		{
 			name: "OK not installed",
 			input: &code.GetGitHubAppInstallationStatusRequest{
-				ProjectId:      1,
-				Type:           code.Type_ORGANIZATION,
-				TargetResource: "target",
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
 			},
 			clientErr: fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -784,9 +817,15 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		{
 			name: "OK repository check not found is check failed",
 			input: &code.GetGitHubAppInstallationStatusRequest{
-				ProjectId:      1,
-				Type:           code.Type_ORGANIZATION,
-				TargetResource: "target",
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
 			},
 			clientErr: fmt.Errorf("list github app repositories: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -800,9 +839,15 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		{
 			name: "OK check failed",
 			input: &code.GetGitHubAppInstallationStatusRequest{
-				ProjectId:      1,
-				Type:           code.Type_ORGANIZATION,
-				TargetResource: "target",
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
 			},
 			clientErr: errors.New("github api failed"),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -817,7 +862,11 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
-			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{err: c.clientErr, installationStatus: c.clientStatus}, logger: logging.NewLogger()}
+			if c.input.GetProjectId() != 0 && c.input.GetGithubSettingId() != 0 {
+				mockDB.On("GetGitHubSetting", context.Background(), c.input.GetProjectId(), c.input.GetGithubSettingId()).Return(c.mockGitHubSetting, c.mockGetError).Once()
+			}
+			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationStatus: c.clientStatus}
+			svc := CodeService{repository: mockDB, githubClient: fakeGitHubClient, logger: logging.NewLogger()}
 			got, err := svc.GetGitHubAppInstallationStatus(context.Background(), c.input)
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error occured: %+v", err)
@@ -827,6 +876,9 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			}
 			if !reflect.DeepEqual(c.want, got) {
 				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
+			}
+			if c.wantConfig != nil && !reflect.DeepEqual(c.wantConfig, fakeGitHubClient.gotConfig) {
+				t.Fatalf("Unexpected github config: want=%+v, got=%+v", c.wantConfig, fakeGitHubClient.gotConfig)
 			}
 		})
 	}
