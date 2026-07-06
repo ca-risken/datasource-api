@@ -745,7 +745,6 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			input: &code.GetGitHubAppInstallationStatusRequest{
 				ProjectId:       1,
 				GithubSettingId: 10,
-				TargetResource:  "attacker",
 			},
 			mockGitHubSetting: &model.CodeGitHubSetting{
 				CodeGitHubSettingID: 10,

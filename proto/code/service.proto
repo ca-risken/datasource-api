@@ -103,10 +103,7 @@ message PutGitHubSettingResponse { GitHubSetting github_setting = 1; }
 
 message GetGitHubAppInstallationStatusRequest {
   uint32 project_id = 1;
-  Type type = 2;
-  string base_url = 3;
-  string target_resource = 4;
-  uint32 github_setting_id = 5;
+  uint32 github_setting_id = 2;
 }
 
 message GetGitHubAppInstallationStatusResponse {

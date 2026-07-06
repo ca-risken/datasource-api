@@ -439,10 +439,7 @@ type GetGitHubAppInstallationStatusRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	ProjectId       uint32 `protobuf:"varint,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Type            Type   `protobuf:"varint,2,opt,name=type,proto3,enum=datasource.code.Type" json:"type,omitempty"`
-	BaseUrl         string `protobuf:"bytes,3,opt,name=base_url,json=baseUrl,proto3" json:"base_url,omitempty"`
-	TargetResource  string `protobuf:"bytes,4,opt,name=target_resource,json=targetResource,proto3" json:"target_resource,omitempty"`
-	GithubSettingId uint32 `protobuf:"varint,5,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
+	GithubSettingId uint32 `protobuf:"varint,2,opt,name=github_setting_id,json=githubSettingId,proto3" json:"github_setting_id,omitempty"`
 }
 
 func (x *GetGitHubAppInstallationStatusRequest) Reset() {
@@ -482,27 +479,6 @@ func (x *GetGitHubAppInstallationStatusRequest) GetProjectId() uint32 {
 		return x.ProjectId
 	}
 	return 0
-}
-
-func (x *GetGitHubAppInstallationStatusRequest) GetType() Type {
-	if x != nil {
-		return x.Type
-	}
-	return Type_UNKNOWN_TYPE
-}
-
-func (x *GetGitHubAppInstallationStatusRequest) GetBaseUrl() string {
-	if x != nil {
-		return x.BaseUrl
-	}
-	return ""
-}
-
-func (x *GetGitHubAppInstallationStatusRequest) GetTargetResource() string {
-	if x != nil {
-		return x.TargetResource
-	}
-	return ""
 }
 
 func (x *GetGitHubAppInstallationStatusRequest) GetGithubSettingId() uint32 {
@@ -2135,20 +2111,13 @@ var file_code_service_proto_rawDesc = []byte{
 	0x69, 0x6e, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x64, 0x61, 0x74, 0x61,
 	0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x2e, 0x63, 0x6f, 0x64, 0x65, 0x2e, 0x47, 0x69, 0x74, 0x48,
 	0x75, 0x62, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x0d, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x22, 0xe1, 0x01, 0x0a, 0x25, 0x47, 0x65, 0x74,
-	0x47, 0x69, 0x74, 0x48, 0x75, 0x62, 0x41, 0x70, 0x70, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c,
-	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x69, 0x64,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x49,
-	0x64, 0x12, 0x29, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32,
-	0x15, 0x2e, 0x64, 0x61, 0x74, 0x61, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x2e, 0x63, 0x6f, 0x64,
-	0x65, 0x2e, 0x54, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x12, 0x19, 0x0a, 0x08,
-	0x62, 0x61, 0x73, 0x65, 0x5f, 0x75, 0x72, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
-	0x62, 0x61, 0x73, 0x65, 0x55, 0x72, 0x6c, 0x12, 0x27, 0x0a, 0x0f, 0x74, 0x61, 0x72, 0x67, 0x65,
-	0x74, 0x5f, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
-	0x52, 0x0e, 0x74, 0x61, 0x72, 0x67, 0x65, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+	0x62, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x22, 0x72, 0x0a, 0x25, 0x47, 0x65, 0x74, 0x47,
+	0x69, 0x74, 0x48, 0x75, 0x62, 0x41, 0x70, 0x70, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6c, 0x6c, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x69, 0x64, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x09, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x49, 0x64,
 	0x12, 0x2a, 0x0a, 0x11, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x5f, 0x73, 0x65, 0x74, 0x74, 0x69,
-	0x6e, 0x67, 0x5f, 0x69, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0f, 0x67, 0x69, 0x74,
+	0x6e, 0x67, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x0f, 0x67, 0x69, 0x74,
 	0x68, 0x75, 0x62, 0x53, 0x65, 0x74, 0x74, 0x69, 0x6e, 0x67, 0x49, 0x64, 0x22, 0x9b, 0x01, 0x0a,
 	0x26, 0x47, 0x65, 0x74, 0x47, 0x69, 0x74, 0x48, 0x75, 0x62, 0x41, 0x70, 0x70, 0x49, 0x6e, 0x73,
 	0x74, 0x61, 0x6c, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52,
@@ -2604,21 +2573,20 @@ var file_code_service_proto_goTypes = []interface{}{
 	(*CodeDataSource)(nil),                         // 38: datasource.code.CodeDataSource
 	(*GitHubSetting)(nil),                          // 39: datasource.code.GitHubSetting
 	(*GitHubSettingForUpsert)(nil),                 // 40: datasource.code.GitHubSettingForUpsert
-	(Type)(0),                                      // 41: datasource.code.Type
-	(*GitHubAppInstallationStatus)(nil),            // 42: datasource.code.GitHubAppInstallationStatus
-	(*GitleaksSettingForUpsert)(nil),               // 43: datasource.code.GitleaksSettingForUpsert
-	(*GitleaksSetting)(nil),                        // 44: datasource.code.GitleaksSetting
-	(*GitleaksCache)(nil),                          // 45: datasource.code.GitleaksCache
-	(*GitleaksCacheForUpsert)(nil),                 // 46: datasource.code.GitleaksCacheForUpsert
-	(*DependencySettingForUpsert)(nil),             // 47: datasource.code.DependencySettingForUpsert
-	(*DependencySetting)(nil),                      // 48: datasource.code.DependencySetting
-	(*CodeScanSettingForUpsert)(nil),               // 49: datasource.code.CodeScanSettingForUpsert
-	(*CodeScanSetting)(nil),                        // 50: datasource.code.CodeScanSetting
-	(*CodeScanRepositoryForUpsert)(nil),            // 51: datasource.code.CodeScanRepositoryForUpsert
-	(*GitleaksRepositoryForUpsert)(nil),            // 52: datasource.code.GitleaksRepositoryForUpsert
-	(*DependencyRepositoryForUpsert)(nil),          // 53: datasource.code.DependencyRepositoryForUpsert
-	(*GitHubRepository)(nil),                       // 54: datasource.code.GitHubRepository
-	(*emptypb.Empty)(nil),                          // 55: google.protobuf.Empty
+	(*GitHubAppInstallationStatus)(nil),            // 41: datasource.code.GitHubAppInstallationStatus
+	(*GitleaksSettingForUpsert)(nil),               // 42: datasource.code.GitleaksSettingForUpsert
+	(*GitleaksSetting)(nil),                        // 43: datasource.code.GitleaksSetting
+	(*GitleaksCache)(nil),                          // 44: datasource.code.GitleaksCache
+	(*GitleaksCacheForUpsert)(nil),                 // 45: datasource.code.GitleaksCacheForUpsert
+	(*DependencySettingForUpsert)(nil),             // 46: datasource.code.DependencySettingForUpsert
+	(*DependencySetting)(nil),                      // 47: datasource.code.DependencySetting
+	(*CodeScanSettingForUpsert)(nil),               // 48: datasource.code.CodeScanSettingForUpsert
+	(*CodeScanSetting)(nil),                        // 49: datasource.code.CodeScanSetting
+	(*CodeScanRepositoryForUpsert)(nil),            // 50: datasource.code.CodeScanRepositoryForUpsert
+	(*GitleaksRepositoryForUpsert)(nil),            // 51: datasource.code.GitleaksRepositoryForUpsert
+	(*DependencyRepositoryForUpsert)(nil),          // 52: datasource.code.DependencyRepositoryForUpsert
+	(*GitHubRepository)(nil),                       // 53: datasource.code.GitHubRepository
+	(*emptypb.Empty)(nil),                          // 54: google.protobuf.Empty
 }
 var file_code_service_proto_depIdxs = []int32{
 	38, // 0: datasource.code.ListDataSourceResponse.code_data_source:type_name -> datasource.code.CodeDataSource
@@ -2626,79 +2594,78 @@ var file_code_service_proto_depIdxs = []int32{
 	39, // 2: datasource.code.GetGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
 	40, // 3: datasource.code.PutGitHubSettingRequest.github_setting:type_name -> datasource.code.GitHubSettingForUpsert
 	39, // 4: datasource.code.PutGitHubSettingResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	41, // 5: datasource.code.GetGitHubAppInstallationStatusRequest.type:type_name -> datasource.code.Type
-	42, // 6: datasource.code.GetGitHubAppInstallationStatusResponse.github_app_installation_status:type_name -> datasource.code.GitHubAppInstallationStatus
-	39, // 7: datasource.code.VerifyGitHubAppInstallationResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	39, // 8: datasource.code.VerifyGitHubAppUserResponse.github_setting:type_name -> datasource.code.GitHubSetting
-	43, // 9: datasource.code.PutGitleaksSettingRequest.gitleaks_setting:type_name -> datasource.code.GitleaksSettingForUpsert
-	44, // 10: datasource.code.PutGitleaksSettingResponse.gitleaks_setting:type_name -> datasource.code.GitleaksSetting
-	45, // 11: datasource.code.ListGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	45, // 12: datasource.code.GetGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	46, // 13: datasource.code.PutGitleaksCacheRequest.gitleaks_cache:type_name -> datasource.code.GitleaksCacheForUpsert
-	45, // 14: datasource.code.PutGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
-	47, // 15: datasource.code.PutDependencySettingRequest.dependency_setting:type_name -> datasource.code.DependencySettingForUpsert
-	48, // 16: datasource.code.PutDependencySettingResponse.dependency_setting:type_name -> datasource.code.DependencySetting
-	49, // 17: datasource.code.PutCodeScanSettingRequest.code_scan_setting:type_name -> datasource.code.CodeScanSettingForUpsert
-	50, // 18: datasource.code.PutCodeScanSettingResponse.code_scan_setting:type_name -> datasource.code.CodeScanSetting
-	51, // 19: datasource.code.PutCodeScanRepositoryRequest.code_scan_repository:type_name -> datasource.code.CodeScanRepositoryForUpsert
-	52, // 20: datasource.code.PutGitleaksRepositoryRequest.gitleaks_repository:type_name -> datasource.code.GitleaksRepositoryForUpsert
-	53, // 21: datasource.code.PutDependencyRepositoryRequest.dependency_repository:type_name -> datasource.code.DependencyRepositoryForUpsert
-	54, // 22: datasource.code.ListCodescanTargetRepositoryResponse.repository:type_name -> datasource.code.GitHubRepository
-	0,  // 23: datasource.code.CodeService.ListDataSource:input_type -> datasource.code.ListDataSourceRequest
-	2,  // 24: datasource.code.CodeService.ListGitHubSetting:input_type -> datasource.code.ListGitHubSettingRequest
-	4,  // 25: datasource.code.CodeService.GetGitHubSetting:input_type -> datasource.code.GetGitHubSettingRequest
-	6,  // 26: datasource.code.CodeService.PutGitHubSetting:input_type -> datasource.code.PutGitHubSettingRequest
-	8,  // 27: datasource.code.CodeService.GetGitHubAppInstallationStatus:input_type -> datasource.code.GetGitHubAppInstallationStatusRequest
-	10, // 28: datasource.code.CodeService.VerifyGitHubAppInstallation:input_type -> datasource.code.VerifyGitHubAppInstallationRequest
-	12, // 29: datasource.code.CodeService.VerifyGitHubAppUser:input_type -> datasource.code.VerifyGitHubAppUserRequest
-	14, // 30: datasource.code.CodeService.DeleteGitHubSetting:input_type -> datasource.code.DeleteGitHubSettingRequest
-	15, // 31: datasource.code.CodeService.PutGitleaksSetting:input_type -> datasource.code.PutGitleaksSettingRequest
-	17, // 32: datasource.code.CodeService.DeleteGitleaksSetting:input_type -> datasource.code.DeleteGitleaksSettingRequest
-	18, // 33: datasource.code.CodeService.ListGitleaksCache:input_type -> datasource.code.ListGitleaksCacheRequest
-	20, // 34: datasource.code.CodeService.GetGitleaksCache:input_type -> datasource.code.GetGitleaksCacheRequest
-	22, // 35: datasource.code.CodeService.PutGitleaksCache:input_type -> datasource.code.PutGitleaksCacheRequest
-	24, // 36: datasource.code.CodeService.PutDependencySetting:input_type -> datasource.code.PutDependencySettingRequest
-	26, // 37: datasource.code.CodeService.DeleteDependencySetting:input_type -> datasource.code.DeleteDependencySettingRequest
-	27, // 38: datasource.code.CodeService.PutCodeScanSetting:input_type -> datasource.code.PutCodeScanSettingRequest
-	29, // 39: datasource.code.CodeService.DeleteCodeScanSetting:input_type -> datasource.code.DeleteCodeScanSettingRequest
-	30, // 40: datasource.code.CodeService.InvokeScanGitleaks:input_type -> datasource.code.InvokeScanGitleaksRequest
-	31, // 41: datasource.code.CodeService.InvokeScanDependency:input_type -> datasource.code.InvokeScanDependencyRequest
-	32, // 42: datasource.code.CodeService.InvokeScanCodeScan:input_type -> datasource.code.InvokeScanCodeScanRequest
-	55, // 43: datasource.code.CodeService.InvokeScanAll:input_type -> google.protobuf.Empty
-	33, // 44: datasource.code.CodeService.PutCodeScanRepository:input_type -> datasource.code.PutCodeScanRepositoryRequest
-	34, // 45: datasource.code.CodeService.PutGitleaksRepository:input_type -> datasource.code.PutGitleaksRepositoryRequest
-	35, // 46: datasource.code.CodeService.PutDependencyRepository:input_type -> datasource.code.PutDependencyRepositoryRequest
-	36, // 47: datasource.code.CodeService.ListCodescanTargetRepository:input_type -> datasource.code.ListCodescanTargetRepositoryRequest
-	1,  // 48: datasource.code.CodeService.ListDataSource:output_type -> datasource.code.ListDataSourceResponse
-	3,  // 49: datasource.code.CodeService.ListGitHubSetting:output_type -> datasource.code.ListGitHubSettingResponse
-	5,  // 50: datasource.code.CodeService.GetGitHubSetting:output_type -> datasource.code.GetGitHubSettingResponse
-	7,  // 51: datasource.code.CodeService.PutGitHubSetting:output_type -> datasource.code.PutGitHubSettingResponse
-	9,  // 52: datasource.code.CodeService.GetGitHubAppInstallationStatus:output_type -> datasource.code.GetGitHubAppInstallationStatusResponse
-	11, // 53: datasource.code.CodeService.VerifyGitHubAppInstallation:output_type -> datasource.code.VerifyGitHubAppInstallationResponse
-	13, // 54: datasource.code.CodeService.VerifyGitHubAppUser:output_type -> datasource.code.VerifyGitHubAppUserResponse
-	55, // 55: datasource.code.CodeService.DeleteGitHubSetting:output_type -> google.protobuf.Empty
-	16, // 56: datasource.code.CodeService.PutGitleaksSetting:output_type -> datasource.code.PutGitleaksSettingResponse
-	55, // 57: datasource.code.CodeService.DeleteGitleaksSetting:output_type -> google.protobuf.Empty
-	19, // 58: datasource.code.CodeService.ListGitleaksCache:output_type -> datasource.code.ListGitleaksCacheResponse
-	21, // 59: datasource.code.CodeService.GetGitleaksCache:output_type -> datasource.code.GetGitleaksCacheResponse
-	23, // 60: datasource.code.CodeService.PutGitleaksCache:output_type -> datasource.code.PutGitleaksCacheResponse
-	25, // 61: datasource.code.CodeService.PutDependencySetting:output_type -> datasource.code.PutDependencySettingResponse
-	55, // 62: datasource.code.CodeService.DeleteDependencySetting:output_type -> google.protobuf.Empty
-	28, // 63: datasource.code.CodeService.PutCodeScanSetting:output_type -> datasource.code.PutCodeScanSettingResponse
-	55, // 64: datasource.code.CodeService.DeleteCodeScanSetting:output_type -> google.protobuf.Empty
-	55, // 65: datasource.code.CodeService.InvokeScanGitleaks:output_type -> google.protobuf.Empty
-	55, // 66: datasource.code.CodeService.InvokeScanDependency:output_type -> google.protobuf.Empty
-	55, // 67: datasource.code.CodeService.InvokeScanCodeScan:output_type -> google.protobuf.Empty
-	55, // 68: datasource.code.CodeService.InvokeScanAll:output_type -> google.protobuf.Empty
-	55, // 69: datasource.code.CodeService.PutCodeScanRepository:output_type -> google.protobuf.Empty
-	55, // 70: datasource.code.CodeService.PutGitleaksRepository:output_type -> google.protobuf.Empty
-	55, // 71: datasource.code.CodeService.PutDependencyRepository:output_type -> google.protobuf.Empty
-	37, // 72: datasource.code.CodeService.ListCodescanTargetRepository:output_type -> datasource.code.ListCodescanTargetRepositoryResponse
-	48, // [48:73] is the sub-list for method output_type
-	23, // [23:48] is the sub-list for method input_type
-	23, // [23:23] is the sub-list for extension type_name
-	23, // [23:23] is the sub-list for extension extendee
-	0,  // [0:23] is the sub-list for field type_name
+	41, // 5: datasource.code.GetGitHubAppInstallationStatusResponse.github_app_installation_status:type_name -> datasource.code.GitHubAppInstallationStatus
+	39, // 6: datasource.code.VerifyGitHubAppInstallationResponse.github_setting:type_name -> datasource.code.GitHubSetting
+	39, // 7: datasource.code.VerifyGitHubAppUserResponse.github_setting:type_name -> datasource.code.GitHubSetting
+	42, // 8: datasource.code.PutGitleaksSettingRequest.gitleaks_setting:type_name -> datasource.code.GitleaksSettingForUpsert
+	43, // 9: datasource.code.PutGitleaksSettingResponse.gitleaks_setting:type_name -> datasource.code.GitleaksSetting
+	44, // 10: datasource.code.ListGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	44, // 11: datasource.code.GetGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	45, // 12: datasource.code.PutGitleaksCacheRequest.gitleaks_cache:type_name -> datasource.code.GitleaksCacheForUpsert
+	44, // 13: datasource.code.PutGitleaksCacheResponse.gitleaks_cache:type_name -> datasource.code.GitleaksCache
+	46, // 14: datasource.code.PutDependencySettingRequest.dependency_setting:type_name -> datasource.code.DependencySettingForUpsert
+	47, // 15: datasource.code.PutDependencySettingResponse.dependency_setting:type_name -> datasource.code.DependencySetting
+	48, // 16: datasource.code.PutCodeScanSettingRequest.code_scan_setting:type_name -> datasource.code.CodeScanSettingForUpsert
+	49, // 17: datasource.code.PutCodeScanSettingResponse.code_scan_setting:type_name -> datasource.code.CodeScanSetting
+	50, // 18: datasource.code.PutCodeScanRepositoryRequest.code_scan_repository:type_name -> datasource.code.CodeScanRepositoryForUpsert
+	51, // 19: datasource.code.PutGitleaksRepositoryRequest.gitleaks_repository:type_name -> datasource.code.GitleaksRepositoryForUpsert
+	52, // 20: datasource.code.PutDependencyRepositoryRequest.dependency_repository:type_name -> datasource.code.DependencyRepositoryForUpsert
+	53, // 21: datasource.code.ListCodescanTargetRepositoryResponse.repository:type_name -> datasource.code.GitHubRepository
+	0,  // 22: datasource.code.CodeService.ListDataSource:input_type -> datasource.code.ListDataSourceRequest
+	2,  // 23: datasource.code.CodeService.ListGitHubSetting:input_type -> datasource.code.ListGitHubSettingRequest
+	4,  // 24: datasource.code.CodeService.GetGitHubSetting:input_type -> datasource.code.GetGitHubSettingRequest
+	6,  // 25: datasource.code.CodeService.PutGitHubSetting:input_type -> datasource.code.PutGitHubSettingRequest
+	8,  // 26: datasource.code.CodeService.GetGitHubAppInstallationStatus:input_type -> datasource.code.GetGitHubAppInstallationStatusRequest
+	10, // 27: datasource.code.CodeService.VerifyGitHubAppInstallation:input_type -> datasource.code.VerifyGitHubAppInstallationRequest
+	12, // 28: datasource.code.CodeService.VerifyGitHubAppUser:input_type -> datasource.code.VerifyGitHubAppUserRequest
+	14, // 29: datasource.code.CodeService.DeleteGitHubSetting:input_type -> datasource.code.DeleteGitHubSettingRequest
+	15, // 30: datasource.code.CodeService.PutGitleaksSetting:input_type -> datasource.code.PutGitleaksSettingRequest
+	17, // 31: datasource.code.CodeService.DeleteGitleaksSetting:input_type -> datasource.code.DeleteGitleaksSettingRequest
+	18, // 32: datasource.code.CodeService.ListGitleaksCache:input_type -> datasource.code.ListGitleaksCacheRequest
+	20, // 33: datasource.code.CodeService.GetGitleaksCache:input_type -> datasource.code.GetGitleaksCacheRequest
+	22, // 34: datasource.code.CodeService.PutGitleaksCache:input_type -> datasource.code.PutGitleaksCacheRequest
+	24, // 35: datasource.code.CodeService.PutDependencySetting:input_type -> datasource.code.PutDependencySettingRequest
+	26, // 36: datasource.code.CodeService.DeleteDependencySetting:input_type -> datasource.code.DeleteDependencySettingRequest
+	27, // 37: datasource.code.CodeService.PutCodeScanSetting:input_type -> datasource.code.PutCodeScanSettingRequest
+	29, // 38: datasource.code.CodeService.DeleteCodeScanSetting:input_type -> datasource.code.DeleteCodeScanSettingRequest
+	30, // 39: datasource.code.CodeService.InvokeScanGitleaks:input_type -> datasource.code.InvokeScanGitleaksRequest
+	31, // 40: datasource.code.CodeService.InvokeScanDependency:input_type -> datasource.code.InvokeScanDependencyRequest
+	32, // 41: datasource.code.CodeService.InvokeScanCodeScan:input_type -> datasource.code.InvokeScanCodeScanRequest
+	54, // 42: datasource.code.CodeService.InvokeScanAll:input_type -> google.protobuf.Empty
+	33, // 43: datasource.code.CodeService.PutCodeScanRepository:input_type -> datasource.code.PutCodeScanRepositoryRequest
+	34, // 44: datasource.code.CodeService.PutGitleaksRepository:input_type -> datasource.code.PutGitleaksRepositoryRequest
+	35, // 45: datasource.code.CodeService.PutDependencyRepository:input_type -> datasource.code.PutDependencyRepositoryRequest
+	36, // 46: datasource.code.CodeService.ListCodescanTargetRepository:input_type -> datasource.code.ListCodescanTargetRepositoryRequest
+	1,  // 47: datasource.code.CodeService.ListDataSource:output_type -> datasource.code.ListDataSourceResponse
+	3,  // 48: datasource.code.CodeService.ListGitHubSetting:output_type -> datasource.code.ListGitHubSettingResponse
+	5,  // 49: datasource.code.CodeService.GetGitHubSetting:output_type -> datasource.code.GetGitHubSettingResponse
+	7,  // 50: datasource.code.CodeService.PutGitHubSetting:output_type -> datasource.code.PutGitHubSettingResponse
+	9,  // 51: datasource.code.CodeService.GetGitHubAppInstallationStatus:output_type -> datasource.code.GetGitHubAppInstallationStatusResponse
+	11, // 52: datasource.code.CodeService.VerifyGitHubAppInstallation:output_type -> datasource.code.VerifyGitHubAppInstallationResponse
+	13, // 53: datasource.code.CodeService.VerifyGitHubAppUser:output_type -> datasource.code.VerifyGitHubAppUserResponse
+	54, // 54: datasource.code.CodeService.DeleteGitHubSetting:output_type -> google.protobuf.Empty
+	16, // 55: datasource.code.CodeService.PutGitleaksSetting:output_type -> datasource.code.PutGitleaksSettingResponse
+	54, // 56: datasource.code.CodeService.DeleteGitleaksSetting:output_type -> google.protobuf.Empty
+	19, // 57: datasource.code.CodeService.ListGitleaksCache:output_type -> datasource.code.ListGitleaksCacheResponse
+	21, // 58: datasource.code.CodeService.GetGitleaksCache:output_type -> datasource.code.GetGitleaksCacheResponse
+	23, // 59: datasource.code.CodeService.PutGitleaksCache:output_type -> datasource.code.PutGitleaksCacheResponse
+	25, // 60: datasource.code.CodeService.PutDependencySetting:output_type -> datasource.code.PutDependencySettingResponse
+	54, // 61: datasource.code.CodeService.DeleteDependencySetting:output_type -> google.protobuf.Empty
+	28, // 62: datasource.code.CodeService.PutCodeScanSetting:output_type -> datasource.code.PutCodeScanSettingResponse
+	54, // 63: datasource.code.CodeService.DeleteCodeScanSetting:output_type -> google.protobuf.Empty
+	54, // 64: datasource.code.CodeService.InvokeScanGitleaks:output_type -> google.protobuf.Empty
+	54, // 65: datasource.code.CodeService.InvokeScanDependency:output_type -> google.protobuf.Empty
+	54, // 66: datasource.code.CodeService.InvokeScanCodeScan:output_type -> google.protobuf.Empty
+	54, // 67: datasource.code.CodeService.InvokeScanAll:output_type -> google.protobuf.Empty
+	54, // 68: datasource.code.CodeService.PutCodeScanRepository:output_type -> google.protobuf.Empty
+	54, // 69: datasource.code.CodeService.PutGitleaksRepository:output_type -> google.protobuf.Empty
+	54, // 70: datasource.code.CodeService.PutDependencyRepository:output_type -> google.protobuf.Empty
+	37, // 71: datasource.code.CodeService.ListCodescanTargetRepository:output_type -> datasource.code.ListCodescanTargetRepositoryResponse
+	47, // [47:72] is the sub-list for method output_type
+	22, // [22:47] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_code_service_proto_init() }
