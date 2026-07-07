@@ -99,6 +99,37 @@ func (g *riskenGitHubClient) VerifyInstallation(ctx context.Context, config *cod
 	return uint64(resolvedInstallationID), nil
 }
 
+func (g *riskenGitHubClient) GetGitHubAppInstallationStatus(ctx context.Context, config *code.GitHubSetting) (*code.GitHubAppInstallationStatus, error) {
+	if g.appAuth == nil {
+		return nil, errors.New("github app auth is not configured")
+	}
+	if config == nil {
+		return nil, errors.New("github setting is required")
+	}
+	client, err := g.newGitHubAppClient(ctx, config.BaseUrl)
+	if err != nil {
+		return nil, fmt.Errorf("create github app client: %w", err)
+	}
+	installation, _, err := findInstallation(ctx, client.Apps, config)
+	if err != nil {
+		return nil, fmt.Errorf("find installation: %w", err)
+	}
+	installationID := installation.GetID()
+	if installationID <= 0 {
+		return nil, errors.New("installation_id is required")
+	}
+	config.InstallationId = uint64(installationID)
+	if _, err := g.ListRepository(ctx, config, ""); err != nil {
+		return nil, fmt.Errorf("list github app repositories: %w", err)
+	}
+	return &code.GitHubAppInstallationStatus{
+		TargetResource:      config.TargetResource,
+		Installed:           true,
+		RepositorySelection: installation.GetRepositorySelection(),
+		Reason:              "",
+	}, nil
+}
+
 func findInstallation(ctx context.Context, appSvc GitHubAppService, config *code.GitHubSetting) (*ghub.Installation, *ghub.Response, error) {
 	switch config.Type {
 	case code.Type_ORGANIZATION:

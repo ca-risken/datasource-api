@@ -140,6 +140,14 @@ message GitHubAppSettingRepositoryForUpsert {
   string github_repository_full_name = 3;
 }
 
+// GitHubAppInstallationStatus
+message GitHubAppInstallationStatus {
+  string target_resource = 1;
+  bool installed = 2;
+  string repository_selection = 3;
+  string reason = 4;
+}
+
 // GitleaksSettingForUpsert
 message GitleaksSettingForUpsert {
   uint32 github_setting_id = 1;

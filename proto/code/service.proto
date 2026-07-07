@@ -17,6 +17,8 @@ service CodeService {
       returns (GetGitHubSettingResponse);
   rpc PutGitHubSetting(PutGitHubSettingRequest)
       returns (PutGitHubSettingResponse);
+  rpc GetGitHubAppInstallationStatus(GetGitHubAppInstallationStatusRequest)
+      returns (GetGitHubAppInstallationStatusResponse);
   rpc VerifyGitHubAppInstallation(VerifyGitHubAppInstallationRequest)
       returns (VerifyGitHubAppInstallationResponse);
   rpc VerifyGitHubAppUser(VerifyGitHubAppUserRequest)
@@ -98,6 +100,15 @@ message PutGitHubSettingRequest {
 }
 
 message PutGitHubSettingResponse { GitHubSetting github_setting = 1; }
+
+message GetGitHubAppInstallationStatusRequest {
+  uint32 project_id = 1;
+  uint32 github_setting_id = 2;
+}
+
+message GetGitHubAppInstallationStatusResponse {
+  GitHubAppInstallationStatus github_app_installation_status = 1;
+}
 
 message VerifyGitHubAppInstallationRequest {
   uint32 project_id = 1;

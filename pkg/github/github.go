@@ -25,6 +25,7 @@ type GithubServiceClient interface {
 	SupportsGitHubApp() bool
 	ResolveInstallationToken(ctx context.Context, config *code.GitHubSetting, repoName string) (string, error)
 	VerifyInstallation(ctx context.Context, config *code.GitHubSetting) (uint64, error)
+	GetGitHubAppInstallationStatus(ctx context.Context, config *code.GitHubSetting) (*code.GitHubAppInstallationStatus, error)
 	VerifyUserToServer(ctx context.Context, config *code.GitHubSetting, oauthCode string) (string, error)
 }
 
