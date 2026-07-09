@@ -35,5 +35,5 @@ message InvokeAIRemediationRequest {
 }
 
 message InvokeAIRemediationResponse {
-  string request_id = 1; // Polling key for ai.GetRemediationProposal
+  string request_id = 1;
 }
