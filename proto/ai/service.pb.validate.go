@@ -181,7 +181,7 @@ func (m *InvokeAIRemediationResponse) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for RequestId
+	// no validation rules for RemediationProposalId
 
 	if len(errors) > 0 {
 		return InvokeAIRemediationResponseMultiError(errors)

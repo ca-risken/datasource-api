@@ -16,5 +16,5 @@ message InvokeAIRemediationRequest {
 }
 
 message InvokeAIRemediationResponse {
-  string request_id = 1;
+  uint32 remediation_proposal_id = 1;
 }
