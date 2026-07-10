@@ -167,6 +167,43 @@ func (_m *CodeServiceClient) DeleteGitleaksSetting(ctx context.Context, in *code
 	return r0, r1
 }
 
+// GetGitHubAppInstallationStatus provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) GetGitHubAppInstallationStatus(ctx context.Context, in *code.GetGitHubAppInstallationStatusRequest, opts ...grpc.CallOption) (*code.GetGitHubAppInstallationStatusResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGitHubAppInstallationStatus")
+	}
+
+	var r0 *code.GetGitHubAppInstallationStatusResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest, ...grpc.CallOption) (*code.GetGitHubAppInstallationStatusResponse, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest, ...grpc.CallOption) *code.GetGitHubAppInstallationStatusResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.GetGitHubAppInstallationStatusResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetGitHubSetting provides a mock function with given fields: ctx, in, opts
 func (_m *CodeServiceClient) GetGitHubSetting(ctx context.Context, in *code.GetGitHubSettingRequest, opts ...grpc.CallOption) (*code.GetGitHubSettingResponse, error) {
 	_va := make([]interface{}, len(opts))
@@ -825,6 +862,80 @@ func (_m *CodeServiceClient) PutGitleaksSetting(ctx context.Context, in *code.Pu
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksSettingRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// VerifyGitHubAppInstallation provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) VerifyGitHubAppInstallation(ctx context.Context, in *code.VerifyGitHubAppInstallationRequest, opts ...grpc.CallOption) (*code.VerifyGitHubAppInstallationResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppInstallation")
+	}
+
+	var r0 *code.VerifyGitHubAppInstallationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) (*code.VerifyGitHubAppInstallationResponse, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) *code.VerifyGitHubAppInstallationResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppInstallationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppInstallationRequest, ...grpc.CallOption) error); ok {
+		r1 = rf(ctx, in, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// VerifyGitHubAppUser provides a mock function with given fields: ctx, in, opts
+func (_m *CodeServiceClient) VerifyGitHubAppUser(ctx context.Context, in *code.VerifyGitHubAppUserRequest, opts ...grpc.CallOption) (*code.VerifyGitHubAppUserResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, in)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppUser")
+	}
+
+	var r0 *code.VerifyGitHubAppUserResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppUserRequest, ...grpc.CallOption) (*code.VerifyGitHubAppUserResponse, error)); ok {
+		return rf(ctx, in, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppUserRequest, ...grpc.CallOption) *code.VerifyGitHubAppUserResponse); ok {
+		r0 = rf(ctx, in, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppUserResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppUserRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)

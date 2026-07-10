@@ -137,6 +137,36 @@ func (_m *CodeServiceServer) DeleteGitleaksSetting(_a0 context.Context, _a1 *cod
 	return r0, r1
 }
 
+// GetGitHubAppInstallationStatus provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) GetGitHubAppInstallationStatus(_a0 context.Context, _a1 *code.GetGitHubAppInstallationStatusRequest) (*code.GetGitHubAppInstallationStatusResponse, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGitHubAppInstallationStatus")
+	}
+
+	var r0 *code.GetGitHubAppInstallationStatusResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest) (*code.GetGitHubAppInstallationStatusResponse, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest) *code.GetGitHubAppInstallationStatusResponse); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.GetGitHubAppInstallationStatusResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.GetGitHubAppInstallationStatusRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetGitHubSetting provides a mock function with given fields: _a0, _a1
 func (_m *CodeServiceServer) GetGitHubSetting(_a0 context.Context, _a1 *code.GetGitHubSettingRequest) (*code.GetGitHubSettingResponse, error) {
 	ret := _m.Called(_a0, _a1)
@@ -669,6 +699,66 @@ func (_m *CodeServiceServer) PutGitleaksSetting(_a0 context.Context, _a1 *code.P
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, *code.PutGitleaksSettingRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// VerifyGitHubAppInstallation provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) VerifyGitHubAppInstallation(_a0 context.Context, _a1 *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppInstallation")
+	}
+
+	var r0 *code.VerifyGitHubAppInstallationResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) (*code.VerifyGitHubAppInstallationResponse, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) *code.VerifyGitHubAppInstallationResponse); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppInstallationResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppInstallationRequest) error); ok {
+		r1 = rf(_a0, _a1)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// VerifyGitHubAppUser provides a mock function with given fields: _a0, _a1
+func (_m *CodeServiceServer) VerifyGitHubAppUser(_a0 context.Context, _a1 *code.VerifyGitHubAppUserRequest) (*code.VerifyGitHubAppUserResponse, error) {
+	ret := _m.Called(_a0, _a1)
+
+	if len(ret) == 0 {
+		panic("no return value specified for VerifyGitHubAppUser")
+	}
+
+	var r0 *code.VerifyGitHubAppUserResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppUserRequest) (*code.VerifyGitHubAppUserResponse, error)); ok {
+		return rf(_a0, _a1)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *code.VerifyGitHubAppUserRequest) *code.VerifyGitHubAppUserResponse); ok {
+		r0 = rf(_a0, _a1)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*code.VerifyGitHubAppUserResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *code.VerifyGitHubAppUserRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)
