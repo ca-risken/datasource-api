@@ -8,6 +8,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (*AIService) InvokeAIRemediation(_ context.Context, _ *protoai.InvokeAIRemediationRequest) (*protoai.InvokeAIRemediationResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "InvokeAIRemediation is not implemented")
+func (*AIService) GenerateRemediationProposal(_ context.Context, _ *protoai.GenerateRemediationProposalRequest) (*protoai.GenerateRemediationProposalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "GenerateRemediationProposal is not implemented")
 }

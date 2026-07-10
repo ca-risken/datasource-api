@@ -35,22 +35,23 @@ var (
 	_ = sort.Sort
 )
 
-// Validate checks the field values on InvokeAIRemediationRequest with the
-// rules defined in the proto definition for this message. If any rules are
-// violated, the first error encountered is returned, or nil if there are no violations.
-func (m *InvokeAIRemediationRequest) Validate() error {
+// Validate checks the field values on GenerateRemediationProposalRequest with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the first error encountered is returned, or nil if there are
+// no violations.
+func (m *GenerateRemediationProposalRequest) Validate() error {
 	return m.validate(false)
 }
 
-// ValidateAll checks the field values on InvokeAIRemediationRequest with the
-// rules defined in the proto definition for this message. If any rules are
-// violated, the result is a list of violation errors wrapped in
-// InvokeAIRemediationRequestMultiError, or nil if none found.
-func (m *InvokeAIRemediationRequest) ValidateAll() error {
+// ValidateAll checks the field values on GenerateRemediationProposalRequest
+// with the rules defined in the proto definition for this message. If any
+// rules are violated, the result is a list of violation errors wrapped in
+// GenerateRemediationProposalRequestMultiError, or nil if none found.
+func (m *GenerateRemediationProposalRequest) ValidateAll() error {
 	return m.validate(true)
 }
 
-func (m *InvokeAIRemediationRequest) validate(all bool) error {
+func (m *GenerateRemediationProposalRequest) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
@@ -58,7 +59,7 @@ func (m *InvokeAIRemediationRequest) validate(all bool) error {
 	var errors []error
 
 	if m.GetProjectId() <= 0 {
-		err := InvokeAIRemediationRequestValidationError{
+		err := GenerateRemediationProposalRequestValidationError{
 			field:  "ProjectId",
 			reason: "value must be greater than 0",
 		}
@@ -69,7 +70,7 @@ func (m *InvokeAIRemediationRequest) validate(all bool) error {
 	}
 
 	if m.GetFindingId() <= 0 {
-		err := InvokeAIRemediationRequestValidationError{
+		err := GenerateRemediationProposalRequestValidationError{
 			field:  "FindingId",
 			reason: "value must be greater than 0",
 		}
@@ -80,19 +81,20 @@ func (m *InvokeAIRemediationRequest) validate(all bool) error {
 	}
 
 	if len(errors) > 0 {
-		return InvokeAIRemediationRequestMultiError(errors)
+		return GenerateRemediationProposalRequestMultiError(errors)
 	}
 
 	return nil
 }
 
-// InvokeAIRemediationRequestMultiError is an error wrapping multiple
-// validation errors returned by InvokeAIRemediationRequest.ValidateAll() if
-// the designated constraints aren't met.
-type InvokeAIRemediationRequestMultiError []error
+// GenerateRemediationProposalRequestMultiError is an error wrapping multiple
+// validation errors returned by
+// GenerateRemediationProposalRequest.ValidateAll() if the designated
+// constraints aren't met.
+type GenerateRemediationProposalRequestMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
-func (m InvokeAIRemediationRequestMultiError) Error() string {
+func (m GenerateRemediationProposalRequestMultiError) Error() string {
 	var msgs []string
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
@@ -101,11 +103,12 @@ func (m InvokeAIRemediationRequestMultiError) Error() string {
 }
 
 // AllErrors returns a list of validation violation errors.
-func (m InvokeAIRemediationRequestMultiError) AllErrors() []error { return m }
+func (m GenerateRemediationProposalRequestMultiError) AllErrors() []error { return m }
 
-// InvokeAIRemediationRequestValidationError is the validation error returned
-// by InvokeAIRemediationRequest.Validate if the designated constraints aren't met.
-type InvokeAIRemediationRequestValidationError struct {
+// GenerateRemediationProposalRequestValidationError is the validation error
+// returned by GenerateRemediationProposalRequest.Validate if the designated
+// constraints aren't met.
+type GenerateRemediationProposalRequestValidationError struct {
 	field  string
 	reason string
 	cause  error
@@ -113,24 +116,24 @@ type InvokeAIRemediationRequestValidationError struct {
 }
 
 // Field function returns field value.
-func (e InvokeAIRemediationRequestValidationError) Field() string { return e.field }
+func (e GenerateRemediationProposalRequestValidationError) Field() string { return e.field }
 
 // Reason function returns reason value.
-func (e InvokeAIRemediationRequestValidationError) Reason() string { return e.reason }
+func (e GenerateRemediationProposalRequestValidationError) Reason() string { return e.reason }
 
 // Cause function returns cause value.
-func (e InvokeAIRemediationRequestValidationError) Cause() error { return e.cause }
+func (e GenerateRemediationProposalRequestValidationError) Cause() error { return e.cause }
 
 // Key function returns key value.
-func (e InvokeAIRemediationRequestValidationError) Key() bool { return e.key }
+func (e GenerateRemediationProposalRequestValidationError) Key() bool { return e.key }
 
 // ErrorName returns error name.
-func (e InvokeAIRemediationRequestValidationError) ErrorName() string {
-	return "InvokeAIRemediationRequestValidationError"
+func (e GenerateRemediationProposalRequestValidationError) ErrorName() string {
+	return "GenerateRemediationProposalRequestValidationError"
 }
 
 // Error satisfies the builtin error interface
-func (e InvokeAIRemediationRequestValidationError) Error() string {
+func (e GenerateRemediationProposalRequestValidationError) Error() string {
 	cause := ""
 	if e.cause != nil {
 		cause = fmt.Sprintf(" | caused by: %v", e.cause)
@@ -142,14 +145,14 @@ func (e InvokeAIRemediationRequestValidationError) Error() string {
 	}
 
 	return fmt.Sprintf(
-		"invalid %sInvokeAIRemediationRequest.%s: %s%s",
+		"invalid %sGenerateRemediationProposalRequest.%s: %s%s",
 		key,
 		e.field,
 		e.reason,
 		cause)
 }
 
-var _ error = InvokeAIRemediationRequestValidationError{}
+var _ error = GenerateRemediationProposalRequestValidationError{}
 
 var _ interface {
 	Field() string
@@ -157,24 +160,25 @@ var _ interface {
 	Key() bool
 	Cause() error
 	ErrorName() string
-} = InvokeAIRemediationRequestValidationError{}
+} = GenerateRemediationProposalRequestValidationError{}
 
-// Validate checks the field values on InvokeAIRemediationResponse with the
-// rules defined in the proto definition for this message. If any rules are
-// violated, the first error encountered is returned, or nil if there are no violations.
-func (m *InvokeAIRemediationResponse) Validate() error {
+// Validate checks the field values on GenerateRemediationProposalResponse with
+// the rules defined in the proto definition for this message. If any rules
+// are violated, the first error encountered is returned, or nil if there are
+// no violations.
+func (m *GenerateRemediationProposalResponse) Validate() error {
 	return m.validate(false)
 }
 
-// ValidateAll checks the field values on InvokeAIRemediationResponse with the
-// rules defined in the proto definition for this message. If any rules are
-// violated, the result is a list of violation errors wrapped in
-// InvokeAIRemediationResponseMultiError, or nil if none found.
-func (m *InvokeAIRemediationResponse) ValidateAll() error {
+// ValidateAll checks the field values on GenerateRemediationProposalResponse
+// with the rules defined in the proto definition for this message. If any
+// rules are violated, the result is a list of violation errors wrapped in
+// GenerateRemediationProposalResponseMultiError, or nil if none found.
+func (m *GenerateRemediationProposalResponse) ValidateAll() error {
 	return m.validate(true)
 }
 
-func (m *InvokeAIRemediationResponse) validate(all bool) error {
+func (m *GenerateRemediationProposalResponse) validate(all bool) error {
 	if m == nil {
 		return nil
 	}
@@ -184,19 +188,20 @@ func (m *InvokeAIRemediationResponse) validate(all bool) error {
 	// no validation rules for RemediationProposalId
 
 	if len(errors) > 0 {
-		return InvokeAIRemediationResponseMultiError(errors)
+		return GenerateRemediationProposalResponseMultiError(errors)
 	}
 
 	return nil
 }
 
-// InvokeAIRemediationResponseMultiError is an error wrapping multiple
-// validation errors returned by InvokeAIRemediationResponse.ValidateAll() if
-// the designated constraints aren't met.
-type InvokeAIRemediationResponseMultiError []error
+// GenerateRemediationProposalResponseMultiError is an error wrapping multiple
+// validation errors returned by
+// GenerateRemediationProposalResponse.ValidateAll() if the designated
+// constraints aren't met.
+type GenerateRemediationProposalResponseMultiError []error
 
 // Error returns a concatenation of all the error messages it wraps.
-func (m InvokeAIRemediationResponseMultiError) Error() string {
+func (m GenerateRemediationProposalResponseMultiError) Error() string {
 	var msgs []string
 	for _, err := range m {
 		msgs = append(msgs, err.Error())
@@ -205,12 +210,12 @@ func (m InvokeAIRemediationResponseMultiError) Error() string {
 }
 
 // AllErrors returns a list of validation violation errors.
-func (m InvokeAIRemediationResponseMultiError) AllErrors() []error { return m }
+func (m GenerateRemediationProposalResponseMultiError) AllErrors() []error { return m }
 
-// InvokeAIRemediationResponseValidationError is the validation error returned
-// by InvokeAIRemediationResponse.Validate if the designated constraints
-// aren't met.
-type InvokeAIRemediationResponseValidationError struct {
+// GenerateRemediationProposalResponseValidationError is the validation error
+// returned by GenerateRemediationProposalResponse.Validate if the designated
+// constraints aren't met.
+type GenerateRemediationProposalResponseValidationError struct {
 	field  string
 	reason string
 	cause  error
@@ -218,24 +223,24 @@ type InvokeAIRemediationResponseValidationError struct {
 }
 
 // Field function returns field value.
-func (e InvokeAIRemediationResponseValidationError) Field() string { return e.field }
+func (e GenerateRemediationProposalResponseValidationError) Field() string { return e.field }
 
 // Reason function returns reason value.
-func (e InvokeAIRemediationResponseValidationError) Reason() string { return e.reason }
+func (e GenerateRemediationProposalResponseValidationError) Reason() string { return e.reason }
 
 // Cause function returns cause value.
-func (e InvokeAIRemediationResponseValidationError) Cause() error { return e.cause }
+func (e GenerateRemediationProposalResponseValidationError) Cause() error { return e.cause }
 
 // Key function returns key value.
-func (e InvokeAIRemediationResponseValidationError) Key() bool { return e.key }
+func (e GenerateRemediationProposalResponseValidationError) Key() bool { return e.key }
 
 // ErrorName returns error name.
-func (e InvokeAIRemediationResponseValidationError) ErrorName() string {
-	return "InvokeAIRemediationResponseValidationError"
+func (e GenerateRemediationProposalResponseValidationError) ErrorName() string {
+	return "GenerateRemediationProposalResponseValidationError"
 }
 
 // Error satisfies the builtin error interface
-func (e InvokeAIRemediationResponseValidationError) Error() string {
+func (e GenerateRemediationProposalResponseValidationError) Error() string {
 	cause := ""
 	if e.cause != nil {
 		cause = fmt.Sprintf(" | caused by: %v", e.cause)
@@ -247,14 +252,14 @@ func (e InvokeAIRemediationResponseValidationError) Error() string {
 	}
 
 	return fmt.Sprintf(
-		"invalid %sInvokeAIRemediationResponse.%s: %s%s",
+		"invalid %sGenerateRemediationProposalResponse.%s: %s%s",
 		key,
 		e.field,
 		e.reason,
 		cause)
 }
 
-var _ error = InvokeAIRemediationResponseValidationError{}
+var _ error = GenerateRemediationProposalResponseValidationError{}
 
 var _ interface {
 	Field() string
@@ -262,4 +267,4 @@ var _ interface {
 	Key() bool
 	Cause() error
 	ErrorName() string
-} = InvokeAIRemediationResponseValidationError{}
+} = GenerateRemediationProposalResponseValidationError{}

@@ -15,28 +15,28 @@ type AIServiceServer struct {
 	mock.Mock
 }
 
-// InvokeAIRemediation provides a mock function with given fields: _a0, _a1
-func (_m *AIServiceServer) InvokeAIRemediation(_a0 context.Context, _a1 *ai.InvokeAIRemediationRequest) (*ai.InvokeAIRemediationResponse, error) {
+// GenerateRemediationProposal provides a mock function with given fields: _a0, _a1
+func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error) {
 	ret := _m.Called(_a0, _a1)
 
 	if len(ret) == 0 {
-		panic("no return value specified for InvokeAIRemediation")
+		panic("no return value specified for GenerateRemediationProposal")
 	}
 
-	var r0 *ai.InvokeAIRemediationResponse
+	var r0 *ai.GenerateRemediationProposalResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.InvokeAIRemediationRequest) (*ai.InvokeAIRemediationResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error)); ok {
 		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.InvokeAIRemediationRequest) *ai.InvokeAIRemediationResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) *ai.GenerateRemediationProposalResponse); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ai.InvokeAIRemediationResponse)
+			r0 = ret.Get(0).(*ai.GenerateRemediationProposalResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *ai.InvokeAIRemediationRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *ai.GenerateRemediationProposalRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)

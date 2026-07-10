@@ -17,8 +17,8 @@ type AIServiceClient struct {
 	mock.Mock
 }
 
-// InvokeAIRemediation provides a mock function with given fields: ctx, in, opts
-func (_m *AIServiceClient) InvokeAIRemediation(ctx context.Context, in *ai.InvokeAIRemediationRequest, opts ...grpc.CallOption) (*ai.InvokeAIRemediationResponse, error) {
+// GenerateRemediationProposal provides a mock function with given fields: ctx, in, opts
+func (_m *AIServiceClient) GenerateRemediationProposal(ctx context.Context, in *ai.GenerateRemediationProposalRequest, opts ...grpc.CallOption) (*ai.GenerateRemediationProposalResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -29,23 +29,23 @@ func (_m *AIServiceClient) InvokeAIRemediation(ctx context.Context, in *ai.Invok
 	ret := _m.Called(_ca...)
 
 	if len(ret) == 0 {
-		panic("no return value specified for InvokeAIRemediation")
+		panic("no return value specified for GenerateRemediationProposal")
 	}
 
-	var r0 *ai.InvokeAIRemediationResponse
+	var r0 *ai.GenerateRemediationProposalResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.InvokeAIRemediationRequest, ...grpc.CallOption) (*ai.InvokeAIRemediationResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) (*ai.GenerateRemediationProposalResponse, error)); ok {
 		return rf(ctx, in, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.InvokeAIRemediationRequest, ...grpc.CallOption) *ai.InvokeAIRemediationResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) *ai.GenerateRemediationProposalResponse); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ai.InvokeAIRemediationResponse)
+			r0 = ret.Get(0).(*ai.GenerateRemediationProposalResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *ai.InvokeAIRemediationRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
