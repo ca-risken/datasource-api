@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package datasource.ai;
+option go_package = "github.com/ca-risken/datasource-api/proto/ai";
+
+import "validate/validate.proto";
+
+service AIService {
+  rpc InvokeAIRemediation(InvokeAIRemediationRequest)
+      returns (InvokeAIRemediationResponse);
+}
+
+message InvokeAIRemediationRequest {
+  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ]; // Required
+  uint64 finding_id = 2 [ (validate.rules).uint64.gt = 0 ]; // Required
+}
+
+message InvokeAIRemediationResponse {
+  string request_id = 1;
+}

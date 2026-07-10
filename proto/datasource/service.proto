@@ -12,8 +12,6 @@ service DataSourceService {
   rpc AnalyzeAttackFlow(AnalyzeAttackFlowRequest)
       returns (AnalyzeAttackFlowResponse);
   rpc NotifyScanError(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc InvokeAIRemediation(InvokeAIRemediationRequest)
-      returns (InvokeAIRemediationResponse);
 }
 
 message AnalyzeAttackFlowRequest {
@@ -27,13 +25,4 @@ message AnalyzeAttackFlowRequest {
 message AnalyzeAttackFlowResponse {
   repeated Resource nodes = 1;
   repeated ResourceRelationship edges = 2;
-}
-
-message InvokeAIRemediationRequest {
-  uint32 project_id = 1 [ (validate.rules).uint32.gt = 0 ]; // Required
-  uint64 finding_id = 2 [ (validate.rules).uint64.gt = 0 ]; // Required
-}
-
-message InvokeAIRemediationResponse {
-  string request_id = 1;
 }

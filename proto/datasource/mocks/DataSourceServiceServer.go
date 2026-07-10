@@ -76,36 +76,6 @@ func (_m *DataSourceServiceServer) CleanDataSource(_a0 context.Context, _a1 *emp
 	return r0, r1
 }
 
-// InvokeAIRemediation provides a mock function with given fields: _a0, _a1
-func (_m *DataSourceServiceServer) InvokeAIRemediation(_a0 context.Context, _a1 *datasource.InvokeAIRemediationRequest) (*datasource.InvokeAIRemediationResponse, error) {
-	ret := _m.Called(_a0, _a1)
-
-	if len(ret) == 0 {
-		panic("no return value specified for InvokeAIRemediation")
-	}
-
-	var r0 *datasource.InvokeAIRemediationResponse
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *datasource.InvokeAIRemediationRequest) (*datasource.InvokeAIRemediationResponse, error)); ok {
-		return rf(_a0, _a1)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, *datasource.InvokeAIRemediationRequest) *datasource.InvokeAIRemediationResponse); ok {
-		r0 = rf(_a0, _a1)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*datasource.InvokeAIRemediationResponse)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, *datasource.InvokeAIRemediationRequest) error); ok {
-		r1 = rf(_a0, _a1)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // NotifyScanError provides a mock function with given fields: _a0, _a1
 func (_m *DataSourceServiceServer) NotifyScanError(_a0 context.Context, _a1 *emptypb.Empty) (*emptypb.Empty, error) {
 	ret := _m.Called(_a0, _a1)
