@@ -11,7 +11,9 @@ import (
 
 	"github.com/ca-risken/common/pkg/logging"
 	mimosarpc "github.com/ca-risken/common/pkg/rpc"
+	coreai "github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/alert"
+	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/core/proto/project"
 	azureClient "github.com/ca-risken/datasource-api/pkg/azure"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -26,11 +28,11 @@ import (
 	diagnosisServer "github.com/ca-risken/datasource-api/pkg/server/diagnosis"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	osintServer "github.com/ca-risken/datasource-api/pkg/server/osint"
-	"github.com/ca-risken/datasource-api/proto/ai"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/ca-risken/datasource-api/proto/azure"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/ca-risken/datasource-api/proto/datasource"
+	aipb "github.com/ca-risken/datasource-api/proto/datasource_ai"
 	"github.com/ca-risken/datasource-api/proto/diagnosis"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/datasource-api/proto/osint"
@@ -90,6 +92,14 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create alert client: %w", err)
 	}
+	findingClient, err := newFindingClient(s.coreSvcAddr)
+	if err != nil {
+		return fmt.Errorf("failed to create finding client: %w", err)
+	}
+	aiClient, err := newAIClient(s.coreSvcAddr)
+	if err != nil {
+		return fmt.Errorf("failed to create ai client: %w", err)
+	}
 	gcpClient, err := gcp.NewGcpClient(ctx, s.googleCredentialPath, s.logger)
 	if err != nil {
 		return fmt.Errorf("failed to create gcp client: %w", err)
@@ -114,7 +124,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
 	azureSvc := azureServer.NewAzureService(ctx, azureClient, s.db, s.queue, pjClient, s.logger)
 	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, slackClient, s.baseURL, s.defaultLocale, s.logger)
-	aiSvc := aiServer.NewAIService(s.logger)
+	aiSvc := aiServer.NewAIService(s.db, findingClient, aiClient, s.queue, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -129,7 +139,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
 	azure.RegisterAzureServiceServer(server, azureSvc)
 	datasource.RegisterDataSourceServiceServer(server, dsSvc)
-	ai.RegisterAIServiceServer(server, aiSvc)
+	aipb.RegisterAIServiceServer(server, aiSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
@@ -177,6 +187,24 @@ func newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
 	return alert.NewAlertServiceClient(conn), nil
+}
+
+func newFindingClient(svcAddr string) (finding.FindingServiceClient, error) {
+	ctx := context.Background()
+	conn, err := getGRPCConn(ctx, svcAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
+	}
+	return finding.NewFindingServiceClient(conn), nil
+}
+
+func newAIClient(svcAddr string) (coreai.AIServiceClient, error) {
+	ctx := context.Background()
+	conn, err := getGRPCConn(ctx, svcAddr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
+	}
+	return coreai.NewAIServiceClient(conn), nil
 }
 
 func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {

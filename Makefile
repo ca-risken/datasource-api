@@ -1,4 +1,4 @@
-TARGETS = aws google diagnosis osint code datasource azure ai
+TARGETS = aws google diagnosis osint code datasource azure datasource_ai
 MOCK_TARGETS = $(TARGETS:=.mock)
 BUILD_OPT=""
 IMAGE_TAG=latest
@@ -53,7 +53,7 @@ proto-without-validate: fmt
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource" "azure" "ai"; do \
+	for svc in "datasource" "azure" "datasource_ai"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \

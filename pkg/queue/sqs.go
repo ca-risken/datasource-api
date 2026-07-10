@@ -23,10 +23,10 @@ type SQSConfig struct {
 	AWSPortscanQueueURL       string
 
 	// google
-	GoogleAssetQueueURL          string
-	GoogleCloudSploitQueueURL    string
-	GoogleSCCQueueURL            string
-	GooglePortscanQueueURL       string
+	GoogleAssetQueueURL       string
+	GoogleCloudSploitQueueURL string
+	GoogleSCCQueueURL         string
+	GooglePortscanQueueURL    string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -44,6 +44,9 @@ type SQSConfig struct {
 
 	// azure
 	AzureProwlerQueueURL string
+
+	// ai
+	AIRemediationQueueURL string
 }
 
 type Client struct {
@@ -58,10 +61,10 @@ type Client struct {
 	AWSPortscanQueueURL       string
 
 	// google
-	GoogleAssetQueueURL          string
-	GoogleCloudSploitQueueURL    string
-	GoogleSCCQueueURL            string
-	GooglePortscanQueueURL       string
+	GoogleAssetQueueURL       string
+	GoogleCloudSploitQueueURL string
+	GoogleSCCQueueURL         string
+	GooglePortscanQueueURL    string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -79,6 +82,9 @@ type Client struct {
 
 	// azure
 	AzureProwlerQueueURL string
+
+	// ai
+	AIRemediationQueueURL string
 }
 
 func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client, error) {
@@ -127,6 +133,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
+		AIRemediationQueueURL:            conf.AIRemediationQueueURL,
 	}, nil
 }
 

@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	ai "github.com/ca-risken/datasource-api/proto/ai"
+	datasource_ai "github.com/ca-risken/datasource-api/proto/datasource_ai"
 
 	mock "github.com/stretchr/testify/mock"
 )
@@ -16,27 +16,27 @@ type AIServiceServer struct {
 }
 
 // GenerateRemediationProposal provides a mock function with given fields: _a0, _a1
-func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error) {
+func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 *datasource_ai.GenerateRemediationProposalRequest) (*datasource_ai.GenerateRemediationProposalResponse, error) {
 	ret := _m.Called(_a0, _a1)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateRemediationProposal")
 	}
 
-	var r0 *ai.GenerateRemediationProposalResponse
+	var r0 *datasource_ai.GenerateRemediationProposalResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest) (*datasource_ai.GenerateRemediationProposalResponse, error)); ok {
 		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) *ai.GenerateRemediationProposalResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest) *datasource_ai.GenerateRemediationProposalResponse); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ai.GenerateRemediationProposalResponse)
+			r0 = ret.Get(0).(*datasource_ai.GenerateRemediationProposalResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *ai.GenerateRemediationProposalRequest) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest) error); ok {
 		r1 = rf(_a0, _a1)
 	} else {
 		r1 = ret.Error(1)

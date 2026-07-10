@@ -1,6 +1,6 @@
 module github.com/ca-risken/datasource-api
 
-go 1.23.0
+go 1.23.3
 
 toolchain go1.24.2
 
@@ -32,7 +32,7 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.8.1-0.20230802005225-c9bcfdb2579c
+	github.com/ca-risken/core v0.16.1-0.20260710043110-fb18e3df8745
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/coocood/freecache v1.2.3
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
@@ -42,6 +42,7 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-github/v44 v44.1.0
+	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/slack-go/slack v0.12.2
 	github.com/stretchr/testify v1.10.0
@@ -65,8 +66,8 @@ require (
 	cloud.google.com/go/orgpolicy v1.10.0 // indirect
 	cloud.google.com/go/osconfig v1.11.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.8.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/DataDog/appsec-internal-go v1.0.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.45.0-rc.1 // indirect
@@ -107,7 +108,6 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/pprof v0.0.0-20230509042627-b1315fad0c5a // indirect
 	github.com/google/s2a-go v0.1.3 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
@@ -117,6 +117,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/openai/openai-go v1.8.3 // indirect
 	github.com/outcaste-io/ristretto v0.2.1 // indirect
 	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
@@ -130,6 +131,10 @@ require (
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tinylib/msgp v1.1.6 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -138,6 +143,7 @@ require (
 	go4.org/unsafe/assume-no-moving-gc v0.0.0-20220617031537-928513b29760 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.3.0 // indirect

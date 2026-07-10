@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	ai "github.com/ca-risken/datasource-api/proto/ai"
+	datasource_ai "github.com/ca-risken/datasource-api/proto/datasource_ai"
 
 	grpc "google.golang.org/grpc"
 
@@ -18,7 +18,7 @@ type AIServiceClient struct {
 }
 
 // GenerateRemediationProposal provides a mock function with given fields: ctx, in, opts
-func (_m *AIServiceClient) GenerateRemediationProposal(ctx context.Context, in *ai.GenerateRemediationProposalRequest, opts ...grpc.CallOption) (*ai.GenerateRemediationProposalResponse, error) {
+func (_m *AIServiceClient) GenerateRemediationProposal(ctx context.Context, in *datasource_ai.GenerateRemediationProposalRequest, opts ...grpc.CallOption) (*datasource_ai.GenerateRemediationProposalResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -32,20 +32,20 @@ func (_m *AIServiceClient) GenerateRemediationProposal(ctx context.Context, in *
 		panic("no return value specified for GenerateRemediationProposal")
 	}
 
-	var r0 *ai.GenerateRemediationProposalResponse
+	var r0 *datasource_ai.GenerateRemediationProposalResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) (*ai.GenerateRemediationProposalResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest, ...grpc.CallOption) (*datasource_ai.GenerateRemediationProposalResponse, error)); ok {
 		return rf(ctx, in, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) *ai.GenerateRemediationProposalResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest, ...grpc.CallOption) *datasource_ai.GenerateRemediationProposalResponse); ok {
 		r0 = rf(ctx, in, opts...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*ai.GenerateRemediationProposalResponse)
+			r0 = ret.Get(0).(*datasource_ai.GenerateRemediationProposalResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, *ai.GenerateRemediationProposalRequest, ...grpc.CallOption) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, *datasource_ai.GenerateRemediationProposalRequest, ...grpc.CallOption) error); ok {
 		r1 = rf(ctx, in, opts...)
 	} else {
 		r1 = ret.Error(1)
