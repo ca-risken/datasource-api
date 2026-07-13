@@ -33,6 +33,7 @@ func (a *AIRemediationQueueMessage) Validate() error {
 		validation.Field(&a.AWSID, validation.Required),
 		validation.Field(&a.AccountID, validation.Required, validation.Length(12, 12)),
 		validation.Field(&a.AssumeRoleArn, validation.Required),
+		validation.Field(&a.ExternalID, validation.Required),
 	)
 }
 
