@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"regexp"
-	"time"
 
 	coreai "github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/finding"
@@ -16,14 +15,10 @@ import (
 )
 
 const (
-	remediationProposalStatusPending   = "PENDING"
-	remediationProposalStatusSucceeded = "SUCCEEDED"
-
-	aiRemediationCooldownPeriod = time.Hour
-	listFindingTagLimit         = 200
+	listFindingTagLimit = 200
 )
 
-var aiRemediationTargetDataSources = []string{
+var remediationProposalTargetDataSources = []string{
 	message.AWSAccessAnalyzerDataSource,
 	message.AWSAdminCheckerDataSource,
 	message.AWSCloudSploitDataSource,
@@ -49,23 +44,8 @@ func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.G
 	}
 
 	dataSource := findingResp.Finding.DataSource
-	if !isAIRemediationTarget(dataSource) {
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for AI remediation: %s", dataSource)
-	}
-
-	proposals, err := a.coreAIClient.ListRemediationProposal(ctx, &coreai.ListRemediationProposalRequest{
-		ProjectId: req.ProjectId,
-		FindingId: req.FindingId,
-		Status:    []string{remediationProposalStatusPending, remediationProposalStatusSucceeded},
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range proposals.RemediationProposal {
-		if time.Since(time.Unix(p.CreatedAt, 0)) < aiRemediationCooldownPeriod {
-			return nil, status.Errorf(codes.FailedPrecondition,
-				"remediation proposal is in cooldown period: finding_id=%d, remediation_proposal_id=%d", req.FindingId, p.RemediationProposalId)
-		}
+	if !isRemediationProposalTarget(dataSource) {
+		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for remediation proposal: %s", dataSource)
 	}
 
 	accountID, err := a.getAWSAccountIDFromFindingTag(ctx, req.ProjectId, req.FindingId)
@@ -94,30 +74,26 @@ func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.G
 		return nil, err
 	}
 
-	putResp, err := a.coreAIClient.PutRemediationProposal(ctx, &coreai.PutRemediationProposalRequest{
+	createResp, err := a.coreAIClient.CreateRemediationProposal(ctx, &coreai.CreateRemediationProposalRequest{
 		ProjectId: req.ProjectId,
 		FindingId: req.FindingId,
-		Status:    remediationProposalStatusPending,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if putResp.RemediationProposal == nil || putResp.RemediationProposal.RemediationProposalId == 0 {
+	if createResp.RemediationProposal == nil || createResp.RemediationProposal.RemediationProposalId == 0 {
 		return nil, status.Error(codes.Internal, "failed to create remediation proposal")
 	}
-	remediationProposalID := putResp.RemediationProposal.RemediationProposalId
+	remediationProposalID := createResp.RemediationProposal.RemediationProposalId
 
-	msg := &message.AIRemediationQueueMessage{
+	msg := &message.RemediationProposalQueueMessage{
 		RemediationProposalID: remediationProposalID,
 		FindingID:             req.FindingId,
 		ProjectID:             req.ProjectId,
-		DataSource:            ds.DataSource,
-		AWSID:                 ds.AWSID,
-		AccountID:             ds.AWSAccountID,
 		AssumeRoleArn:         ds.AssumeRoleArn,
 		ExternalID:            ds.ExternalID,
 	}
-	resp, err := a.sqs.Send(ctx, a.aiRemediationQueueURL, msg)
+	resp, err := a.sqs.Send(ctx, a.remediationProposalQueueURL, msg)
 	if err != nil {
 		return nil, err
 	}
@@ -125,8 +101,8 @@ func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.G
 	return &aipb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
 }
 
-func isAIRemediationTarget(dataSource string) bool {
-	for _, target := range aiRemediationTargetDataSources {
+func isRemediationProposalTarget(dataSource string) bool {
+	for _, target := range remediationProposalTargetDataSources {
 		if dataSource == target {
 			return true
 		}

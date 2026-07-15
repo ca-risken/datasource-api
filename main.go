@@ -58,7 +58,7 @@ type AppConf struct {
 	DiagnosisPortscanQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-portscan"`
 	DiagnosisApplicationScanQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-applicationscan"`
 	AzureProwlerQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/azure-prowler"`
-	AIRemediationQueueURL            string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/ai-remediation"`
+	RemediationProposalQueueURL      string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-remediation-proposal"`
 
 	// datasource
 	GoogleCredentialPath         string   `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
@@ -174,7 +174,7 @@ func main() {
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
-		AIRemediationQueueURL:            conf.AIRemediationQueueURL,
+		RemediationProposalQueueURL:      conf.RemediationProposalQueueURL,
 	}
 	q, err := queue.NewClient(ctx, queueConf, logger)
 	if err != nil {

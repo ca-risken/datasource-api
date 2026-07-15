@@ -20,21 +20,21 @@ type sqsAPI interface {
 }
 
 type AIService struct {
-	dbClient              aiDBClient
-	findingClient         finding.FindingServiceClient
-	coreAIClient          coreai.AIServiceClient
-	sqs                   sqsAPI
-	aiRemediationQueueURL string
-	logger                logging.Logger
+	dbClient                    aiDBClient
+	findingClient               finding.FindingServiceClient
+	coreAIClient                coreai.AIServiceClient
+	sqs                         sqsAPI
+	remediationProposalQueueURL string
+	logger                      logging.Logger
 }
 
 func NewAIService(dbClient aiDBClient, findingClient finding.FindingServiceClient, coreAIClient coreai.AIServiceClient, q *queue.Client, l logging.Logger) *AIService {
 	return &AIService{
-		dbClient:              dbClient,
-		findingClient:         findingClient,
-		coreAIClient:          coreAIClient,
-		sqs:                   q,
-		aiRemediationQueueURL: q.AIRemediationQueueURL,
-		logger:                l,
+		dbClient:                    dbClient,
+		findingClient:               findingClient,
+		coreAIClient:                coreAIClient,
+		sqs:                         q,
+		remediationProposalQueueURL: q.RemediationProposalQueueURL,
+		logger:                      l,
 	}
 }
