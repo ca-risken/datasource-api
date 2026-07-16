@@ -4,11 +4,13 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 
 	coreai "github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/message"
-	aipb "github.com/ca-risken/datasource-api/proto/datasource_ai"
+	remediationpb "github.com/ca-risken/datasource-api/proto/remediation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
@@ -27,78 +29,110 @@ var remediationProposalTargetDataSources = []string{
 
 var awsAccountIDPattern = regexp.MustCompile(`^[0-9]{12}$`)
 
-func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.GenerateRemediationProposalRequest) (*aipb.GenerateRemediationProposalResponse, error) {
+func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *remediationpb.GenerateRemediationProposalRequest) (*remediationpb.GenerateRemediationProposalResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
 
+	targetFinding, err := a.getRemediationProposalTargetFinding(ctx, req.ProjectId, req.FindingId)
+	if err != nil {
+		return nil, err
+	}
+	ds, err := a.getAWSDataSourceForRemediationProposal(ctx, req.ProjectId, req.FindingId, targetFinding.DataSource)
+	if err != nil {
+		return nil, err
+	}
+	remediationProposalID, err := a.createRemediationProposal(ctx, req.ProjectId, req.FindingId)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.sendRemediationProposalMessage(ctx, req.ProjectId, req.FindingId, remediationProposalID, ds); err != nil {
+		return nil, err
+	}
+	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
+}
+
+func (a *AIService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
 	findingResp, err := a.findingClient.GetFinding(ctx, &finding.GetFindingRequest{
-		ProjectId: req.ProjectId,
-		FindingId: req.FindingId,
+		ProjectId: projectID,
+		FindingId: findingID,
 	})
 	if err != nil {
 		return nil, err
 	}
 	if findingResp.Finding == nil {
-		return nil, status.Errorf(codes.NotFound, "finding not found: finding_id=%d", req.FindingId)
+		return nil, status.Errorf(codes.NotFound, "finding not found: finding_id=%d", findingID)
 	}
-
-	dataSource := findingResp.Finding.DataSource
-	if !isRemediationProposalTarget(dataSource) {
-		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for remediation proposal: %s", dataSource)
+	if !isRemediationProposalTarget(findingResp.Finding.DataSource) {
+		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for remediation proposal: %s", findingResp.Finding.DataSource)
 	}
+	return findingResp.Finding, nil
+}
 
-	accountID, err := a.getAWSAccountIDFromFindingTag(ctx, req.ProjectId, req.FindingId)
+func (a *AIService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource string) (*db.DataSource, error) {
+	accountID, err := a.getAWSAccountIDFromFindingTag(ctx, projectID, findingID)
 	if err != nil {
 		return nil, err
 	}
-	awsData, err := a.dbClient.GetAWSByAccountID(ctx, req.ProjectId, accountID)
+	awsData, err := a.dbClient.GetAWSByAccountID(ctx, projectID, accountID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, status.Errorf(codes.NotFound, "aws account is not registered: account_id=%s", accountID)
+			a.logger.Warnf(ctx, "AWS account is not registered for remediation proposal: project_id=%d, finding_id=%d, account_id=%s", projectID, findingID, accountID)
+			return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
 		}
 		return nil, err
 	}
-	awsDataSources, err := a.dbClient.ListAWSDataSource(ctx, req.ProjectId, awsData.AWSID, dataSource)
+	awsDataSources, err := a.dbClient.ListAWSDataSource(ctx, projectID, awsData.AWSID, dataSource)
 	if err != nil {
 		return nil, err
 	}
 	if awsDataSources == nil || len(*awsDataSources) == 0 {
-		return nil, status.Errorf(codes.NotFound, "aws data_source not found: data_source=%s", dataSource)
+		a.logger.Warnf(ctx, "AWS data_source is not found for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, data_source=%s", projectID, findingID, awsData.AWSID, dataSource)
+		return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
 	}
-	ds, err := a.dbClient.GetAWSDataSourceForMessage(ctx, awsData.AWSID, (*awsDataSources)[0].AWSDataSourceID, req.ProjectId)
+	ds, err := a.dbClient.GetAWSDataSourceForMessage(ctx, awsData.AWSID, (*awsDataSources)[0].AWSDataSourceID, projectID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, status.Errorf(codes.NotFound, "aws data_source is not attached: aws_id=%d, data_source=%s", awsData.AWSID, dataSource)
+			a.logger.Warnf(ctx, "AWS data_source is not attached for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, aws_data_source_id=%d, data_source=%s", projectID, findingID, awsData.AWSID, (*awsDataSources)[0].AWSDataSourceID, dataSource)
+			return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
 		}
 		return nil, err
 	}
+	if !isAWSAccountIDInAssumeRoleArn(accountID, ds.AssumeRoleArn) {
+		a.logger.Warnf(ctx, "AWS account_id does not match assume_role_arn for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, aws_data_source_id=%d, account_id=%s, assume_role_arn=%s", projectID, findingID, ds.AWSID, ds.AWSDataSourceID, accountID, ds.AssumeRoleArn)
+		return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
+	}
+	return ds, nil
+}
 
+func (a *AIService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
 	createResp, err := a.coreAIClient.CreateRemediationProposal(ctx, &coreai.CreateRemediationProposalRequest{
-		ProjectId: req.ProjectId,
-		FindingId: req.FindingId,
+		ProjectId: projectID,
+		FindingId: findingID,
 	})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	if createResp.RemediationProposal == nil || createResp.RemediationProposal.RemediationProposalId == 0 {
-		return nil, status.Error(codes.Internal, "failed to create remediation proposal")
+		return 0, status.Error(codes.Internal, "failed to create remediation proposal")
 	}
-	remediationProposalID := createResp.RemediationProposal.RemediationProposalId
+	return createResp.RemediationProposal.RemediationProposalId, nil
+}
 
+func (a *AIService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
 	msg := &message.RemediationProposalQueueMessage{
 		RemediationProposalID: remediationProposalID,
-		FindingID:             req.FindingId,
-		ProjectID:             req.ProjectId,
+		FindingID:             findingID,
+		ProjectID:             projectID,
 		AssumeRoleArn:         ds.AssumeRoleArn,
 		ExternalID:            ds.ExternalID,
 	}
 	resp, err := a.sqs.Send(ctx, a.remediationProposalQueueURL, msg)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	a.logger.Infof(ctx, "Generated remediation proposal: remediation_proposal_id=%d, finding_id=%d, messageId=%v", remediationProposalID, req.FindingId, resp.MessageId)
-	return &aipb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
+	a.logger.Infof(ctx, "Generated remediation proposal: remediation_proposal_id=%d, finding_id=%d, messageId=%v", remediationProposalID, findingID, resp.MessageId)
+	return nil
 }
 
 func isRemediationProposalTarget(dataSource string) bool {
@@ -108,6 +142,14 @@ func isRemediationProposalTarget(dataSource string) bool {
 		}
 	}
 	return false
+}
+
+func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
+	parts := strings.SplitN(assumeRoleArn, ":", 6)
+	if len(parts) != 6 {
+		return false
+	}
+	return parts[0] == "arn" && parts[2] == "iam" && parts[4] == accountID
 }
 
 func (a *AIService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID uint32, findingID uint64) (string, error) {
@@ -124,5 +166,6 @@ func (a *AIService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID
 			return t.Tag, nil
 		}
 	}
-	return "", status.Errorf(codes.NotFound, "aws account_id tag not found: finding_id=%d", findingID)
+	a.logger.Warnf(ctx, "AWS account_id tag is not found for remediation proposal: project_id=%d, finding_id=%d", projectID, findingID)
+	return "", status.Error(codes.NotFound, "aws remediation target is not configured")
 }

@@ -32,10 +32,10 @@ import (
 	"github.com/ca-risken/datasource-api/proto/azure"
 	"github.com/ca-risken/datasource-api/proto/code"
 	"github.com/ca-risken/datasource-api/proto/datasource"
-	aipb "github.com/ca-risken/datasource-api/proto/datasource_ai"
 	"github.com/ca-risken/datasource-api/proto/diagnosis"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/datasource-api/proto/osint"
+	remediationpb "github.com/ca-risken/datasource-api/proto/remediation"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/slack-go/slack"
 	"google.golang.org/grpc"
@@ -139,7 +139,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
 	azure.RegisterAzureServiceServer(server, azureSvc)
 	datasource.RegisterDataSourceServiceServer(server, dsSvc)
-	aipb.RegisterAIServiceServer(server, aiSvc)
+	remediationpb.RegisterRemediationServiceServer(server, aiSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API

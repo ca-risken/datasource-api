@@ -34,7 +34,7 @@ func NewAIService(dbClient aiDBClient, findingClient finding.FindingServiceClien
 		findingClient:               findingClient,
 		coreAIClient:                coreAIClient,
 		sqs:                         q,
-		remediationProposalQueueURL: q.RemediationProposalQueueURL,
+		remediationProposalQueueURL: q.AWSRemediationProposalQueueURL,
 		logger:                      l,
 	}
 }

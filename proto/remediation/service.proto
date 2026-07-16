@@ -1,11 +1,11 @@
 syntax = "proto3";
 
-package datasource.ai;
-option go_package = "github.com/ca-risken/datasource-api/proto/datasource_ai";
+package datasource.remediation;
+option go_package = "github.com/ca-risken/datasource-api/proto/remediation";
 
 import "validate/validate.proto";
 
-service AIService {
+service RemediationService {
   rpc GenerateRemediationProposal(GenerateRemediationProposalRequest)
       returns (GenerateRemediationProposalResponse);
 }

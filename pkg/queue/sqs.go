@@ -45,8 +45,8 @@ type SQSConfig struct {
 	// azure
 	AzureProwlerQueueURL string
 
-	// remediation proposal
-	RemediationProposalQueueURL string
+	// aws remediation proposal
+	AWSRemediationProposalQueueURL string
 }
 
 type Client struct {
@@ -83,8 +83,8 @@ type Client struct {
 	// azure
 	AzureProwlerQueueURL string
 
-	// remediation proposal
-	RemediationProposalQueueURL string
+	// aws remediation proposal
+	AWSRemediationProposalQueueURL string
 }
 
 func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client, error) {
@@ -133,7 +133,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
-		RemediationProposalQueueURL:      conf.RemediationProposalQueueURL,
+		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 	}, nil
 }
 
