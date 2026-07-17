@@ -1744,8 +1744,7 @@ func TestInvokeScan(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockUpsertGitleaksResponse   *model.CodeGitleaksSetting
-		mockUpsertGitleaksError      error
+		mockRefreshGitleaksError       error
 		wantErr                      bool
 	}{
 		{
@@ -1757,7 +1756,6 @@ func TestInvokeScan(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksResponse:   &model.CodeGitleaksSetting{},
 		},
 		{
 			name:    "NG invalid param",
@@ -1782,7 +1780,7 @@ func TestInvokeScan(t *testing.T) {
 			wantErr:                      true,
 		},
 		{
-			name:  "NG NG db error when UpsertGitleaksSetting",
+			name:  "NG db error when RefreshGitleaksSettingStatus",
 			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
 			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -1790,7 +1788,7 @@ func TestInvokeScan(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksError:      gorm.ErrInvalidDB,
+			mockRefreshGitleaksError:     gorm.ErrInvalidDB,
 			wantErr:                      true,
 		},
 	}
@@ -1823,8 +1821,10 @@ func TestInvokeScan(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
-			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
-				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
+			if c.mockRefreshGitleaksError != nil {
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshGitleaksError).Once()
+			} else if !c.wantErr && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanGitleaks(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -2128,8 +2128,7 @@ func TestInvokeScanDependency(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockUpsertDependencyResponse *model.CodeDependencySetting
-		mockUpsertDependencyError    error
+		mockRefreshDependencyError    error
 		wantErr                      bool
 	}{
 		{
@@ -2141,7 +2140,6 @@ func TestInvokeScanDependency(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
 		},
 		{
 			name:    "NG invalid param",
@@ -2166,7 +2164,7 @@ func TestInvokeScanDependency(t *testing.T) {
 			wantErr:                      true,
 		},
 		{
-			name:  "NG NG db error when UpsertDependencySetting",
+			name:  "NG db error when RefreshDependencySettingStatus",
 			input: &code.InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
 			mockGetDependencyResponse: &model.CodeDependencySetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -2174,7 +2172,7 @@ func TestInvokeScanDependency(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyError:    gorm.ErrInvalidDB,
+			mockRefreshDependencyError:   gorm.ErrInvalidDB,
 			wantErr:                      true,
 		},
 	}
@@ -2208,8 +2206,10 @@ func TestInvokeScanDependency(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
-			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
-				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
+			if c.mockRefreshDependencyError != nil {
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshDependencyError).Once()
+			} else if !c.wantErr && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanDependency(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -2276,7 +2276,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetGitleaksResponse:      &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksResponse:   &model.CodeGitleaksSetting{},
 		},
 		{
 			name:      "OK found gitleaks setting but projectID is zero",
@@ -2309,7 +2308,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
 		},
 		{
 			name:                     "OK found dependency setting but projectID is zero",
@@ -2342,7 +2340,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
 		},
 		{
 			name:                       "OK found CodeScan setting but projectID is zero",
@@ -2620,6 +2617,8 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetDependencyResponse != nil || c.mockGetDependencyError != nil {
 				callCount := 1
@@ -2631,6 +2630,8 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
 				// GetCodeScanSetting is called twice: once in InvokeScanCodeScan and once in listCodescanTargetRepository.
@@ -2662,6 +2663,8 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
 				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetCodeScanError == nil && c.mockGetCodeScanResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshCodeScanSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 
 			if c.mockIsActiveResponse != nil || c.mockIsActiveError != nil {

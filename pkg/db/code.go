@@ -44,6 +44,7 @@ type CodeRepoInterface interface {
 	ListGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error)
 	GetGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error)
 	UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error)
+	RefreshGitleaksSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
 
 	// code_dependency_setting
@@ -56,6 +57,7 @@ type CodeRepoInterface interface {
 	ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error)
 	GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error)
 	UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error)
+	RefreshDependencySettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteDependencyRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
 
 	// code_code_scan_setting
@@ -68,6 +70,7 @@ type CodeRepoInterface interface {
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
+	RefreshCodeScanSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
 	// scan error
 	ListCodeGitHubScanErrorForNotify(ctx context.Context) ([]*GitHubScanError, error)
@@ -702,7 +705,7 @@ WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 
 const updateGitleaksSettingStatusByRepo = `
 UPDATE code_gitleaks_setting
-SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+SET status = ?, status_detail = ?, scan_at = COALESCE(?, scan_at), updated_at = NOW()
 WHERE project_id = ? AND code_github_setting_id = ?
 `
 
@@ -720,7 +723,6 @@ func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32,
 		scanAt = time.Now()
 	}
 
-	// Step 1: Upsert repository status
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertGitleaksRepository,
 		data.GithubSettingId,
@@ -732,62 +734,69 @@ func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32,
 		return nil, err
 	}
 
-	// Step 2: Calculate summary from current state
-	var summary gitleaksRepoStatusSummary
-	if err := c.MasterDB.WithContext(ctx).Raw(selectGitleaksRepositoryStatusSummary, projectID, data.GithubSettingId).
-		Scan(&summary).Error; err != nil {
-		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to calculate gitleaks repository status summary: %w", err)
-	}
-
-	// Step 3: Update parent table status based on summary (only if status or summary changed)
-	currentParentStatus := determineGitleaksSettingStatus(&summary)
-
-	// Get current parent to check existing status_detail
-	var currentParent model.CodeGitleaksSetting
-	if err := c.MasterDB.WithContext(ctx).
-		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
-		First(&currentParent).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("parent code_gitleaks_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
-		}
-		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to get gitleaks parent setting: %w", err)
-	}
-
-	// Build status_detail based on status and summary
-	statusDetail, err := buildGitleaksStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
-	if err != nil {
+	if err := c.RefreshGitleaksSettingStatus(ctx, projectID, data.GithubSettingId, &scanAt); err != nil {
 		return nil, err
 	}
 
-	// If parent already has the same values, skip UPDATE to avoid needless writes
+	return c.GetGitleaksRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func (c *Client) RefreshGitleaksSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error {
+	var summary gitleaksRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectGitleaksRepositoryStatusSummary, projectID, githubSettingID).
+		Scan(&summary).Error; err != nil {
+		c.logger.Errorf(ctx, "RefreshGitleaksSettingStatus: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to calculate gitleaks repository status summary: %w", err)
+	}
+
+	currentParentStatus := determineGitleaksSettingStatus(&summary)
+
+	var currentParent model.CodeGitleaksSetting
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).
+		First(&currentParent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("parent code_gitleaks_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, githubSettingID, err)
+		}
+		c.logger.Errorf(ctx, "RefreshGitleaksSettingStatus: failed to get parent setting (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to get gitleaks parent setting: %w", err)
+	}
+
+	statusDetail, err := buildGitleaksStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
+	if err != nil {
+		return err
+	}
+
 	if currentParent.Status == currentParentStatus.String() &&
 		currentParent.StatusDetail == statusDetail {
-		return c.GetGitleaksRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+		return nil
+	}
+
+	var scanAtArg interface{}
+	if scanAt != nil {
+		scanAtArg = *scanAt
 	}
 
 	result := c.MasterDB.WithContext(ctx).Exec(
 		updateGitleaksSettingStatusByRepo,
 		currentParentStatus.String(),
 		convertZeroValueToNull(statusDetail),
-		scanAt,
+		scanAtArg,
 		projectID,
-		data.GithubSettingId,
+		githubSettingID,
 	)
 	if result.Error != nil {
-		c.logger.Errorf(ctx, "UpsertGitleaksRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
-		return nil, fmt.Errorf("failed to update gitleaks parent table status: %w", result.Error)
+		c.logger.Errorf(ctx, "RefreshGitleaksSettingStatus: failed to update parent table status (project_id=%d, github_setting_id=%d, status=%s, err=%+v).",
+			projectID, githubSettingID, currentParentStatus.String(), result.Error)
+		return fmt.Errorf("failed to update gitleaks parent table status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		// No rows affected - parent setting may not exist, log as warning
-		c.logger.Warnf(ctx, "UpsertGitleaksRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
+		c.logger.Warnf(ctx, "RefreshGitleaksSettingStatus: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, status=%s). Parent setting may not exist.",
+			projectID, githubSettingID, currentParentStatus.String())
 	}
-	return c.GetGitleaksRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	return nil
 }
 
 func determineGitleaksSettingStatus(summary *gitleaksRepoStatusSummary) code.Status {
@@ -983,7 +992,7 @@ WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 
 const updateDependencySettingStatusByRepo = `
 UPDATE code_dependency_setting
-SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+SET status = ?, status_detail = ?, scan_at = COALESCE(?, scan_at), updated_at = NOW()
 WHERE project_id = ? AND code_github_setting_id = ?
 `
 
@@ -1001,7 +1010,6 @@ func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint3
 		scanAt = time.Now()
 	}
 
-	// Step 1: Upsert repository status
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertDependencyRepository,
 		data.GithubSettingId,
@@ -1013,62 +1021,69 @@ func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint3
 		return nil, err
 	}
 
-	// Step 2: Calculate summary from current state
-	var summary dependencyRepoStatusSummary
-	if err := c.MasterDB.WithContext(ctx).Raw(selectDependencyRepositoryStatusSummary, projectID, data.GithubSettingId).
-		Scan(&summary).Error; err != nil {
-		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to calculate dependency repository status summary: %w", err)
-	}
-
-	// Step 3: Update parent table status based on summary (only if status or summary changed)
-	currentParentStatus := determineDependencySettingStatus(&summary)
-
-	// Get current parent to check existing status_detail
-	var currentParent model.CodeDependencySetting
-	if err := c.MasterDB.WithContext(ctx).
-		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
-		First(&currentParent).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("parent code_dependency_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
-		}
-		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to get dependency parent setting: %w", err)
-	}
-
-	// Build status_detail based on status and summary
-	statusDetail, err := buildDependencyStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
-	if err != nil {
+	if err := c.RefreshDependencySettingStatus(ctx, projectID, data.GithubSettingId, &scanAt); err != nil {
 		return nil, err
 	}
 
-	// If parent already has the same values, skip UPDATE to avoid needless writes
+	return c.GetDependencyRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func (c *Client) RefreshDependencySettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error {
+	var summary dependencyRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectDependencyRepositoryStatusSummary, projectID, githubSettingID).
+		Scan(&summary).Error; err != nil {
+		c.logger.Errorf(ctx, "RefreshDependencySettingStatus: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to calculate dependency repository status summary: %w", err)
+	}
+
+	currentParentStatus := determineDependencySettingStatus(&summary)
+
+	var currentParent model.CodeDependencySetting
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).
+		First(&currentParent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("parent code_dependency_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, githubSettingID, err)
+		}
+		c.logger.Errorf(ctx, "RefreshDependencySettingStatus: failed to get parent setting (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to get dependency parent setting: %w", err)
+	}
+
+	statusDetail, err := buildDependencyStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
+	if err != nil {
+		return err
+	}
+
 	if currentParent.Status == currentParentStatus.String() &&
 		currentParent.StatusDetail == statusDetail {
-		return c.GetDependencyRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+		return nil
+	}
+
+	var scanAtArg interface{}
+	if scanAt != nil {
+		scanAtArg = *scanAt
 	}
 
 	result := c.MasterDB.WithContext(ctx).Exec(
 		updateDependencySettingStatusByRepo,
 		currentParentStatus.String(),
 		convertZeroValueToNull(statusDetail),
-		scanAt,
+		scanAtArg,
 		projectID,
-		data.GithubSettingId,
+		githubSettingID,
 	)
 	if result.Error != nil {
-		c.logger.Errorf(ctx, "UpsertDependencyRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
-		return nil, fmt.Errorf("failed to update dependency parent table status: %w", result.Error)
+		c.logger.Errorf(ctx, "RefreshDependencySettingStatus: failed to update parent table status (project_id=%d, github_setting_id=%d, status=%s, err=%+v).",
+			projectID, githubSettingID, currentParentStatus.String(), result.Error)
+		return fmt.Errorf("failed to update dependency parent table status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		// No rows affected - parent setting may not exist, log as warning
-		c.logger.Warnf(ctx, "UpsertDependencyRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
+		c.logger.Warnf(ctx, "RefreshDependencySettingStatus: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, status=%s). Parent setting may not exist.",
+			projectID, githubSettingID, currentParentStatus.String())
 	}
-	return c.GetDependencyRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	return nil
 }
 
 func determineDependencySettingStatus(summary *dependencyRepoStatusSummary) code.Status {
@@ -1354,7 +1369,7 @@ WHERE github.project_id = ? AND repo.code_github_setting_id = ?
 
 const updateCodeScanSettingStatusByRepo = `
 UPDATE code_codescan_setting
-SET status = ?, status_detail = ?, scan_at = ?, updated_at = NOW()
+SET status = ?, status_detail = ?, scan_at = COALESCE(?, scan_at), updated_at = NOW()
 WHERE project_id = ? AND code_github_setting_id = ?
 `
 
@@ -1372,7 +1387,6 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		scanAt = time.Now()
 	}
 
-	// Step 1: Upsert repository status
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertCodeScanRepository,
 		data.GithubSettingId,
@@ -1384,62 +1398,69 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 		return nil, err
 	}
 
-	// Step 2: Calculate summary from current state
-	var summary codeScanRepoStatusSummary
-	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, data.GithubSettingId).
-		Scan(&summary).Error; err != nil {
-		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to calculate repository status summary: %w", err)
-	}
-
-	// Step 3: Update parent table status based on summary (only if status or summary changed)
-	currentParentStatus := determineCodeScanSettingStatus(&summary)
-
-	// Get current parent to check existing status_detail
-	var currentParent model.CodeCodeScanSetting
-	if err := c.MasterDB.WithContext(ctx).
-		Where("project_id = ? AND code_github_setting_id = ?", projectID, data.GithubSettingId).
-		First(&currentParent).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("parent code_codescan_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, data.GithubSettingId, err)
-		}
-		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to get parent setting (project_id=%d, github_setting_id=%d, repository=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, err)
-		return nil, fmt.Errorf("failed to get parent setting: %w", err)
-	}
-
-	// Build status_detail based on status and summary
-	statusDetail, err := buildCodeScanStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
-	if err != nil {
+	if err := c.RefreshCodeScanSettingStatus(ctx, projectID, data.GithubSettingId, &scanAt); err != nil {
 		return nil, err
 	}
 
-	// If parent already has the same values, skip UPDATE to avoid needless writes
+	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+}
+
+func (c *Client) RefreshCodeScanSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error {
+	var summary codeScanRepoStatusSummary
+	if err := c.MasterDB.WithContext(ctx).Raw(selectCodeScanRepositoryStatusSummary, projectID, githubSettingID).
+		Scan(&summary).Error; err != nil {
+		c.logger.Errorf(ctx, "RefreshCodeScanSettingStatus: failed to calculate repository status summary (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to calculate repository status summary: %w", err)
+	}
+
+	currentParentStatus := determineCodeScanSettingStatus(&summary)
+
+	var currentParent model.CodeCodeScanSetting
+	if err := c.MasterDB.WithContext(ctx).
+		Where("project_id = ? AND code_github_setting_id = ?", projectID, githubSettingID).
+		First(&currentParent).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return fmt.Errorf("parent code_codescan_setting not found (project_id=%d, github_setting_id=%d): %w", projectID, githubSettingID, err)
+		}
+		c.logger.Errorf(ctx, "RefreshCodeScanSettingStatus: failed to get parent setting (project_id=%d, github_setting_id=%d, err=%+v).",
+			projectID, githubSettingID, err)
+		return fmt.Errorf("failed to get parent setting: %w", err)
+	}
+
+	statusDetail, err := buildCodeScanStatusDetail(&summary, currentParentStatus, currentParent.StatusDetail)
+	if err != nil {
+		return err
+	}
+
 	if currentParent.Status == currentParentStatus.String() &&
 		currentParent.StatusDetail == statusDetail {
-		return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+		return nil
+	}
+
+	var scanAtArg interface{}
+	if scanAt != nil {
+		scanAtArg = *scanAt
 	}
 
 	result := c.MasterDB.WithContext(ctx).Exec(
 		updateCodeScanSettingStatusByRepo,
 		currentParentStatus.String(),
 		convertZeroValueToNull(statusDetail),
-		scanAt,
+		scanAtArg,
 		projectID,
-		data.GithubSettingId,
+		githubSettingID,
 	)
 	if result.Error != nil {
-		c.logger.Errorf(ctx, "UpsertCodeScanRepository: failed to update parent table status (project_id=%d, github_setting_id=%d, repository=%s, status=%s, err=%+v).",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String(), result.Error)
-		return nil, fmt.Errorf("failed to update parent table status: %w", result.Error)
+		c.logger.Errorf(ctx, "RefreshCodeScanSettingStatus: failed to update parent table status (project_id=%d, github_setting_id=%d, status=%s, err=%+v).",
+			projectID, githubSettingID, currentParentStatus.String(), result.Error)
+		return fmt.Errorf("failed to update parent table status: %w", result.Error)
 	}
 	if result.RowsAffected == 0 {
-		// No rows affected - parent setting may not exist, log as warning
-		c.logger.Warnf(ctx, "UpsertCodeScanRepository: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, repository=%s, status=%s). Parent setting may not exist.",
-			projectID, data.GithubSettingId, data.RepositoryFullName, currentParentStatus.String())
+		c.logger.Warnf(ctx, "RefreshCodeScanSettingStatus: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d, status=%s). Parent setting may not exist.",
+			projectID, githubSettingID, currentParentStatus.String())
 	}
-	return c.GetCodeScanRepository(ctx, projectID, data.GithubSettingId, data.RepositoryFullName, true)
+	return nil
 }
 
 func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
