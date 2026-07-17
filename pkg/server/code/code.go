@@ -836,19 +836,7 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		}
 	}
 
-	statusDetail := fmt.Sprintf("Start gitleaks scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
-	if _, err = c.repository.UpsertGitleaksSetting(ctx, &code.GitleaksSettingForUpsert{
-		GithubSettingId:   data.CodeGitHubSettingID,
-		CodeDataSourceId:  data.CodeDataSourceID,
-		ProjectId:         data.ProjectID,
-		RepositoryPattern: data.RepositoryPattern,
-		ScanPublic:        data.ScanPublic,
-		ScanInternal:      data.ScanInternal,
-		ScanPrivate:       data.ScanPrivate,
-		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      statusDetail,
-		ScanAt:            data.ScanAt.Unix(),
-	}); err != nil {
+	if err := c.repository.RefreshGitleaksSettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
 		return nil, err
 	}
 
@@ -918,16 +906,7 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		}
 	}
 
-	statusDetail := fmt.Sprintf("Start dependency scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
-	if _, err = c.repository.UpsertDependencySetting(ctx, &code.DependencySettingForUpsert{
-		GithubSettingId:   data.CodeGitHubSettingID,
-		CodeDataSourceId:  data.CodeDataSourceID,
-		ProjectId:         data.ProjectID,
-		RepositoryPattern: data.RepositoryPattern,
-		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      statusDetail,
-		ScanAt:            data.ScanAt.Unix(),
-	}); err != nil {
+	if err := c.repository.RefreshDependencySettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
 		return nil, err
 	}
 
@@ -1001,21 +980,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		}
 	}
 
-	// Update status only if all messages were sent successfully
-	statusDetail := fmt.Sprintf("Start scan at %+v, attempted=%d, succeeded=%d", time.Now().Format(time.RFC3339), len(repos), len(messageIDs))
-
-	if _, err = c.repository.UpsertCodeScanSetting(ctx, &code.CodeScanSettingForUpsert{
-		GithubSettingId:   data.CodeGitHubSettingID,
-		CodeDataSourceId:  data.CodeDataSourceID,
-		ProjectId:         data.ProjectID,
-		RepositoryPattern: data.RepositoryPattern,
-		ScanPublic:        data.ScanPublic,
-		ScanInternal:      data.ScanInternal,
-		ScanPrivate:       data.ScanPrivate,
-		Status:            code.Status_IN_PROGRESS,
-		StatusDetail:      statusDetail,
-		ScanAt:            data.ScanAt.Unix(),
-	}); err != nil {
+	if err := c.repository.RefreshCodeScanSettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
 		return nil, err
 	}
 
