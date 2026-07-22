@@ -45,6 +45,7 @@ type AppConf struct {
 	AWSAdminCheckerQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-adminchecker"`
 	AWSCloudSploitQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit"`
 	AWSPortscanQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
+	AWSRemediationProposalQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-remediation-proposal"`
 	GoogleAssetQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
 	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
 	GoogleSCCQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
@@ -58,7 +59,6 @@ type AppConf struct {
 	DiagnosisPortscanQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-portscan"`
 	DiagnosisApplicationScanQueueURL string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/diagnosis-applicationscan"`
 	AzureProwlerQueueURL             string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/azure-prowler"`
-	AWSRemediationProposalQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-remediation-proposal"`
 
 	// datasource
 	GoogleCredentialPath         string   `required:"true" split_words:"true" default:"/tmp/credential.json"` // google
@@ -161,6 +161,7 @@ func main() {
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
@@ -174,7 +175,6 @@ func main() {
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
-		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 	}
 	q, err := queue.NewClient(ctx, queueConf, logger)
 	if err != nil {

@@ -5,7 +5,7 @@ option go_package = "github.com/ca-risken/datasource-api/proto/remediation";
 
 import "validate/validate.proto";
 
-service RemediationService {
+service AIService {
   rpc GenerateRemediationProposal(GenerateRemediationProposalRequest)
       returns (GenerateRemediationProposalResponse);
 }

@@ -16,11 +16,12 @@ type SQSConfig struct {
 	SQSEndpoint string
 
 	// aws
-	AWSGuardDutyQueueURL      string
-	AWSAccessAnalyzerQueueURL string
-	AWSAdminCheckerQueueURL   string
-	AWSCloudSploitQueueURL    string
-	AWSPortscanQueueURL       string
+	AWSGuardDutyQueueURL           string
+	AWSAccessAnalyzerQueueURL      string
+	AWSAdminCheckerQueueURL        string
+	AWSCloudSploitQueueURL         string
+	AWSPortscanQueueURL            string
+	AWSRemediationProposalQueueURL string
 
 	// google
 	GoogleAssetQueueURL       string
@@ -44,9 +45,6 @@ type SQSConfig struct {
 
 	// azure
 	AzureProwlerQueueURL string
-
-	// aws remediation proposal
-	AWSRemediationProposalQueueURL string
 }
 
 type Client struct {
@@ -54,11 +52,12 @@ type Client struct {
 	logger logging.Logger
 
 	// aws
-	AWSGuardDutyQueueURL      string
-	AWSAccessAnalyzerQueueURL string
-	AWSAdminCheckerQueueURL   string
-	AWSCloudSploitQueueURL    string
-	AWSPortscanQueueURL       string
+	AWSGuardDutyQueueURL           string
+	AWSAccessAnalyzerQueueURL      string
+	AWSAdminCheckerQueueURL        string
+	AWSCloudSploitQueueURL         string
+	AWSPortscanQueueURL            string
+	AWSRemediationProposalQueueURL string
 
 	// google
 	GoogleAssetQueueURL       string
@@ -82,9 +81,6 @@ type Client struct {
 
 	// azure
 	AzureProwlerQueueURL string
-
-	// aws remediation proposal
-	AWSRemediationProposalQueueURL string
 }
 
 func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client, error) {
@@ -120,6 +116,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
@@ -133,7 +130,6 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		DiagnosisPortscanQueueURL:        conf.DiagnosisPortscanQueueURL,
 		DiagnosisApplicationScanQueueURL: conf.DiagnosisApplicationScanQueueURL,
 		AzureProwlerQueueURL:             conf.AzureProwlerQueueURL,
-		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 	}, nil
 }
 

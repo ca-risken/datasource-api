@@ -139,7 +139,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
 	azure.RegisterAzureServiceServer(server, azureSvc)
 	datasource.RegisterDataSourceServiceServer(server, dsSvc)
-	remediationpb.RegisterRemediationServiceServer(server, aiSvc)
+	remediationpb.RegisterAIServiceServer(server, aiSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
