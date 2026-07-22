@@ -1,7 +1,7 @@
 syntax = "proto3";
 
-package datasource.ai;
-option go_package = "github.com/ca-risken/datasource-api/proto/ai";
+package datasource.remediation;
+option go_package = "github.com/ca-risken/datasource-api/proto/remediation";
 
 import "validate/validate.proto";
 
