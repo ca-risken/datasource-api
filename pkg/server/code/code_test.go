@@ -736,6 +736,8 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		mockGetError      error
 		clientStatus      *code.GitHubAppInstallationStatus
 		clientErr         error
+		mockUpdateError   error
+		wantStatus        string
 		want              *code.GetGitHubAppInstallationStatusResponse
 		wantConfig        *code.GitHubSetting
 		wantErr           bool
@@ -802,7 +804,8 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
 			},
-			clientErr: fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			clientErr:  fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			wantStatus: code.GitHubVerificationStatusFailed,
 			want: &code.GetGitHubAppInstallationStatusResponse{
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource: "target",
@@ -810,6 +813,24 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 					Reason:         code.GitHubAppInstallationReasonNotInstalled,
 				},
 			},
+		},
+		{
+			name: "NG persist not installed status",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+			},
+			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			mockUpdateError: errors.New("db error"),
+			wantStatus:      code.GitHubVerificationStatusFailed,
+			wantErr:         true,
 		},
 		{
 			name: "OK repository check not found is check failed",
@@ -861,6 +882,9 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
 			if c.input.GetProjectId() != 0 && c.input.GetGithubSettingId() != 0 {
 				mockDB.On("GetGitHubSetting", context.Background(), c.input.GetProjectId(), c.input.GetGithubSettingId()).Return(c.mockGitHubSetting, c.mockGetError).Once()
+			}
+			if c.wantStatus != "" {
+				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(10), c.wantStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
 			}
 			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationStatus: c.clientStatus}
 			svc := CodeService{repository: mockDB, githubClient: fakeGitHubClient, logger: logging.NewLogger()}
@@ -1744,7 +1768,7 @@ func TestInvokeScan(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockRefreshGitleaksError       error
+		mockRefreshGitleaksError     error
 		wantErr                      bool
 	}{
 		{
@@ -2128,7 +2152,7 @@ func TestInvokeScanDependency(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockRefreshDependencyError    error
+		mockRefreshDependencyError   error
 		wantErr                      bool
 	}{
 		{
