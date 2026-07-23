@@ -395,6 +395,9 @@ func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *c
 	if err != nil {
 		return nil, err
 	}
+	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
+		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
 	status, err := c.githubClient.GetGitHubAppInstallationStatus(ctx, &code.GitHubSetting{
 		ProjectId:       githubSetting.ProjectID,
 		GithubSettingId: githubSetting.CodeGitHubSettingID,

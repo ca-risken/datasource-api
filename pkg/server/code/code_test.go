@@ -754,6 +754,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientStatus: &code.GitHubAppInstallationStatus{
 				TargetResource:      "target",
@@ -803,6 +804,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr:  fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			wantStatus: code.GitHubVerificationStatusFailed,
@@ -826,6 +828,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			mockUpdateError: errors.New("db error"),
@@ -844,6 +847,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr: fmt.Errorf("list github app repositories: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -866,6 +870,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr: errors.New("github api failed"),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -875,6 +880,19 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 					Reason:         code.GitHubAppInstallationReasonCheckFailed,
 				},
 			},
+		},
+		{
+			name: "NG personal access token auth mode",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				AuthMode:            code.GitHubAuthModePersonalAccessToken,
+			},
+			wantErr: true,
 		},
 	}
 	for _, c := range cases {
