@@ -395,18 +395,28 @@ func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *c
 	if err != nil {
 		return nil, err
 	}
-	status, err := c.githubClient.GetGitHubAppInstallationStatus(ctx, &code.GitHubSetting{
+	if githubSetting.AuthMode != code.GitHubAuthModeGitHubApp {
+		return nil, fmt.Errorf("github setting is not github app auth mode: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSettingId)
+	}
+	config := &code.GitHubSetting{
 		ProjectId:       githubSetting.ProjectID,
 		GithubSettingId: githubSetting.CodeGitHubSettingID,
 		Type:            getType(githubSetting.Type),
 		BaseUrl:         githubSetting.BaseURL,
 		TargetResource:  githubSetting.TargetResource,
 		AuthMode:        code.GitHubAuthModeGitHubApp,
-	})
+	}
+	status, err := c.githubClient.GetGitHubAppInstallationStatus(ctx, config)
 	if err != nil {
 		reason := code.GitHubAppInstallationReasonCheckFailed
 		if isGitHubAppInstallationNotFound(err) {
 			reason = code.GitHubAppInstallationReasonNotInstalled
+			if _, updateErr := c.repository.UpdateGitHubAppVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, code.GitHubVerificationStatusFailed, "", time.Now()); updateErr != nil {
+				return nil, updateErr
+			}
+			if deleteErr := c.repository.DeleteGitHubAppSettingRepository(ctx, githubSetting.CodeGitHubSettingID); deleteErr != nil {
+				return nil, deleteErr
+			}
 		}
 		c.logger.Warnf(ctx, "Failed to get github app installation status: project_id=%d, github_setting_id=%d, target_resource=%q, reason=%s", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, githubSetting.TargetResource, reason)
 		return &code.GetGitHubAppInstallationStatusResponse{
@@ -416,6 +426,11 @@ func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *c
 				Reason:         reason,
 			},
 		}, nil
+	}
+	if githubSetting.VerificationStatus == code.GitHubVerificationStatusFailed {
+		if _, err := c.repository.UpdateGitHubAppInstallationVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, config.InstallationId, code.GitHubVerificationStatusPendingUserVerification, "", time.Now()); err != nil {
+			return nil, err
+		}
 	}
 	status.Reason = code.GitHubAppInstallationReasonInstalled
 	return &code.GetGitHubAppInstallationStatusResponse{GithubAppInstallationStatus: status}, nil
