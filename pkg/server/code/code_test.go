@@ -738,6 +738,8 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		clientErr         error
 		mockUpdateError   error
 		wantStatus        string
+		installationID    uint64
+		wantInstallStatus string
 		want              *code.GetGitHubAppInstallationStatusResponse
 		wantConfig        *code.GitHubSetting
 		wantErr           bool
@@ -776,6 +778,37 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				BaseUrl:         "https://api.github.com/",
 				TargetResource:  "target",
 				AuthMode:        code.GitHubAuthModeGitHubApp,
+			},
+		},
+		{
+			name: "OK installed after verification failure",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusFailed,
+			},
+			clientStatus: &code.GitHubAppInstallationStatus{
+				TargetResource:      "target",
+				Installed:           true,
+				RepositorySelection: "selected",
+			},
+			installationID:    123,
+			wantInstallStatus: code.GitHubVerificationStatusPendingUserVerification,
+			want: &code.GetGitHubAppInstallationStatusResponse{
+				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
+					TargetResource:      "target",
+					Installed:           true,
+					RepositorySelection: "selected",
+					Reason:              code.GitHubAppInstallationReasonInstalled,
+				},
 			},
 		},
 		{
@@ -904,7 +937,10 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			if c.wantStatus != "" {
 				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(10), c.wantStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
 			}
-			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationStatus: c.clientStatus}
+			if c.wantInstallStatus != "" {
+				mockDB.On("UpdateGitHubAppInstallationVerification", mock.Anything, uint32(1), uint32(10), c.installationID, c.wantInstallStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
+			}
+			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationID: c.installationID, installationStatus: c.clientStatus}
 			svc := CodeService{repository: mockDB, githubClient: fakeGitHubClient, logger: logging.NewLogger()}
 			got, err := svc.GetGitHubAppInstallationStatus(context.Background(), c.input)
 			if !c.wantErr && err != nil {
@@ -2787,6 +2823,7 @@ func (g *FakeGithubClient) VerifyInstallation(ctx context.Context, config *code.
 
 func (g *FakeGithubClient) GetGitHubAppInstallationStatus(ctx context.Context, config *code.GitHubSetting) (*code.GitHubAppInstallationStatus, error) {
 	g.gotConfig = config
+	config.InstallationId = g.installationID
 	return g.installationStatus, g.err
 }
 
