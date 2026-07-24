@@ -737,7 +737,9 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		clientStatus      *code.GitHubAppInstallationStatus
 		clientErr         error
 		mockUpdateError   error
+		mockDeleteError   error
 		wantStatus        string
+		wantDelete        bool
 		installationID    uint64
 		wantInstallStatus string
 		want              *code.GetGitHubAppInstallationStatusResponse
@@ -841,6 +843,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			},
 			clientErr:  fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			wantStatus: code.GitHubVerificationStatusFailed,
+			wantDelete: true,
 			want: &code.GetGitHubAppInstallationStatusResponse{
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource: "target",
@@ -866,6 +869,26 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			mockUpdateError: errors.New("db error"),
 			wantStatus:      code.GitHubVerificationStatusFailed,
+			wantErr:         true,
+		},
+		{
+			name: "NG delete repositories after not installed",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+			},
+			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			mockDeleteError: errors.New("db error"),
+			wantStatus:      code.GitHubVerificationStatusFailed,
+			wantDelete:      true,
 			wantErr:         true,
 		},
 		{
@@ -936,6 +959,9 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			}
 			if c.wantStatus != "" {
 				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(10), c.wantStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
+			}
+			if c.wantDelete {
+				mockDB.On("DeleteGitHubAppSettingRepository", mock.Anything, uint32(10)).Return(c.mockDeleteError).Once()
 			}
 			if c.wantInstallStatus != "" {
 				mockDB.On("UpdateGitHubAppInstallationVerification", mock.Anything, uint32(1), uint32(10), c.installationID, c.wantInstallStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()

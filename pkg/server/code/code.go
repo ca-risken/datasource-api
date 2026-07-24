@@ -414,6 +414,9 @@ func (c *CodeService) GetGitHubAppInstallationStatus(ctx context.Context, req *c
 			if _, updateErr := c.repository.UpdateGitHubAppVerification(ctx, githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, code.GitHubVerificationStatusFailed, "", time.Now()); updateErr != nil {
 				return nil, updateErr
 			}
+			if deleteErr := c.repository.DeleteGitHubAppSettingRepository(ctx, githubSetting.CodeGitHubSettingID); deleteErr != nil {
+				return nil, deleteErr
+			}
 		}
 		c.logger.Warnf(ctx, "Failed to get github app installation status: project_id=%d, github_setting_id=%d, target_resource=%q, reason=%s", githubSetting.ProjectID, githubSetting.CodeGitHubSettingID, githubSetting.TargetResource, reason)
 		return &code.GetGitHubAppInstallationStatusResponse{
