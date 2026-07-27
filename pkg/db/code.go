@@ -1405,7 +1405,8 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 			return fmt.Errorf("failed to initialize code scan setting status: %w", result.Error)
 		}
 		if result.RowsAffected == 0 {
-			return fmt.Errorf("code scan setting not found (project_id=%d, github_setting_id=%d)", projectID, githubSettingID)
+			c.logger.Warnf(ctx, "InitializeCodeScanRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
 		}
 		return nil
 	})

@@ -970,8 +970,8 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	messages := make([]*message.CodeQueueMessage, 0, len(repos))
 	repositoryNames := make([]string, 0, len(repos))
 	for _, repo := range repos {
-		if repo == nil {
-			return nil, fmt.Errorf("repository is nil")
+		if repo == nil || repo.FullName == nil || repo.GetFullName() == "" {
+			return nil, fmt.Errorf("repository full name is required")
 		}
 		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo)
 		if err != nil {
@@ -985,7 +985,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 
 	scanAt := time.Now()
 	if err := c.repository.InitializeCodeScanRepositories(ctx, req.ProjectId, req.GithubSettingId, repositoryNames, scanAt); err != nil {
-		return nil, fmt.Errorf("failed to initialize codescan repository statuses: %w", err)
+		c.logger.Errorf(ctx, "Failed to initialize codescan repository statuses: project_id=%d, github_setting_id=%d, err=%+v",
+			req.ProjectId, req.GithubSettingId, err)
+		return nil, fmt.Errorf("failed to initialize codescan repository statuses")
 	}
 
 	var messageIDs []string
@@ -999,7 +1001,7 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
 				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
-			sendErrors = append(sendErrors, fmt.Errorf("failed to send message for repository %s: %w", repositoryName, err))
+			sendErrors = append(sendErrors, fmt.Errorf("failed to send message for repository %s", repositoryName))
 			if _, updateErr := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
 				GithubSettingId:    req.GithubSettingId,
 				RepositoryFullName: repositoryName,
@@ -1007,7 +1009,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 				StatusDetail:       sanitizeErrorMessage(err),
 				ScanAt:             scanAt.Unix(),
 			}); updateErr != nil {
-				sendErrors = append(sendErrors, fmt.Errorf("failed to update repository %s status after send failure: %w", repositoryName, updateErr))
+				c.logger.Errorf(ctx, "Failed to update repository status after send failure: project_id=%d, github_setting_id=%d, repository=%s, err=%+v",
+					req.ProjectId, req.GithubSettingId, repositoryName, updateErr)
+				sendErrors = append(sendErrors, fmt.Errorf("failed to update repository %s status after send failure", repositoryName))
 			}
 			continue
 		}

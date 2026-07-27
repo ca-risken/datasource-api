@@ -2812,6 +2812,7 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 		wantSendCount     int
 		wantFailedRepo    string
 		wantRefreshCalled bool
+		wantErrNotContain string
 	}{
 		{
 			name:              "OK initializes all repositories before sending",
@@ -2819,9 +2820,10 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 			wantRefreshCalled: true,
 		},
 		{
-			name:          "NG initialization failure does not send",
-			initializeErr: errors.New("DB error"),
-			wantErr:       true,
+			name:              "NG initialization failure does not send",
+			initializeErr:     errors.New("DB error"),
+			wantErr:           true,
+			wantErrNotContain: "DB error",
 		},
 		{
 			name:              "NG send failure marks repository error and continues",
@@ -2830,6 +2832,7 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 			wantSendCount:     2,
 			wantFailedRepo:    "owner/repo-1",
 			wantRefreshCalled: true,
+			wantErrNotContain: "SQS error",
 		},
 	}
 
@@ -2880,10 +2883,48 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
+			if c.wantErrNotContain != "" && strings.Contains(err.Error(), c.wantErrNotContain) {
+				t.Fatalf("Error contains internal detail %q: %v", c.wantErrNotContain, err)
+			}
 			if queue.sendCount != c.wantSendCount {
 				t.Fatalf("Unexpected send count: want=%d, got=%d", c.wantSendCount, queue.sendCount)
 			}
 		})
+	}
+}
+
+func TestInvokeScanCodeScanRejectsEmptyRepositoryFullName(t *testing.T) {
+	mockDB := mocks.NewCodeRepoInterface(t)
+	setting := &model.CodeCodeScanSetting{
+		CodeGitHubSettingID: 1,
+		CodeDataSourceID:    1,
+		ProjectID:           1,
+		ScanPublic:          true,
+	}
+	githubSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		Type:                "ORGANIZATION",
+		TargetResource:      "owner",
+	}
+	mockDB.On("GetCodeScanSetting", mock.Anything, uint32(1), uint32(1)).Return(setting, nil).Twice()
+	mockDB.On("GetGitHubSetting", mock.Anything, uint32(1), uint32(1)).Return(githubSetting, nil).Once()
+
+	svc := CodeService{
+		repository: mockDB,
+		sqs:        &sequencedCodeQueue{},
+		logger:     logging.NewLogger(),
+		githubClient: newFakeGithubClient([]*ghub.Repository{
+			{Name: ghub.String("repo"), Visibility: ghub.String("public")},
+		}, nil),
+	}
+
+	_, err := svc.InvokeScanCodeScan(context.Background(), &code.InvokeScanCodeScanRequest{
+		ProjectId:       1,
+		GithubSettingId: 1,
+	})
+	if err == nil {
+		t.Fatal("Expected error but got nil")
 	}
 }
 

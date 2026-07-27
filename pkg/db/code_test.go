@@ -1522,13 +1522,12 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			},
 		},
 		{
-			name: "NG parent setting not found rolls back",
+			name: "OK parent update affects no rows",
 			args: args{
 				projectID:          1,
 				githubSettingID:    2,
 				repositoryFullName: []string{"owner/repo"},
 			},
-			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
@@ -1537,7 +1536,7 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(0, 0))
-				mock.ExpectRollback()
+				mock.ExpectCommit()
 			},
 		},
 	}
