@@ -1371,6 +1371,8 @@ SELECT EXISTS(
 )
 `
 
+const codeScanStatusDetailInProgress = "Scanning in progress..."
+
 const selectCodeScanRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -1408,7 +1410,7 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 				upsertCodeScanRepository,
 				repositoryFullName,
 				code.Status_IN_PROGRESS.String(),
-				nil,
+				codeScanStatusDetailInProgress,
 				scanAt,
 				projectID,
 				githubSettingID,
@@ -1420,7 +1422,7 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 		result := tx.Exec(
 			updateCodeScanSettingStatusByRepo,
 			code.Status_IN_PROGRESS.String(),
-			"Scanning in progress...",
+			codeScanStatusDetailInProgress,
 			scanAt,
 			projectID,
 			githubSettingID,
@@ -1449,12 +1451,16 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertCodeScanRepository,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
 		projectID,
 		data.GithubSettingId,

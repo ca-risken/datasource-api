@@ -1488,13 +1488,13 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 					WithArgs(uint32(1), uint32(2)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs("owner/repo-1", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
+					WithArgs("owner/repo-1", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs("owner/repo-2", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
+					WithArgs("owner/repo-2", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
-					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
+					WithArgs("IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(0, 1))
 				mock.ExpectCommit()
 			},
@@ -1522,7 +1522,7 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 					WithArgs(uint32(1), uint32(2)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnError(errors.New("DB error"))
 				mock.ExpectRollback()
 			},
@@ -1556,10 +1556,10 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 					WithArgs(uint32(1), uint32(2)).
 					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
-					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
+					WithArgs("IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(0, 0))
 				mock.ExpectCommit()
 			},
@@ -1649,14 +1649,13 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			},
 		},
 		{
-			name: "NG summary query error",
+			name: "NG summary query error after IN_PROGRESS detail update",
 			args: args{
 				projectID: 1,
 				data: &code.CodeScanRepositoryForUpsert{
 					GithubSettingId:    1,
 					RepositoryFullName: "owner/repo",
-					Status:             code.Status_OK,
-					StatusDetail:       "done",
+					Status:             code.Status_IN_PROGRESS,
 					ScanAt:             now.Unix(),
 				},
 			},
@@ -1664,6 +1663,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, time.Unix(now.Unix(), 0), uint32(1), uint32(1)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnError(errors.New("DB error"))
