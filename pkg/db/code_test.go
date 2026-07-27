@@ -1484,10 +1484,13 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WithArgs("owner/repo-1", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WithArgs("owner/repo-2", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
@@ -1515,9 +1518,28 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name: "NG github setting does not belong to project",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
 				mock.ExpectRollback()
 			},
 		},
@@ -1530,7 +1552,10 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
@@ -1605,6 +1630,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "OK", "done", time.Unix(now.Unix(), 0), uint32(1), uint32(1)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).

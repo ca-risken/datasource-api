@@ -1349,21 +1349,6 @@ INSERT INTO code_codescan_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-  status=VALUES(status),
-  status_detail=VALUES(status_detail),
-  scan_at=VALUES(scan_at)
-`
-
-const initializeCodeScanRepository = `
-INSERT INTO code_codescan_repository (
-  code_github_setting_id,
-  repository_full_name,
-  status,
-  status_detail,
-  scan_at
-)
 SELECT
   code_github_setting_id,
   ?,
@@ -1376,6 +1361,14 @@ ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
   scan_at=VALUES(scan_at)
+`
+
+const selectExistsGitHubSetting = `
+SELECT EXISTS(
+  SELECT 1
+  FROM code_github_setting
+  WHERE project_id = ? AND code_github_setting_id = ?
+)
 `
 
 const selectCodeScanRepositoryStatusSummary = `
@@ -1402,9 +1395,17 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 	}
 
 	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
 		for _, repositoryFullName := range repositoryFullNames {
 			if err := tx.Exec(
-				initializeCodeScanRepository,
+				upsertCodeScanRepository,
 				repositoryFullName,
 				code.Status_IN_PROGRESS.String(),
 				nil,
@@ -1451,11 +1452,12 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertCodeScanRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
 		convertZeroValueToNull(data.StatusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
