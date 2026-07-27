@@ -852,12 +852,9 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	for i, msg := range messages {
 		repositoryName := repositoryNames[i]
 		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, msg)
-		if err == nil && (resp == nil || resp.MessageId == nil) {
-			err = fmt.Errorf("SQS response did not contain a message ID")
-		}
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+				repositoryName, req.ProjectId, req.GithubSettingId, len(sentRepositoryNames), err)
 			sendErrors = append(sendErrors, errors.New("failed to send gitleaks message"))
 			if _, updateErr := c.repository.UpsertGitleaksRepository(ctx, req.ProjectId, &code.GitleaksRepositoryForUpsert{
 				GithubSettingId:    req.GithubSettingId,
@@ -872,10 +869,15 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 			}
 			continue
 		}
-		messageIDs = append(messageIDs, *resp.MessageId)
 		sentRepositoryNames = append(sentRepositoryNames, repositoryName)
-		c.logger.Debugf(ctx, "Sent gitleaks message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
-			repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		if resp == nil || resp.MessageId == nil {
+			c.logger.Warnf(ctx, "SQS send succeeded without message ID: repository=%s, project_id=%d, github_setting_id=%d",
+				repositoryName, req.ProjectId, req.GithubSettingId)
+		} else {
+			messageIDs = append(messageIDs, *resp.MessageId)
+			c.logger.Debugf(ctx, "Sent gitleaks message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		}
 	}
 
 	if err := c.repository.RefreshGitleaksSettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
@@ -883,8 +885,8 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	}
 
 	c.logger.Infof(ctx, "Invoke gitleaks scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
-		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, sentRepositoryNames)
-	if len(sendErrors) > 0 && len(messageIDs) == 0 {
+		req.ProjectId, req.GithubSettingId, len(repos), len(sentRepositoryNames), messageIDs, sentRepositoryNames)
+	if len(sendErrors) > 0 && len(sentRepositoryNames) == 0 {
 		return nil, errors.Join(sendErrors...)
 	}
 	return &empty.Empty{}, nil
@@ -952,12 +954,9 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 	for i, msg := range messages {
 		repositoryName := repositoryNames[i]
 		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, msg)
-		if err == nil && (resp == nil || resp.MessageId == nil) {
-			err = fmt.Errorf("SQS response did not contain a message ID")
-		}
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+				repositoryName, req.ProjectId, req.GithubSettingId, len(sentRepositoryNames), err)
 			sendErrors = append(sendErrors, errors.New("failed to send dependency message"))
 			if _, updateErr := c.repository.UpsertDependencyRepository(ctx, req.ProjectId, &code.DependencyRepositoryForUpsert{
 				GithubSettingId:    req.GithubSettingId,
@@ -972,10 +971,15 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 			}
 			continue
 		}
-		messageIDs = append(messageIDs, *resp.MessageId)
 		sentRepositoryNames = append(sentRepositoryNames, repositoryName)
-		c.logger.Debugf(ctx, "Sent dependency message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
-			repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		if resp == nil || resp.MessageId == nil {
+			c.logger.Warnf(ctx, "SQS send succeeded without message ID: repository=%s, project_id=%d, github_setting_id=%d",
+				repositoryName, req.ProjectId, req.GithubSettingId)
+		} else {
+			messageIDs = append(messageIDs, *resp.MessageId)
+			c.logger.Debugf(ctx, "Sent dependency message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		}
 	}
 
 	if err := c.repository.RefreshDependencySettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
@@ -983,8 +987,8 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 	}
 
 	c.logger.Infof(ctx, "Invoke dependency scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
-		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, sentRepositoryNames)
-	if len(sendErrors) > 0 && len(messageIDs) == 0 {
+		req.ProjectId, req.GithubSettingId, len(repos), len(sentRepositoryNames), messageIDs, sentRepositoryNames)
+	if len(sendErrors) > 0 && len(sentRepositoryNames) == 0 {
 		return nil, errors.Join(sendErrors...)
 	}
 	return &empty.Empty{}, nil
@@ -1056,12 +1060,9 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 	for i, msg := range messages {
 		repositoryName := repositoryNames[i]
 		resp, err := c.sqs.Send(ctx, c.codeCodeScanQueueURL, msg)
-		if err == nil && (resp == nil || resp.MessageId == nil) {
-			err = fmt.Errorf("SQS response did not contain a message ID")
-		}
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+				repositoryName, req.ProjectId, req.GithubSettingId, len(sentRepositoryNames), err)
 			sendErrors = append(sendErrors, errors.New("failed to send code scan message"))
 			if _, updateErr := c.repository.UpsertCodeScanRepository(ctx, req.ProjectId, &code.CodeScanRepositoryForUpsert{
 				GithubSettingId:    req.GithubSettingId,
@@ -1076,18 +1077,23 @@ func (c *CodeService) InvokeScanCodeScan(ctx context.Context, req *code.InvokeSc
 			}
 			continue
 		}
-		messageIDs = append(messageIDs, *resp.MessageId)
 		sentRepositoryNames = append(sentRepositoryNames, repositoryName)
-		c.logger.Debugf(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
-			repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		if resp == nil || resp.MessageId == nil {
+			c.logger.Warnf(ctx, "SQS send succeeded without message ID: repository=%s, project_id=%d, github_setting_id=%d",
+				repositoryName, req.ProjectId, req.GithubSettingId)
+		} else {
+			messageIDs = append(messageIDs, *resp.MessageId)
+			c.logger.Debugf(ctx, "Sent message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+				repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
+		}
 	}
 
 	if err := c.repository.RefreshCodeScanSettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
 		return nil, err
 	}
 
-	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v", req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, sentRepositoryNames)
-	if len(sendErrors) > 0 && len(messageIDs) == 0 {
+	c.logger.Infof(ctx, "Invoke scanned: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v", req.ProjectId, req.GithubSettingId, len(repos), len(sentRepositoryNames), messageIDs, sentRepositoryNames)
+	if len(sendErrors) > 0 && len(sentRepositoryNames) == 0 {
 		return nil, errors.Join(sendErrors...)
 	}
 	return &empty.Empty{}, nil

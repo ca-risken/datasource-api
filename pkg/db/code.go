@@ -687,7 +687,14 @@ INSERT INTO code_gitleaks_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
 ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
@@ -799,11 +806,12 @@ func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32,
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertGitleaksRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
 		convertZeroValueToNull(statusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
@@ -875,9 +883,13 @@ func (c *Client) RefreshGitleaksSettingStatus(ctx context.Context, projectID, gi
 
 func determineGitleaksSettingStatus(summary *gitleaksRepoStatusSummary) code.Status {
 	switch {
+	case summary == nil || summary.Total == 0:
+		return code.Status_ERROR
 	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
 	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
 		return code.Status_ERROR
 	default:
 		return code.Status_OK
@@ -1035,7 +1047,14 @@ INSERT INTO code_dependency_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
 ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
@@ -1147,11 +1166,12 @@ func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint3
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertDependencyRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
 		convertZeroValueToNull(statusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
@@ -1223,9 +1243,13 @@ func (c *Client) RefreshDependencySettingStatus(ctx context.Context, projectID, 
 
 func determineDependencySettingStatus(summary *dependencyRepoStatusSummary) code.Status {
 	switch {
+	case summary == nil || summary.Total == 0:
+		return code.Status_ERROR
 	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
 	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
 		return code.Status_ERROR
 	default:
 		return code.Status_OK
@@ -1657,10 +1681,14 @@ func (c *Client) RefreshCodeScanSettingStatus(ctx context.Context, projectID, gi
 
 func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
 	switch {
+	case summary == nil || summary.Total == 0:
+		return code.Status_ERROR
 	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
 	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
 	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
 		return code.Status_ERROR
 	default:
 		return code.Status_OK

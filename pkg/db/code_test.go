@@ -1652,24 +1652,28 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 func TestDetermineRepositoryAggregatedStatus(t *testing.T) {
 	cases := []struct {
 		name       string
+		total      int64
+		ok         int64
 		inProgress int64
 		errors     int64
 		want       code.Status
 	}{
-		{name: "IN_PROGRESS takes priority", inProgress: 1, errors: 1, want: code.Status_IN_PROGRESS},
-		{name: "ERROR when no repository is running", errors: 1, want: code.Status_ERROR},
-		{name: "OK when all repositories completed", want: code.Status_OK},
+		{name: "IN_PROGRESS takes priority", total: 2, inProgress: 1, errors: 1, want: code.Status_IN_PROGRESS},
+		{name: "ERROR when no repository is running", total: 1, errors: 1, want: code.Status_ERROR},
+		{name: "OK when all repositories completed", total: 1, ok: 1, want: code.Status_OK},
+		{name: "ERROR when no repository exists", want: code.Status_ERROR},
+		{name: "ERROR when an unexpected status exists", total: 2, ok: 1, want: code.Status_ERROR},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := determineGitleaksSettingStatus(&gitleaksRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+			if got := determineGitleaksSettingStatus(&gitleaksRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
 				t.Errorf("Unexpected gitleaks status: want=%s, got=%s", c.want, got)
 			}
-			if got := determineDependencySettingStatus(&dependencyRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+			if got := determineDependencySettingStatus(&dependencyRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
 				t.Errorf("Unexpected dependency status: want=%s, got=%s", c.want, got)
 			}
-			if got := determineCodeScanSettingStatus(&codeScanRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+			if got := determineCodeScanSettingStatus(&codeScanRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
 				t.Errorf("Unexpected code scan status: want=%s, got=%s", c.want, got)
 			}
 		})
