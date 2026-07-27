@@ -1461,6 +1461,66 @@ func TestUpsertDependencySetting(t *testing.T) {
 	}
 }
 
+func TestInitializeGitleaksAndDependencyRepositories(t *testing.T) {
+	scanAt := time.Now()
+
+	cases := []struct {
+		name            string
+		repositoryQuery string
+		parentQuery     string
+		statusDetail    string
+		initialize      func(*Client) error
+	}{
+		{
+			name:            "Gitleaks",
+			repositoryQuery: initializeGitleaksRepository,
+			parentQuery:     updateGitleaksSettingStatusByRepo,
+			statusDetail:    gitleaksStatusDetailInProgress,
+			initialize: func(db *Client) error {
+				return db.InitializeGitleaksRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
+			},
+		},
+		{
+			name:            "Dependency",
+			repositoryQuery: initializeDependencyRepository,
+			parentQuery:     updateDependencySettingStatusByRepo,
+			statusDetail:    dependencyStatusDetailInProgress,
+			initialize: func(db *Client) error {
+				return db.InitializeDependencyRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("Unexpected DB mock error: %+v", err)
+			}
+			mock.ExpectBegin()
+			mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+				WithArgs(uint32(1), uint32(2)).
+				WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+			for _, repositoryName := range []string{"owner/repo-1", "owner/repo-2"} {
+				mock.ExpectExec(regexp.QuoteMeta(c.repositoryQuery)).
+					WithArgs(repositoryName, "IN_PROGRESS", c.statusDetail, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			}
+			mock.ExpectExec(regexp.QuoteMeta(c.parentQuery)).
+				WithArgs("IN_PROGRESS", c.statusDetail, scanAt, uint32(1), uint32(2)).
+				WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
+
+			if err := c.initialize(db); err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestInitializeCodeScanRepositories(t *testing.T) {
 	scanAt := time.Now()
 

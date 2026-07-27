@@ -823,32 +823,59 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 		return &empty.Empty{}, nil
 	}
 
-	var messageIDs []string
-	var repositoryNames []string
+	messages := make([]*message.CodeQueueMessage, 0, len(repos))
+	repositoryNames := make([]string, 0, len(repos))
 	for _, repo := range repos {
-		if repo.FullName == nil {
-			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
-				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
-			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
+		if repo == nil || repo.FullName == nil || repo.GetFullName() == "" {
+			return nil, fmt.Errorf("repository full name is required")
 		}
 		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, req.FullScan, repo)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to build gitleaks message: project_id=%d, github_setting_id=%d, repo_id=%v, err=%+v",
-				req.ProjectId, req.GithubSettingId, repo.ID, err)
+				req.ProjectId, req.GithubSettingId, repo.GetID(), err)
 			return nil, err
 		}
+		messages = append(messages, msg)
+		repositoryNames = append(repositoryNames, repo.GetFullName())
+	}
+
+	scanAt := time.Now()
+	if err := c.repository.InitializeGitleaksRepositories(ctx, req.ProjectId, req.GithubSettingId, repositoryNames, scanAt); err != nil {
+		c.logger.Errorf(ctx, "Failed to initialize gitleaks repository statuses: project_id=%d, github_setting_id=%d, err=%+v",
+			req.ProjectId, req.GithubSettingId, err)
+		return nil, fmt.Errorf("failed to initialize gitleaks repository statuses")
+	}
+
+	var messageIDs []string
+	var sentRepositoryNames []string
+	var sendErrors []error
+	for i, msg := range messages {
+		repositoryName := repositoryNames[i]
 		resp, err := c.sqs.Send(ctx, c.codeGitleaksQueueURL, msg)
+		if err == nil && (resp == nil || resp.MessageId == nil) {
+			err = fmt.Errorf("SQS response did not contain a message ID")
+		}
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
-			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
+				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+			sendErrors = append(sendErrors, errors.New("failed to send gitleaks message"))
+			if _, updateErr := c.repository.UpsertGitleaksRepository(ctx, req.ProjectId, &code.GitleaksRepositoryForUpsert{
+				GithubSettingId:    req.GithubSettingId,
+				RepositoryFullName: repositoryName,
+				Status:             code.Status_ERROR,
+				StatusDetail:       sanitizeErrorMessage(err),
+				ScanAt:             scanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update gitleaks repository status after send failure: project_id=%d, github_setting_id=%d, repository=%s, err=%+v",
+					req.ProjectId, req.GithubSettingId, repositoryName, updateErr)
+				sendErrors = append(sendErrors, errors.New("failed to update gitleaks repository status after send failure"))
+			}
+			continue
 		}
-		if resp.MessageId != nil {
-			messageIDs = append(messageIDs, *resp.MessageId)
-			repositoryNames = append(repositoryNames, *repo.FullName)
-			c.logger.Debugf(ctx, "Sent gitleaks message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
-				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
-		}
+		messageIDs = append(messageIDs, *resp.MessageId)
+		sentRepositoryNames = append(sentRepositoryNames, repositoryName)
+		c.logger.Debugf(ctx, "Sent gitleaks message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+			repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
 	}
 
 	if err := c.repository.RefreshGitleaksSettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
@@ -856,7 +883,10 @@ func (c *CodeService) InvokeScanGitleaks(ctx context.Context, req *code.InvokeSc
 	}
 
 	c.logger.Infof(ctx, "Invoke gitleaks scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
-		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
+		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, sentRepositoryNames)
+	if len(sendErrors) > 0 && len(messageIDs) == 0 {
+		return nil, errors.Join(sendErrors...)
+	}
 	return &empty.Empty{}, nil
 }
 
@@ -893,32 +923,59 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 		return &empty.Empty{}, nil
 	}
 
-	var messageIDs []string
-	var repositoryNames []string
+	messages := make([]*message.CodeQueueMessage, 0, len(repos))
+	repositoryNames := make([]string, 0, len(repos))
 	for _, repo := range repos {
-		if repo.FullName == nil {
-			c.logger.Errorf(ctx, "Repository with nil FullName found: project_id=%d, github_setting_id=%d, repo_id=%v, succeeded=%d before failure",
-				req.ProjectId, req.GithubSettingId, repo.ID, len(messageIDs))
-			return nil, fmt.Errorf("repository with nil FullName found (repo_id=%v)", repo.ID)
+		if repo == nil || repo.FullName == nil || repo.GetFullName() == "" {
+			return nil, fmt.Errorf("repository full name is required")
 		}
 		msg, err := buildCodeQueueMessage(data.CodeGitHubSettingID, data.ProjectID, req.ScanOnly, false, repo)
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to build dependency message: project_id=%d, github_setting_id=%d, repo_id=%v, err=%+v",
-				req.ProjectId, req.GithubSettingId, repo.ID, err)
+				req.ProjectId, req.GithubSettingId, repo.GetID(), err)
 			return nil, err
 		}
+		messages = append(messages, msg)
+		repositoryNames = append(repositoryNames, repo.GetFullName())
+	}
+
+	scanAt := time.Now()
+	if err := c.repository.InitializeDependencyRepositories(ctx, req.ProjectId, req.GithubSettingId, repositoryNames, scanAt); err != nil {
+		c.logger.Errorf(ctx, "Failed to initialize dependency repository statuses: project_id=%d, github_setting_id=%d, err=%+v",
+			req.ProjectId, req.GithubSettingId, err)
+		return nil, fmt.Errorf("failed to initialize dependency repository statuses")
+	}
+
+	var messageIDs []string
+	var sentRepositoryNames []string
+	var sendErrors []error
+	for i, msg := range messages {
+		repositoryName := repositoryNames[i]
 		resp, err := c.sqs.Send(ctx, c.codeDependencyQueueURL, msg)
+		if err == nil && (resp == nil || resp.MessageId == nil) {
+			err = fmt.Errorf("SQS response did not contain a message ID")
+		}
 		if err != nil {
 			c.logger.Errorf(ctx, "Failed to send message for repository %s: project_id=%d, github_setting_id=%d, succeeded=%d before failure, err=%+v",
-				*repo.FullName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
-			return nil, fmt.Errorf("failed to send message for repository %s", *repo.FullName)
+				repositoryName, req.ProjectId, req.GithubSettingId, len(messageIDs), err)
+			sendErrors = append(sendErrors, errors.New("failed to send dependency message"))
+			if _, updateErr := c.repository.UpsertDependencyRepository(ctx, req.ProjectId, &code.DependencyRepositoryForUpsert{
+				GithubSettingId:    req.GithubSettingId,
+				RepositoryFullName: repositoryName,
+				Status:             code.Status_ERROR,
+				StatusDetail:       sanitizeErrorMessage(err),
+				ScanAt:             scanAt.Unix(),
+			}); updateErr != nil {
+				c.logger.Errorf(ctx, "Failed to update dependency repository status after send failure: project_id=%d, github_setting_id=%d, repository=%s, err=%+v",
+					req.ProjectId, req.GithubSettingId, repositoryName, updateErr)
+				sendErrors = append(sendErrors, errors.New("failed to update dependency repository status after send failure"))
+			}
+			continue
 		}
-		if resp.MessageId != nil {
-			messageIDs = append(messageIDs, *resp.MessageId)
-			repositoryNames = append(repositoryNames, *repo.FullName)
-			c.logger.Debugf(ctx, "Sent dependency message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
-				*repo.FullName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
-		}
+		messageIDs = append(messageIDs, *resp.MessageId)
+		sentRepositoryNames = append(sentRepositoryNames, repositoryName)
+		c.logger.Debugf(ctx, "Sent dependency message for repository %s: project_id=%d, github_setting_id=%d, messageId=%s",
+			repositoryName, req.ProjectId, req.GithubSettingId, *resp.MessageId)
 	}
 
 	if err := c.repository.RefreshDependencySettingStatus(ctx, req.ProjectId, req.GithubSettingId, nil); err != nil {
@@ -926,7 +983,10 @@ func (c *CodeService) InvokeScanDependency(ctx context.Context, req *code.Invoke
 	}
 
 	c.logger.Infof(ctx, "Invoke dependency scan: project_id=%d, github_setting_id=%d, attempted=%d, succeeded=%d, messageIds: %v, repositories: %v",
-		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, repositoryNames)
+		req.ProjectId, req.GithubSettingId, len(repos), len(messageIDs), messageIDs, sentRepositoryNames)
+	if len(sendErrors) > 0 && len(messageIDs) == 0 {
+		return nil, errors.Join(sendErrors...)
+	}
 	return &empty.Empty{}, nil
 }
 

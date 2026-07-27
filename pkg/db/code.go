@@ -43,6 +43,7 @@ type CodeRepoInterface interface {
 	// code_gitleaks_repository
 	ListGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error)
 	GetGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error)
+	InitializeGitleaksRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error)
 	RefreshGitleaksSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -56,6 +57,7 @@ type CodeRepoInterface interface {
 	// code_dependency_repository
 	ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error)
 	GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error)
+	InitializeDependencyRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error)
 	RefreshDependencySettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteDependencyRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -692,6 +694,30 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
+const initializeGitleaksRepository = `
+INSERT INTO code_gitleaks_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const gitleaksStatusDetailInProgress = "Gitleaks scan in progress..."
+
 const selectGitleaksRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -716,6 +742,53 @@ type gitleaksRepoStatusSummary struct {
 	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) InitializeGitleaksRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				initializeGitleaksRepository,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				gitleaksStatusDetailInProgress,
+				scanAt,
+				projectID,
+				githubSettingID,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize gitleaks repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateGitleaksSettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			gitleaksStatusDetailInProgress,
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize gitleaks setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			c.logger.Warnf(ctx, "InitializeGitleaksRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
+		}
+		return nil
+	})
 }
 
 func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error) {
@@ -979,6 +1052,30 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
+const initializeDependencyRepository = `
+INSERT INTO code_dependency_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const dependencyStatusDetailInProgress = "Dependency scan in progress..."
+
 const selectDependencyRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -1003,6 +1100,53 @@ type dependencyRepoStatusSummary struct {
 	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) InitializeDependencyRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				initializeDependencyRepository,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				dependencyStatusDetailInProgress,
+				scanAt,
+				projectID,
+				githubSettingID,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize dependency repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateDependencySettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			dependencyStatusDetailInProgress,
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize dependency setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			c.logger.Warnf(ctx, "InitializeDependencyRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
+		}
+		return nil
+	})
 }
 
 func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error) {
