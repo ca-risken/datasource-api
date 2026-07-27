@@ -716,8 +716,6 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
-const gitleaksStatusDetailInProgress = "Gitleaks scan in progress..."
-
 const selectGitleaksRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -761,7 +759,7 @@ func (c *Client) InitializeGitleaksRepositories(ctx context.Context, projectID, 
 				initializeGitleaksRepository,
 				repositoryFullName,
 				code.Status_IN_PROGRESS.String(),
-				gitleaksStatusDetailInProgress,
+				codeScanStatusDetailInProgress,
 				scanAt,
 				projectID,
 				githubSettingID,
@@ -773,7 +771,7 @@ func (c *Client) InitializeGitleaksRepositories(ctx context.Context, projectID, 
 		result := tx.Exec(
 			updateGitleaksSettingStatusByRepo,
 			code.Status_IN_PROGRESS.String(),
-			gitleaksStatusDetailInProgress,
+			codeScanStatusDetailInProgress,
 			scanAt,
 			projectID,
 			githubSettingID,
@@ -794,13 +792,17 @@ func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32,
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertGitleaksRepository,
 		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
 	).Error; err != nil {
 		return nil, err
@@ -889,7 +891,7 @@ func buildGitleaksStatusDetail(summary *gitleaksRepoStatusSummary, currentParent
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Gitleaks scan in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
@@ -1062,8 +1064,6 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
-const dependencyStatusDetailInProgress = "Dependency scan in progress..."
-
 const selectDependencyRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -1107,7 +1107,7 @@ func (c *Client) InitializeDependencyRepositories(ctx context.Context, projectID
 				initializeDependencyRepository,
 				repositoryFullName,
 				code.Status_IN_PROGRESS.String(),
-				dependencyStatusDetailInProgress,
+				codeScanStatusDetailInProgress,
 				scanAt,
 				projectID,
 				githubSettingID,
@@ -1119,7 +1119,7 @@ func (c *Client) InitializeDependencyRepositories(ctx context.Context, projectID
 		result := tx.Exec(
 			updateDependencySettingStatusByRepo,
 			code.Status_IN_PROGRESS.String(),
-			dependencyStatusDetailInProgress,
+			codeScanStatusDetailInProgress,
 			scanAt,
 			projectID,
 			githubSettingID,
@@ -1140,13 +1140,17 @@ func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint3
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertDependencyRepository,
 		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
 	).Error; err != nil {
 		return nil, err
@@ -1235,7 +1239,7 @@ func buildDependencyStatusDetail(summary *dependencyRepoStatusSummary, currentPa
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Dependency scan in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
@@ -1671,7 +1675,7 @@ func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, currentParent
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Scanning in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK:
