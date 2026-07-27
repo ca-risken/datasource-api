@@ -462,6 +462,24 @@ func (_m *CodeRepoInterface) GetGitleaksSetting(ctx context.Context, projectID u
 	return r0, r1
 }
 
+// InitializeCodeScanRepositories provides a mock function with given fields: ctx, projectID, githubSettingID, repositoryFullNames, scanAt
+func (_m *CodeRepoInterface) InitializeCodeScanRepositories(ctx context.Context, projectID uint32, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	ret := _m.Called(ctx, projectID, githubSettingID, repositoryFullNames, scanAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InitializeCodeScanRepositories")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, uint32, uint32, []string, time.Time) error); ok {
+		r0 = rf(ctx, projectID, githubSettingID, repositoryFullNames, scanAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // ListCodeDataSource provides a mock function with given fields: ctx, codeDataSourceID, name
 func (_m *CodeRepoInterface) ListCodeDataSource(ctx context.Context, codeDataSourceID uint32, name string) (*[]model.CodeDataSource, error) {
 	ret := _m.Called(ctx, codeDataSourceID, name)

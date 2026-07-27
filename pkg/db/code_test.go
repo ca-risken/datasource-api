@@ -1461,6 +1461,110 @@ func TestUpsertDependencySetting(t *testing.T) {
 	}
 }
 
+func TestInitializeCodeScanRepositories(t *testing.T) {
+	scanAt := time.Now()
+
+	type args struct {
+		projectID          uint32
+		githubSettingID    uint32
+		repositoryFullName []string
+	}
+	cases := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo-1", "owner/repo-2"},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs(uint32(2), "owner/repo-1", "IN_PROGRESS", nil, scanAt).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs(uint32(2), "owner/repo-2", "IN_PROGRESS", nil, scanAt).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
+					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(0, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name: "OK empty repositories",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: nil,
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {},
+		},
+		{
+			name: "NG repository upsert error rolls back",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs(uint32(2), "owner/repo", "IN_PROGRESS", nil, scanAt).
+					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name: "NG parent setting not found rolls back",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs(uint32(2), "owner/repo", "IN_PROGRESS", nil, scanAt).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
+					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+				mock.ExpectRollback()
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("Unexpected DB mock error: %+v", err)
+			}
+			c.mockClosure(mock)
+
+			err = db.InitializeCodeScanRepositories(ctx, c.args.projectID, c.args.githubSettingID, c.args.repositoryFullName, scanAt)
+			if c.wantErr && err == nil {
+				t.Fatal("Expected error but got nil")
+			}
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestUpsertCodeScanRepository(t *testing.T) {
 	now := time.Now()
 	summaryColumns := []string{"total", "ok_count", "in_progress_count", "configured_count", "error_count"}

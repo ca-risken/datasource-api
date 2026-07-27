@@ -69,6 +69,7 @@ type CodeRepoInterface interface {
 	// code_codescan_repository
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
+	InitializeCodeScanRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
 	RefreshCodeScanSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -1372,6 +1373,43 @@ UPDATE code_codescan_setting
 SET status = ?, status_detail = ?, scan_at = COALESCE(?, scan_at), updated_at = NOW()
 WHERE project_id = ? AND code_github_setting_id = ?
 `
+
+func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				upsertCodeScanRepository,
+				githubSettingID,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				nil,
+				scanAt,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize code scan repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateCodeScanSettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			"Scanning in progress...",
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize code scan setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			return fmt.Errorf("code scan setting not found (project_id=%d, github_setting_id=%d)", projectID, githubSettingID)
+		}
+		return nil
+	})
+}
 
 type codeScanRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
