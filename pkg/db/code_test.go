@@ -1475,7 +1475,7 @@ func TestInitializeGitleaksAndDependencyRepositories(t *testing.T) {
 			name:            "Gitleaks",
 			repositoryQuery: initializeGitleaksRepository,
 			parentQuery:     updateGitleaksSettingStatusByRepo,
-			statusDetail:    gitleaksStatusDetailInProgress,
+			statusDetail:    codeScanStatusDetailInProgress,
 			initialize: func(db *Client) error {
 				return db.InitializeGitleaksRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
 			},
@@ -1484,7 +1484,7 @@ func TestInitializeGitleaksAndDependencyRepositories(t *testing.T) {
 			name:            "Dependency",
 			repositoryQuery: initializeDependencyRepository,
 			parentQuery:     updateDependencySettingStatusByRepo,
-			statusDetail:    dependencyStatusDetailInProgress,
+			statusDetail:    codeScanStatusDetailInProgress,
 			initialize: func(db *Client) error {
 				return db.InitializeDependencyRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
 			},
@@ -1671,6 +1671,44 @@ func TestDetermineRepositoryAggregatedStatus(t *testing.T) {
 			}
 			if got := determineCodeScanSettingStatus(&codeScanRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
 				t.Errorf("Unexpected code scan status: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
+func TestBuildRepositoryInProgressStatusDetail(t *testing.T) {
+	cases := []struct {
+		name  string
+		build func() (string, error)
+	}{
+		{
+			name: "Gitleaks",
+			build: func() (string, error) {
+				return buildGitleaksStatusDetail(&gitleaksRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+		{
+			name: "Dependency",
+			build: func() (string, error) {
+				return buildDependencyStatusDetail(&dependencyRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+		{
+			name: "CodeScan",
+			build: func() (string, error) {
+				return buildCodeScanStatusDetail(&codeScanRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := c.build()
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if got != codeScanStatusDetailInProgress {
+				t.Errorf("Unexpected status detail: want=%q, got=%q", codeScanStatusDetailInProgress, got)
 			}
 		})
 	}
