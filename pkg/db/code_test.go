@@ -1649,9 +1649,36 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 	}
 }
 
+func TestDetermineRepositoryAggregatedStatus(t *testing.T) {
+	cases := []struct {
+		name       string
+		inProgress int64
+		errors     int64
+		want       code.Status
+	}{
+		{name: "IN_PROGRESS takes priority", inProgress: 1, errors: 1, want: code.Status_IN_PROGRESS},
+		{name: "ERROR when no repository is running", errors: 1, want: code.Status_ERROR},
+		{name: "OK when all repositories completed", want: code.Status_OK},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := determineGitleaksSettingStatus(&gitleaksRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected gitleaks status: want=%s, got=%s", c.want, got)
+			}
+			if got := determineDependencySettingStatus(&dependencyRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected dependency status: want=%s, got=%s", c.want, got)
+			}
+			if got := determineCodeScanSettingStatus(&codeScanRepoStatusSummary{InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected code scan status: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
 func TestUpsertCodeScanRepository(t *testing.T) {
 	now := time.Now()
-	summaryColumns := []string{"total", "ok_count", "in_progress_count", "configured_count", "error_count"}
+	summaryColumns := []string{"total", "ok_count", "in_progress_count", "error_count"}
 
 	type args struct {
 		projectID uint32
@@ -1694,7 +1721,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
@@ -1748,7 +1775,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
@@ -1786,10 +1813,10 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 				// Step 1: Upsert repository
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				// Step 2: Calculate summary
+					// Step 2: Calculate summary
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				// Step 3: Check current parent - status and status_detail are same, so skip full UPDATE but refresh scan_at
 				parentScanAt := time.Unix(now.Unix(), 0)
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
@@ -1799,7 +1826,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						"status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at",
 					}).AddRow(uint32(1), uint32(1), uint32(1), "pattern", true, true, true,
 						"OK",
-						"Repository summary: total=1, ok=1, in_progress=0, configured=0, error=0",
+						"Repository summary: total=1, ok=1, in_progress=0, error=0",
 						parentScanAt, nil, now, now))
 				// Step 4: Get repository
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).

@@ -723,7 +723,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_gitleaks_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -739,7 +738,6 @@ WHERE project_id = ? AND code_github_setting_id = ?
 type gitleaksRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
 }
@@ -874,20 +872,11 @@ func (c *Client) RefreshGitleaksSettingStatus(ctx context.Context, projectID, gi
 }
 
 func determineGitleaksSettingStatus(summary *gitleaksRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		return code.Status_UNKNOWN
-	}
 	switch {
-	case summary.InProgressCount > 0:
+	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary != nil && summary.ErrorCount > 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
 	default:
 		return code.Status_OK
 	}
@@ -905,11 +894,10 @@ func buildGitleaksStatusDetail(summary *gitleaksRepoStatusSummary, currentParent
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:
@@ -1081,7 +1069,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_dependency_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -1097,7 +1084,6 @@ WHERE project_id = ? AND code_github_setting_id = ?
 type dependencyRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
 }
@@ -1232,20 +1218,11 @@ func (c *Client) RefreshDependencySettingStatus(ctx context.Context, projectID, 
 }
 
 func determineDependencySettingStatus(summary *dependencyRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		return code.Status_UNKNOWN
-	}
 	switch {
-	case summary.InProgressCount > 0:
+	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary != nil && summary.ErrorCount > 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
 	default:
 		return code.Status_OK
 	}
@@ -1263,11 +1240,10 @@ func buildDependencyStatusDetail(summary *dependencyRepoStatusSummary, currentPa
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:
@@ -1522,7 +1498,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_codescan_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -1585,7 +1560,6 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 type codeScanRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
 }
@@ -1678,23 +1652,12 @@ func (c *Client) RefreshCodeScanSettingStatus(ctx context.Context, projectID, gi
 }
 
 func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	// Check if there are unknown statuses (Total != sum of known statuses)
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		// Unknown statuses exist - treat as UNKNOWN to avoid optimistic status
-		return code.Status_UNKNOWN
-	}
 	switch {
 	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
-	case summary.InProgressCount > 0:
+	case summary != nil && summary.InProgressCount > 0:
 		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary != nil && summary.ErrorCount > 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
 	default:
 		return code.Status_OK
 	}
@@ -1713,20 +1676,18 @@ func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, currentParent
 		return existingStatusDetail, nil
 	case code.Status_OK:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	case code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:
