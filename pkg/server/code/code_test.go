@@ -1925,9 +1925,17 @@ func TestInvokeScan(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
+			if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertGitleaksRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.GitleaksRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeGitleaksRepository{}, nil).Once()
+			}
 			if c.mockRefreshGitleaksError != nil {
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshGitleaksError).Once()
-			} else if !c.wantErr && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+			} else if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanGitleaks(ctx, c.input)
@@ -2310,9 +2318,17 @@ func TestInvokeScanDependency(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
+			if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertDependencyRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.DependencyRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeDependencyRepository{}, nil).Once()
+			}
 			if c.mockRefreshDependencyError != nil {
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshDependencyError).Once()
-			} else if !c.wantErr && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+			} else if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanDependency(ctx, c.input)
@@ -2722,6 +2738,7 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
 			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetDependencyResponse != nil || c.mockGetDependencyError != nil {
@@ -2735,6 +2752,7 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
