@@ -2768,6 +2768,7 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
 				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
 			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetCodeScanError == nil && c.mockGetCodeScanResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeCodeScanRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
 				mockDB.On("RefreshCodeScanSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 
@@ -2783,6 +2784,175 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
+	repositories := []*ghub.Repository{
+		{Name: ghub.String("repo-1"), FullName: ghub.String("owner/repo-1"), Visibility: ghub.String("public")},
+		{Name: ghub.String("repo-2"), FullName: ghub.String("owner/repo-2"), Visibility: ghub.String("public")},
+	}
+	setting := &model.CodeCodeScanSetting{
+		CodeGitHubSettingID: 1,
+		CodeDataSourceID:    1,
+		ProjectID:           1,
+		ScanPublic:          true,
+	}
+	githubSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		Type:                "ORGANIZATION",
+		TargetResource:      "owner",
+	}
+
+	cases := []struct {
+		name              string
+		initializeErr     error
+		sendErrors        map[int]error
+		wantErr           bool
+		wantSendCount     int
+		wantFailedRepo    string
+		wantRefreshCalled bool
+		wantErrNotContain string
+	}{
+		{
+			name:              "OK initializes all repositories before sending",
+			wantSendCount:     2,
+			wantRefreshCalled: true,
+		},
+		{
+			name:              "NG initialization failure does not send",
+			initializeErr:     errors.New("DB error"),
+			wantErr:           true,
+			wantErrNotContain: "DB error",
+		},
+		{
+			name:              "OK partial send failure marks repository error without retrying successful sends",
+			sendErrors:        map[int]error{0: errors.New("SQS error")},
+			wantSendCount:     2,
+			wantFailedRepo:    "owner/repo-1",
+			wantRefreshCalled: true,
+			wantErrNotContain: "SQS error",
+		},
+		{
+			name:              "NG all sends fail",
+			sendErrors:        map[int]error{0: errors.New("first SQS error"), 1: errors.New("second SQS error")},
+			wantErr:           true,
+			wantSendCount:     2,
+			wantFailedRepo:    "owner/repo-1",
+			wantRefreshCalled: true,
+			wantErrNotContain: "owner/repo-1",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mocks.NewCodeRepoInterface(t)
+			initialized := false
+			queue := &sequencedCodeQueue{sendErrors: c.sendErrors, initialized: &initialized}
+			svc := CodeService{
+				repository:           mockDB,
+				sqs:                  queue,
+				logger:               logging.NewLogger(),
+				githubClient:         newFakeGithubClient(repositories, nil),
+				codeCodeScanQueueURL: "codescan",
+			}
+
+			mockDB.On("GetCodeScanSetting", mock.Anything, uint32(1), uint32(1)).Return(setting, nil).Twice()
+			mockDB.On("GetGitHubSetting", mock.Anything, uint32(1), uint32(1)).Return(githubSetting, nil).Once()
+			mockDB.On(
+				"InitializeCodeScanRepositories",
+				mock.Anything,
+				uint32(1),
+				uint32(1),
+				[]string{"owner/repo-1", "owner/repo-2"},
+				mock.AnythingOfType("time.Time"),
+			).Run(func(_ mock.Arguments) {
+				if c.initializeErr == nil {
+					initialized = true
+				}
+			}).Return(c.initializeErr).Once()
+
+			if c.wantFailedRepo != "" {
+				mockDB.On("UpsertCodeScanRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.CodeScanRepositoryForUpsert) bool {
+					return data.Status == code.Status_ERROR
+				})).Return(&model.CodeCodeScanRepository{}, nil)
+			}
+			if c.wantRefreshCalled {
+				mockDB.On("RefreshCodeScanSettingStatus", mock.Anything, uint32(1), uint32(1), (*time.Time)(nil)).Return(nil).Once()
+			}
+
+			_, err := svc.InvokeScanCodeScan(context.Background(), &code.InvokeScanCodeScanRequest{
+				ProjectId:       1,
+				GithubSettingId: 1,
+			})
+			if c.wantErr && err == nil {
+				t.Fatal("Expected error but got nil")
+			}
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err != nil && c.wantErrNotContain != "" && strings.Contains(err.Error(), c.wantErrNotContain) {
+				t.Fatalf("Error contains internal detail %q: %v", c.wantErrNotContain, err)
+			}
+			if queue.sendCount != c.wantSendCount {
+				t.Fatalf("Unexpected send count: want=%d, got=%d", c.wantSendCount, queue.sendCount)
+			}
+		})
+	}
+}
+
+func TestInvokeScanCodeScanRejectsEmptyRepositoryFullName(t *testing.T) {
+	mockDB := mocks.NewCodeRepoInterface(t)
+	setting := &model.CodeCodeScanSetting{
+		CodeGitHubSettingID: 1,
+		CodeDataSourceID:    1,
+		ProjectID:           1,
+		ScanPublic:          true,
+	}
+	githubSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		Type:                "ORGANIZATION",
+		TargetResource:      "owner",
+	}
+	mockDB.On("GetCodeScanSetting", mock.Anything, uint32(1), uint32(1)).Return(setting, nil).Twice()
+	mockDB.On("GetGitHubSetting", mock.Anything, uint32(1), uint32(1)).Return(githubSetting, nil).Once()
+
+	svc := CodeService{
+		repository: mockDB,
+		sqs:        &sequencedCodeQueue{},
+		logger:     logging.NewLogger(),
+		githubClient: newFakeGithubClient([]*ghub.Repository{
+			{Name: ghub.String("repo"), Visibility: ghub.String("public")},
+		}, nil),
+	}
+
+	_, err := svc.InvokeScanCodeScan(context.Background(), &code.InvokeScanCodeScanRequest{
+		ProjectId:       1,
+		GithubSettingId: 1,
+	})
+	if err == nil {
+		t.Fatal("Expected error but got nil")
+	}
+}
+
+type sequencedCodeQueue struct {
+	sendCount   int
+	sendErrors  map[int]error
+	initialized *bool
+}
+
+func (q *sequencedCodeQueue) Send(_ context.Context, _ string, _ interface{}) (*sqs.SendMessageOutput, error) {
+	index := q.sendCount
+	q.sendCount++
+	if q.initialized != nil && !*q.initialized {
+		return nil, errors.New("repository statuses were not initialized before sending")
+	}
+	if err := q.sendErrors[index]; err != nil {
+		return nil, err
+	}
+	messageID := fmt.Sprintf("message-%d", index)
+	return &sqs.SendMessageOutput{MessageId: &messageID}, nil
 }
 
 type FakeCodeQueue struct {

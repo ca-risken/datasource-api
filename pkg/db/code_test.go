@@ -1461,6 +1461,134 @@ func TestUpsertDependencySetting(t *testing.T) {
 	}
 }
 
+func TestInitializeCodeScanRepositories(t *testing.T) {
+	scanAt := time.Now()
+
+	type args struct {
+		projectID          uint32
+		githubSettingID    uint32
+		repositoryFullName []string
+	}
+	cases := []struct {
+		name        string
+		args        args
+		wantErr     bool
+		mockClosure func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name: "OK",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo-1", "owner/repo-2"},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo-1", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo-2", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
+					WithArgs("IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(0, 1))
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name: "OK empty repositories",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: nil,
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {},
+		},
+		{
+			name: "NG repository upsert error rolls back",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnError(errors.New("DB error"))
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name: "NG github setting does not belong to project",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			wantErr: true,
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name: "OK parent update affects no rows",
+			args: args{
+				projectID:          1,
+				githubSettingID:    2,
+				repositoryFullName: []string{"owner/repo"},
+			},
+			mockClosure: func(mock sqlmock.Sqlmock) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+					WithArgs(uint32(1), uint32(2)).
+					WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
+					WithArgs("IN_PROGRESS", codeScanStatusDetailInProgress, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+				mock.ExpectCommit()
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ctx := context.Background()
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("Unexpected DB mock error: %+v", err)
+			}
+			c.mockClosure(mock)
+
+			err = db.InitializeCodeScanRepositories(ctx, c.args.projectID, c.args.githubSettingID, c.args.repositoryFullName, scanAt)
+			if c.wantErr && err == nil {
+				t.Fatal("Expected error but got nil")
+			}
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestUpsertCodeScanRepository(t *testing.T) {
 	now := time.Now()
 	summaryColumns := []string{"total", "ok_count", "in_progress_count", "configured_count", "error_count"}
@@ -1502,6 +1630,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "OK", "done", time.Unix(now.Unix(), 0), uint32(1), uint32(1)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
@@ -1520,14 +1649,13 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			},
 		},
 		{
-			name: "NG summary query error",
+			name: "NG summary query error after IN_PROGRESS detail update",
 			args: args{
 				projectID: 1,
 				data: &code.CodeScanRepositoryForUpsert{
 					GithubSettingId:    1,
 					RepositoryFullName: "owner/repo",
-					Status:             code.Status_OK,
-					StatusDetail:       "done",
+					Status:             code.Status_IN_PROGRESS,
 					ScanAt:             now.Unix(),
 				},
 			},
@@ -1535,6 +1663,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", codeScanStatusDetailInProgress, time.Unix(now.Unix(), 0), uint32(1), uint32(1)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnError(errors.New("DB error"))

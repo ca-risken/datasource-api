@@ -69,6 +69,7 @@ type CodeRepoInterface interface {
 	// code_codescan_repository
 	ListCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeCodeScanRepository, error)
 	GetCodeScanRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeCodeScanRepository, error)
+	InitializeCodeScanRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertCodeScanRepository(ctx context.Context, projectID uint32, data *code.CodeScanRepositoryForUpsert) (*model.CodeCodeScanRepository, error)
 	RefreshCodeScanSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteCodeScanRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -1348,12 +1349,29 @@ INSERT INTO code_codescan_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
 ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
   scan_at=VALUES(scan_at)
 `
+
+const selectExistsGitHubSetting = `
+SELECT EXISTS(
+  SELECT 1
+  FROM code_github_setting
+  WHERE project_id = ? AND code_github_setting_id = ?
+)
+`
+
+const codeScanStatusDetailInProgress = "Scanning in progress..."
 
 const selectCodeScanRepositoryStatusSummary = `
 SELECT
@@ -1373,6 +1391,53 @@ SET status = ?, status_detail = ?, scan_at = COALESCE(?, scan_at), updated_at = 
 WHERE project_id = ? AND code_github_setting_id = ?
 `
 
+func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				upsertCodeScanRepository,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				codeScanStatusDetailInProgress,
+				scanAt,
+				projectID,
+				githubSettingID,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize code scan repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateCodeScanSettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			codeScanStatusDetailInProgress,
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize code scan setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			c.logger.Warnf(ctx, "InitializeCodeScanRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
+		}
+		return nil
+	})
+}
+
 type codeScanRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
@@ -1386,14 +1451,19 @@ func (c *Client) UpsertCodeScanRepository(ctx context.Context, projectID uint32,
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertCodeScanRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
