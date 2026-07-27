@@ -1356,6 +1356,28 @@ ON DUPLICATE KEY UPDATE
   scan_at=VALUES(scan_at)
 `
 
+const initializeCodeScanRepository = `
+INSERT INTO code_codescan_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
 const selectCodeScanRepositoryStatusSummary = `
 SELECT
   COUNT(*) AS total,
@@ -1382,12 +1404,13 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for _, repositoryFullName := range repositoryFullNames {
 			if err := tx.Exec(
-				upsertCodeScanRepository,
-				githubSettingID,
+				initializeCodeScanRepository,
 				repositoryFullName,
 				code.Status_IN_PROGRESS.String(),
 				nil,
 				scanAt,
+				projectID,
+				githubSettingID,
 			).Error; err != nil {
 				return fmt.Errorf("failed to initialize code scan repository %s: %w", repositoryFullName, err)
 			}

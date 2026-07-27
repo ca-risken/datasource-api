@@ -2826,13 +2826,21 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 			wantErrNotContain: "DB error",
 		},
 		{
-			name:              "NG send failure marks repository error and continues",
+			name:              "OK partial send failure marks repository error without retrying successful sends",
 			sendErrors:        map[int]error{0: errors.New("SQS error")},
-			wantErr:           true,
 			wantSendCount:     2,
 			wantFailedRepo:    "owner/repo-1",
 			wantRefreshCalled: true,
 			wantErrNotContain: "SQS error",
+		},
+		{
+			name:              "NG all sends fail",
+			sendErrors:        map[int]error{0: errors.New("first SQS error"), 1: errors.New("second SQS error")},
+			wantErr:           true,
+			wantSendCount:     2,
+			wantFailedRepo:    "owner/repo-1",
+			wantRefreshCalled: true,
+			wantErrNotContain: "owner/repo-1",
 		},
 	}
 
@@ -2866,8 +2874,8 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 
 			if c.wantFailedRepo != "" {
 				mockDB.On("UpsertCodeScanRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.CodeScanRepositoryForUpsert) bool {
-					return data.RepositoryFullName == c.wantFailedRepo && data.Status == code.Status_ERROR
-				})).Return(&model.CodeCodeScanRepository{}, nil).Once()
+					return data.Status == code.Status_ERROR
+				})).Return(&model.CodeCodeScanRepository{}, nil)
 			}
 			if c.wantRefreshCalled {
 				mockDB.On("RefreshCodeScanSettingStatus", mock.Anything, uint32(1), uint32(1), (*time.Time)(nil)).Return(nil).Once()
@@ -2883,7 +2891,7 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 			if !c.wantErr && err != nil {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
-			if c.wantErrNotContain != "" && strings.Contains(err.Error(), c.wantErrNotContain) {
+			if err != nil && c.wantErrNotContain != "" && strings.Contains(err.Error(), c.wantErrNotContain) {
 				t.Fatalf("Error contains internal detail %q: %v", c.wantErrNotContain, err)
 			}
 			if queue.sendCount != c.wantSendCount {

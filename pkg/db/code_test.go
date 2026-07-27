@@ -1484,11 +1484,11 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs(uint32(2), "owner/repo-1", "IN_PROGRESS", nil, scanAt).
+				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+					WithArgs("owner/repo-1", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs(uint32(2), "owner/repo-2", "IN_PROGRESS", nil, scanAt).
+				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+					WithArgs("owner/repo-2", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
@@ -1515,8 +1515,8 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs(uint32(2), "owner/repo", "IN_PROGRESS", nil, scanAt).
+				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnError(errors.New("DB error"))
 				mock.ExpectRollback()
 			},
@@ -1530,8 +1530,8 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 			},
 			mockClosure: func(mock sqlmock.Sqlmock) {
 				mock.ExpectBegin()
-				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
-					WithArgs(uint32(2), "owner/repo", "IN_PROGRESS", nil, scanAt).
+				mock.ExpectExec(regexp.QuoteMeta(initializeCodeScanRepository)).
+					WithArgs("owner/repo", "IN_PROGRESS", nil, scanAt, uint32(1), uint32(2)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectExec(regexp.QuoteMeta(updateCodeScanSettingStatusByRepo)).
 					WithArgs("IN_PROGRESS", "Scanning in progress...", scanAt, uint32(1), uint32(2)).
