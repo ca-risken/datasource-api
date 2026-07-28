@@ -43,6 +43,7 @@ type CodeRepoInterface interface {
 	// code_gitleaks_repository
 	ListGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitleaksRepository, error)
 	GetGitleaksRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeGitleaksRepository, error)
+	InitializeGitleaksRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error)
 	RefreshGitleaksSettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteGitleaksRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -56,6 +57,7 @@ type CodeRepoInterface interface {
 	// code_dependency_repository
 	ListDependencyRepository(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeDependencyRepository, error)
 	GetDependencyRepository(ctx context.Context, projectID, githubSettingID uint32, repositoryFullName string, immediately bool) (*model.CodeDependencyRepository, error)
+	InitializeDependencyRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error
 	UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error)
 	RefreshDependencySettingStatus(ctx context.Context, projectID, githubSettingID uint32, scanAt *time.Time) error
 	DeleteDependencyRepository(ctx context.Context, projectID uint32, githubSettingID uint32) error
@@ -685,7 +687,36 @@ INSERT INTO code_gitleaks_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const initializeGitleaksRepository = `
+INSERT INTO code_gitleaks_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
 ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
@@ -697,7 +728,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_gitleaks_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -713,9 +743,55 @@ WHERE project_id = ? AND code_github_setting_id = ?
 type gitleaksRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) InitializeGitleaksRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				initializeGitleaksRepository,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				codeScanStatusDetailInProgress,
+				scanAt,
+				projectID,
+				githubSettingID,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize gitleaks repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateGitleaksSettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			codeScanStatusDetailInProgress,
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize gitleaks setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			c.logger.Warnf(ctx, "InitializeGitleaksRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
+		}
+		return nil
+	})
 }
 
 func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32, data *code.GitleaksRepositoryForUpsert) (*model.CodeGitleaksRepository, error) {
@@ -723,14 +799,19 @@ func (c *Client) UpsertGitleaksRepository(ctx context.Context, projectID uint32,
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertGitleaksRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
@@ -801,20 +882,15 @@ func (c *Client) RefreshGitleaksSettingStatus(ctx context.Context, projectID, gi
 }
 
 func determineGitleaksSettingStatus(summary *gitleaksRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		return code.Status_UNKNOWN
-	}
 	switch {
-	case summary.InProgressCount > 0:
-		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary == nil || summary.Total == 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
+	case summary != nil && summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
+		return code.Status_ERROR
 	default:
 		return code.Status_OK
 	}
@@ -827,16 +903,15 @@ func buildGitleaksStatusDetail(summary *gitleaksRepoStatusSummary, currentParent
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Gitleaks scan in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:
@@ -972,7 +1047,36 @@ INSERT INTO code_dependency_repository (
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
+ON DUPLICATE KEY UPDATE
+  status=VALUES(status),
+  status_detail=VALUES(status_detail),
+  scan_at=VALUES(scan_at)
+`
+
+const initializeDependencyRepository = `
+INSERT INTO code_dependency_repository (
+  code_github_setting_id,
+  repository_full_name,
+  status,
+  status_detail,
+  scan_at
+)
+SELECT
+  code_github_setting_id,
+  ?,
+  ?,
+  ?,
+  ?
+FROM code_github_setting
+WHERE project_id = ? AND code_github_setting_id = ?
 ON DUPLICATE KEY UPDATE
   status=VALUES(status),
   status_detail=VALUES(status_detail),
@@ -984,7 +1088,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_dependency_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -1000,9 +1103,55 @@ WHERE project_id = ? AND code_github_setting_id = ?
 type dependencyRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
+}
+
+func (c *Client) InitializeDependencyRepositories(ctx context.Context, projectID, githubSettingID uint32, repositoryFullNames []string, scanAt time.Time) error {
+	if len(repositoryFullNames) == 0 {
+		return nil
+	}
+
+	return c.MasterDB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var exists bool
+		if err := tx.Raw(selectExistsGitHubSetting, projectID, githubSettingID).Scan(&exists).Error; err != nil {
+			return fmt.Errorf("failed to verify github setting: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("github setting not found: project_id=%d, github_setting_id=%d", projectID, githubSettingID)
+		}
+
+		for _, repositoryFullName := range repositoryFullNames {
+			if err := tx.Exec(
+				initializeDependencyRepository,
+				repositoryFullName,
+				code.Status_IN_PROGRESS.String(),
+				codeScanStatusDetailInProgress,
+				scanAt,
+				projectID,
+				githubSettingID,
+			).Error; err != nil {
+				return fmt.Errorf("failed to initialize dependency repository %s: %w", repositoryFullName, err)
+			}
+		}
+
+		result := tx.Exec(
+			updateDependencySettingStatusByRepo,
+			code.Status_IN_PROGRESS.String(),
+			codeScanStatusDetailInProgress,
+			scanAt,
+			projectID,
+			githubSettingID,
+		)
+		if result.Error != nil {
+			return fmt.Errorf("failed to initialize dependency setting status: %w", result.Error)
+		}
+		if result.RowsAffected == 0 {
+			c.logger.Warnf(ctx, "InitializeDependencyRepositories: parent table status update affected 0 rows (project_id=%d, github_setting_id=%d).",
+				projectID, githubSettingID)
+		}
+		return nil
+	})
 }
 
 func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint32, data *code.DependencyRepositoryForUpsert) (*model.CodeDependencyRepository, error) {
@@ -1010,14 +1159,19 @@ func (c *Client) UpsertDependencyRepository(ctx context.Context, projectID uint3
 	if data.ScanAt == 0 {
 		scanAt = time.Now()
 	}
+	statusDetail := data.StatusDetail
+	if data.Status == code.Status_IN_PROGRESS {
+		statusDetail = codeScanStatusDetailInProgress
+	}
 
 	if err := c.MasterDB.WithContext(ctx).Exec(
 		upsertDependencyRepository,
-		data.GithubSettingId,
 		data.RepositoryFullName,
 		data.Status.String(),
-		convertZeroValueToNull(data.StatusDetail),
+		convertZeroValueToNull(statusDetail),
 		scanAt,
+		projectID,
+		data.GithubSettingId,
 	).Error; err != nil {
 		return nil, err
 	}
@@ -1088,20 +1242,15 @@ func (c *Client) RefreshDependencySettingStatus(ctx context.Context, projectID, 
 }
 
 func determineDependencySettingStatus(summary *dependencyRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		return code.Status_UNKNOWN
-	}
 	switch {
-	case summary.InProgressCount > 0:
-		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary == nil || summary.Total == 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
+	case summary != nil && summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
+		return code.Status_ERROR
 	default:
 		return code.Status_OK
 	}
@@ -1114,16 +1263,15 @@ func buildDependencyStatusDetail(summary *dependencyRepoStatusSummary, currentPa
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Dependency scan in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK, code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:
@@ -1378,7 +1526,6 @@ SELECT
   COUNT(*) AS total,
   COALESCE(SUM(CASE WHEN repo.status = 'OK' THEN 1 ELSE 0 END), 0) AS ok_count,
   COALESCE(SUM(CASE WHEN repo.status = 'IN_PROGRESS' THEN 1 ELSE 0 END), 0) AS in_progress_count,
-  COALESCE(SUM(CASE WHEN repo.status = 'CONFIGURED' THEN 1 ELSE 0 END), 0) AS configured_count,
   COALESCE(SUM(CASE WHEN repo.status = 'ERROR' THEN 1 ELSE 0 END), 0) AS error_count
 FROM code_codescan_repository repo
 INNER JOIN code_github_setting github USING(code_github_setting_id)
@@ -1441,7 +1588,6 @@ func (c *Client) InitializeCodeScanRepositories(ctx context.Context, projectID, 
 type codeScanRepoStatusSummary struct {
 	Total           int64 `gorm:"column:total"`
 	OkCount         int64 `gorm:"column:ok_count"`
-	ConfiguredCount int64 `gorm:"column:configured_count"`
 	InProgressCount int64 `gorm:"column:in_progress_count"`
 	ErrorCount      int64 `gorm:"column:error_count"`
 }
@@ -1534,23 +1680,16 @@ func (c *Client) RefreshCodeScanSettingStatus(ctx context.Context, projectID, gi
 }
 
 func determineCodeScanSettingStatus(summary *codeScanRepoStatusSummary) code.Status {
-	if summary == nil || summary.Total == 0 {
-		return code.Status_UNKNOWN
-	}
-	// Check if there are unknown statuses (Total != sum of known statuses)
-	knownStatusCount := summary.OkCount + summary.InProgressCount + summary.ConfiguredCount + summary.ErrorCount
-	if knownStatusCount != summary.Total {
-		// Unknown statuses exist - treat as UNKNOWN to avoid optimistic status
-		return code.Status_UNKNOWN
-	}
 	switch {
-	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
-	case summary.InProgressCount > 0:
-		return code.Status_IN_PROGRESS
-	case summary.ErrorCount > 0:
+	case summary == nil || summary.Total == 0:
 		return code.Status_ERROR
-	case summary.ConfiguredCount == summary.Total:
-		return code.Status_CONFIGURED
+	// IN_PROGRESS has highest priority - if any repository is in progress, show IN_PROGRESS even if there are errors
+	case summary != nil && summary.InProgressCount > 0:
+		return code.Status_IN_PROGRESS
+	case summary != nil && summary.ErrorCount > 0:
+		return code.Status_ERROR
+	case summary.OkCount != summary.Total:
+		return code.Status_ERROR
 	default:
 		return code.Status_OK
 	}
@@ -1564,25 +1703,23 @@ func buildCodeScanStatusDetail(summary *codeScanRepoStatusSummary, currentParent
 	switch currentParentStatus {
 	case code.Status_IN_PROGRESS:
 		if existingStatusDetail == "" {
-			return "Scanning in progress...", nil
+			return codeScanStatusDetailInProgress, nil
 		}
 		return existingStatusDetail, nil
 	case code.Status_OK:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	case code.Status_ERROR:
 		return fmt.Sprintf(
-			"Repository summary: total=%d, ok=%d, in_progress=%d, configured=%d, error=%d",
+			"Repository summary: total=%d, ok=%d, in_progress=%d, error=%d",
 			summary.Total,
 			summary.OkCount,
 			summary.InProgressCount,
-			summary.ConfiguredCount,
 			summary.ErrorCount,
 		), nil
 	default:

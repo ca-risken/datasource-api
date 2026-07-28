@@ -1461,6 +1461,66 @@ func TestUpsertDependencySetting(t *testing.T) {
 	}
 }
 
+func TestInitializeGitleaksAndDependencyRepositories(t *testing.T) {
+	scanAt := time.Now()
+
+	cases := []struct {
+		name            string
+		repositoryQuery string
+		parentQuery     string
+		statusDetail    string
+		initialize      func(*Client) error
+	}{
+		{
+			name:            "Gitleaks",
+			repositoryQuery: initializeGitleaksRepository,
+			parentQuery:     updateGitleaksSettingStatusByRepo,
+			statusDetail:    codeScanStatusDetailInProgress,
+			initialize: func(db *Client) error {
+				return db.InitializeGitleaksRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
+			},
+		},
+		{
+			name:            "Dependency",
+			repositoryQuery: initializeDependencyRepository,
+			parentQuery:     updateDependencySettingStatusByRepo,
+			statusDetail:    codeScanStatusDetailInProgress,
+			initialize: func(db *Client) error {
+				return db.InitializeDependencyRepositories(context.Background(), 1, 2, []string{"owner/repo-1", "owner/repo-2"}, scanAt)
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			db, mock, err := newDBMock()
+			if err != nil {
+				t.Fatalf("Unexpected DB mock error: %+v", err)
+			}
+			mock.ExpectBegin()
+			mock.ExpectQuery(regexp.QuoteMeta(selectExistsGitHubSetting)).
+				WithArgs(uint32(1), uint32(2)).
+				WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
+			for _, repositoryName := range []string{"owner/repo-1", "owner/repo-2"} {
+				mock.ExpectExec(regexp.QuoteMeta(c.repositoryQuery)).
+					WithArgs(repositoryName, "IN_PROGRESS", c.statusDetail, scanAt, uint32(1), uint32(2)).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+			}
+			mock.ExpectExec(regexp.QuoteMeta(c.parentQuery)).
+				WithArgs("IN_PROGRESS", c.statusDetail, scanAt, uint32(1), uint32(2)).
+				WillReturnResult(sqlmock.NewResult(0, 1))
+			mock.ExpectCommit()
+
+			if err := c.initialize(db); err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestInitializeCodeScanRepositories(t *testing.T) {
 	scanAt := time.Now()
 
@@ -1589,9 +1649,78 @@ func TestInitializeCodeScanRepositories(t *testing.T) {
 	}
 }
 
+func TestDetermineRepositoryAggregatedStatus(t *testing.T) {
+	cases := []struct {
+		name       string
+		total      int64
+		ok         int64
+		inProgress int64
+		errors     int64
+		want       code.Status
+	}{
+		{name: "IN_PROGRESS takes priority", total: 2, inProgress: 1, errors: 1, want: code.Status_IN_PROGRESS},
+		{name: "ERROR when no repository is running", total: 1, errors: 1, want: code.Status_ERROR},
+		{name: "OK when all repositories completed", total: 1, ok: 1, want: code.Status_OK},
+		{name: "ERROR when no repository exists", want: code.Status_ERROR},
+		{name: "ERROR when an unexpected status exists", total: 2, ok: 1, want: code.Status_ERROR},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := determineGitleaksSettingStatus(&gitleaksRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected gitleaks status: want=%s, got=%s", c.want, got)
+			}
+			if got := determineDependencySettingStatus(&dependencyRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected dependency status: want=%s, got=%s", c.want, got)
+			}
+			if got := determineCodeScanSettingStatus(&codeScanRepoStatusSummary{Total: c.total, OkCount: c.ok, InProgressCount: c.inProgress, ErrorCount: c.errors}); got != c.want {
+				t.Errorf("Unexpected code scan status: want=%s, got=%s", c.want, got)
+			}
+		})
+	}
+}
+
+func TestBuildRepositoryInProgressStatusDetail(t *testing.T) {
+	cases := []struct {
+		name  string
+		build func() (string, error)
+	}{
+		{
+			name: "Gitleaks",
+			build: func() (string, error) {
+				return buildGitleaksStatusDetail(&gitleaksRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+		{
+			name: "Dependency",
+			build: func() (string, error) {
+				return buildDependencyStatusDetail(&dependencyRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+		{
+			name: "CodeScan",
+			build: func() (string, error) {
+				return buildCodeScanStatusDetail(&codeScanRepoStatusSummary{}, code.Status_IN_PROGRESS, "")
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := c.build()
+			if err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if got != codeScanStatusDetailInProgress {
+				t.Errorf("Unexpected status detail: want=%q, got=%q", codeScanStatusDetailInProgress, got)
+			}
+		})
+	}
+}
+
 func TestUpsertCodeScanRepository(t *testing.T) {
 	now := time.Now()
-	summaryColumns := []string{"total", "ok_count", "in_progress_count", "configured_count", "error_count"}
+	summaryColumns := []string{"total", "ok_count", "in_progress_count", "error_count"}
 
 	type args struct {
 		projectID uint32
@@ -1634,7 +1763,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
@@ -1688,7 +1817,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 					WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
 					WillReturnRows(sqlmock.NewRows([]string{
 						"code_github_setting_id", "code_data_source_id", "project_id", "repository_pattern",
@@ -1726,10 +1855,10 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 				// Step 1: Upsert repository
 				mock.ExpectExec(regexp.QuoteMeta(upsertCodeScanRepository)).
 					WillReturnResult(sqlmock.NewResult(1, 1))
-				// Step 2: Calculate summary
+					// Step 2: Calculate summary
 				mock.ExpectQuery(regexp.QuoteMeta(selectCodeScanRepositoryStatusSummary)).
 					WillReturnRows(sqlmock.NewRows(summaryColumns).
-						AddRow(int64(1), int64(1), int64(0), int64(0), int64(0)))
+						AddRow(int64(1), int64(1), int64(0), int64(0)))
 				// Step 3: Check current parent - status and status_detail are same, so skip full UPDATE but refresh scan_at
 				parentScanAt := time.Unix(now.Unix(), 0)
 				mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_codescan_setting` WHERE project_id = ? AND code_github_setting_id = ? ORDER BY `code_codescan_setting`.`code_github_setting_id` LIMIT 1")).
@@ -1739,7 +1868,7 @@ func TestUpsertCodeScanRepository(t *testing.T) {
 						"status", "status_detail", "scan_at", "error_notified_at", "created_at", "updated_at",
 					}).AddRow(uint32(1), uint32(1), uint32(1), "pattern", true, true, true,
 						"OK",
-						"Repository summary: total=1, ok=1, in_progress=0, configured=0, error=0",
+						"Repository summary: total=1, ok=1, in_progress=0, error=0",
 						parentScanAt, nil, now, now))
 				// Step 4: Get repository
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeScanRepository)).

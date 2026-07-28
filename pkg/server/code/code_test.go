@@ -1862,6 +1862,16 @@ func TestInvokeScan(t *testing.T) {
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
 		},
 		{
+			name:  "OK missing message ID",
+			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
+			mockQueue:                    &FakeCodeQueue{resp: &sqs.SendMessageOutput{}},
+		},
+		{
 			name:    "NG invalid param",
 			input:   &code.InvokeScanGitleaksRequest{ProjectId: 1},
 			wantErr: true,
@@ -1925,9 +1935,17 @@ func TestInvokeScan(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
+			if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertGitleaksRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.GitleaksRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeGitleaksRepository{}, nil).Once()
+			}
 			if c.mockRefreshGitleaksError != nil {
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshGitleaksError).Once()
-			} else if !c.wantErr && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+			} else if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanGitleaks(ctx, c.input)
@@ -2246,6 +2264,16 @@ func TestInvokeScanDependency(t *testing.T) {
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
 		},
 		{
+			name:  "OK missing message ID",
+			input: &code.InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
+			mockQueue:                    &FakeCodeQueue{resp: &sqs.SendMessageOutput{}},
+		},
+		{
 			name:    "NG invalid param",
 			input:   &code.InvokeScanDependencyRequest{ProjectId: 1},
 			wantErr: true,
@@ -2310,9 +2338,17 @@ func TestInvokeScanDependency(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
+			if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertDependencyRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.DependencyRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeDependencyRepository{}, nil).Once()
+			}
 			if c.mockRefreshDependencyError != nil {
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshDependencyError).Once()
-			} else if !c.wantErr && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+			} else if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanDependency(ctx, c.input)
@@ -2722,6 +2758,7 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
 			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
 				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetDependencyResponse != nil || c.mockGetDependencyError != nil {
@@ -2735,6 +2772,7 @@ func TestInvokeScanAll(t *testing.T) {
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
 			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
 				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
@@ -2808,6 +2846,7 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 		name              string
 		initializeErr     error
 		sendErrors        map[int]error
+		missingMessageIDs map[int]bool
 		wantErr           bool
 		wantSendCount     int
 		wantFailedRepo    string
@@ -2816,6 +2855,12 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 	}{
 		{
 			name:              "OK initializes all repositories before sending",
+			wantSendCount:     2,
+			wantRefreshCalled: true,
+		},
+		{
+			name:              "OK missing message ID is treated as sent",
+			missingMessageIDs: map[int]bool{0: true},
 			wantSendCount:     2,
 			wantRefreshCalled: true,
 		},
@@ -2848,7 +2893,7 @@ func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
 			initialized := false
-			queue := &sequencedCodeQueue{sendErrors: c.sendErrors, initialized: &initialized}
+			queue := &sequencedCodeQueue{sendErrors: c.sendErrors, missingMessageIDs: c.missingMessageIDs, initialized: &initialized}
 			svc := CodeService{
 				repository:           mockDB,
 				sqs:                  queue,
@@ -2937,9 +2982,10 @@ func TestInvokeScanCodeScanRejectsEmptyRepositoryFullName(t *testing.T) {
 }
 
 type sequencedCodeQueue struct {
-	sendCount   int
-	sendErrors  map[int]error
-	initialized *bool
+	sendCount         int
+	sendErrors        map[int]error
+	missingMessageIDs map[int]bool
+	initialized       *bool
 }
 
 func (q *sequencedCodeQueue) Send(_ context.Context, _ string, _ interface{}) (*sqs.SendMessageOutput, error) {
@@ -2950,6 +2996,9 @@ func (q *sequencedCodeQueue) Send(_ context.Context, _ string, _ interface{}) (*
 	}
 	if err := q.sendErrors[index]; err != nil {
 		return nil, err
+	}
+	if q.missingMessageIDs[index] {
+		return &sqs.SendMessageOutput{}, nil
 	}
 	messageID := fmt.Sprintf("message-%d", index)
 	return &sqs.SendMessageOutput{MessageId: &messageID}, nil
