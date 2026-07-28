@@ -1,6 +1,6 @@
 module github.com/ca-risken/datasource-api
 
-go 1.23.0
+go 1.23.3
 
 toolchain go1.24.2
 
@@ -32,7 +32,7 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.8.1-0.20230802005225-c9bcfdb2579c
+	github.com/ca-risken/core v0.16.1-0.20260716080705-ad3c7364c668
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/coocood/freecache v1.2.3
 	github.com/envoyproxy/protoc-gen-validate v0.9.1
@@ -65,8 +65,8 @@ require (
 	cloud.google.com/go/orgpolicy v1.10.0 // indirect
 	cloud.google.com/go/osconfig v1.11.0 // indirect
 	dario.cat/mergo v1.0.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.8.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.17.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.2.2 // indirect
 	github.com/DataDog/appsec-internal-go v1.0.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.45.0-rc.1 // indirect
