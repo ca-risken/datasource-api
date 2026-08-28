@@ -736,6 +736,12 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 		mockGetError      error
 		clientStatus      *code.GitHubAppInstallationStatus
 		clientErr         error
+		mockUpdateError   error
+		mockDeleteError   error
+		wantStatus        string
+		wantDelete        bool
+		installationID    uint64
+		wantInstallStatus string
 		want              *code.GetGitHubAppInstallationStatusResponse
 		wantConfig        *code.GitHubSetting
 		wantErr           bool
@@ -752,6 +758,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientStatus: &code.GitHubAppInstallationStatus{
 				TargetResource:      "target",
@@ -773,6 +780,37 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				BaseUrl:         "https://api.github.com/",
 				TargetResource:  "target",
 				AuthMode:        code.GitHubAuthModeGitHubApp,
+			},
+		},
+		{
+			name: "OK installed after verification failure",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+				VerificationStatus:  code.GitHubVerificationStatusFailed,
+			},
+			clientStatus: &code.GitHubAppInstallationStatus{
+				TargetResource:      "target",
+				Installed:           true,
+				RepositorySelection: "selected",
+			},
+			installationID:    123,
+			wantInstallStatus: code.GitHubVerificationStatusPendingUserVerification,
+			want: &code.GetGitHubAppInstallationStatusResponse{
+				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
+					TargetResource:      "target",
+					Installed:           true,
+					RepositorySelection: "selected",
+					Reason:              code.GitHubAppInstallationReasonInstalled,
+				},
 			},
 		},
 		{
@@ -801,8 +839,11 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
-			clientErr: fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			clientErr:  fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			wantStatus: code.GitHubVerificationStatusFailed,
+			wantDelete: true,
 			want: &code.GetGitHubAppInstallationStatusResponse{
 				GithubAppInstallationStatus: &code.GitHubAppInstallationStatus{
 					TargetResource: "target",
@@ -810,6 +851,45 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 					Reason:         code.GitHubAppInstallationReasonNotInstalled,
 				},
 			},
+		},
+		{
+			name: "NG persist not installed status",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+			},
+			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			mockUpdateError: errors.New("db error"),
+			wantStatus:      code.GitHubVerificationStatusFailed,
+			wantErr:         true,
+		},
+		{
+			name: "NG delete repositories after not installed",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				Type:                code.Type_ORGANIZATION.String(),
+				BaseURL:             "https://api.github.com/",
+				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
+			},
+			clientErr:       fmt.Errorf("find installation: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
+			mockDeleteError: errors.New("db error"),
+			wantStatus:      code.GitHubVerificationStatusFailed,
+			wantDelete:      true,
+			wantErr:         true,
 		},
 		{
 			name: "OK repository check not found is check failed",
@@ -823,6 +903,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr: fmt.Errorf("list github app repositories: %w", &ghub.ErrorResponse{Response: &http.Response{StatusCode: http.StatusNotFound}}),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -845,6 +926,7 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				Type:                code.Type_ORGANIZATION.String(),
 				BaseURL:             "https://api.github.com/",
 				TargetResource:      "target",
+				AuthMode:            code.GitHubAuthModeGitHubApp,
 			},
 			clientErr: errors.New("github api failed"),
 			want: &code.GetGitHubAppInstallationStatusResponse{
@@ -855,6 +937,19 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "NG personal access token auth mode",
+			input: &code.GetGitHubAppInstallationStatusRequest{
+				ProjectId:       1,
+				GithubSettingId: 10,
+			},
+			mockGitHubSetting: &model.CodeGitHubSetting{
+				CodeGitHubSettingID: 10,
+				ProjectID:           1,
+				AuthMode:            code.GitHubAuthModePersonalAccessToken,
+			},
+			wantErr: true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -862,7 +957,16 @@ func TestGetGitHubAppInstallationStatus(t *testing.T) {
 			if c.input.GetProjectId() != 0 && c.input.GetGithubSettingId() != 0 {
 				mockDB.On("GetGitHubSetting", context.Background(), c.input.GetProjectId(), c.input.GetGithubSettingId()).Return(c.mockGitHubSetting, c.mockGetError).Once()
 			}
-			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationStatus: c.clientStatus}
+			if c.wantStatus != "" {
+				mockDB.On("UpdateGitHubAppVerification", mock.Anything, uint32(1), uint32(10), c.wantStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
+			}
+			if c.wantDelete {
+				mockDB.On("DeleteGitHubAppSettingRepository", mock.Anything, uint32(10)).Return(c.mockDeleteError).Once()
+			}
+			if c.wantInstallStatus != "" {
+				mockDB.On("UpdateGitHubAppInstallationVerification", mock.Anything, uint32(1), uint32(10), c.installationID, c.wantInstallStatus, "", mock.AnythingOfType("time.Time")).Return(c.mockGitHubSetting, c.mockUpdateError).Once()
+			}
+			fakeGitHubClient := &FakeGithubClient{err: c.clientErr, installationID: c.installationID, installationStatus: c.clientStatus}
 			svc := CodeService{repository: mockDB, githubClient: fakeGitHubClient, logger: logging.NewLogger()}
 			got, err := svc.GetGitHubAppInstallationStatus(context.Background(), c.input)
 			if !c.wantErr && err != nil {
@@ -1744,8 +1848,7 @@ func TestInvokeScan(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockUpsertGitleaksResponse   *model.CodeGitleaksSetting
-		mockUpsertGitleaksError      error
+		mockRefreshGitleaksError     error
 		wantErr                      bool
 	}{
 		{
@@ -1757,7 +1860,16 @@ func TestInvokeScan(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksResponse:   &model.CodeGitleaksSetting{},
+		},
+		{
+			name:  "OK missing message ID",
+			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
+			mockQueue:                    &FakeCodeQueue{resp: &sqs.SendMessageOutput{}},
 		},
 		{
 			name:    "NG invalid param",
@@ -1782,7 +1894,7 @@ func TestInvokeScan(t *testing.T) {
 			wantErr:                      true,
 		},
 		{
-			name:  "NG NG db error when UpsertGitleaksSetting",
+			name:  "NG db error when RefreshGitleaksSettingStatus",
 			input: &code.InvokeScanGitleaksRequest{ProjectId: 1, GithubSettingId: 1},
 			mockGetGitleaksResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -1790,7 +1902,7 @@ func TestInvokeScan(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{Name: ghub.String("repo"), FullName: ghub.String("owner/repo"), ID: ghub.Int64(1), Visibility: ghub.String("public")}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksError:      gorm.ErrInvalidDB,
+			mockRefreshGitleaksError:     gorm.ErrInvalidDB,
 			wantErr:                      true,
 		},
 	}
@@ -1823,8 +1935,18 @@ func TestInvokeScan(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
-			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
-				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
+			if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertGitleaksRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.GitleaksRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeGitleaksRepository{}, nil).Once()
+			}
+			if c.mockRefreshGitleaksError != nil {
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshGitleaksError).Once()
+			} else if c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanGitleaks(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -2128,8 +2250,7 @@ func TestInvokeScanDependency(t *testing.T) {
 		mockGetGitHubSettingResponse *model.CodeGitHubSetting
 		mockGetGitHubSettingError    error
 		mockGithubClient             *FakeGithubClient
-		mockUpsertDependencyResponse *model.CodeDependencySetting
-		mockUpsertDependencyError    error
+		mockRefreshDependencyError   error
 		wantErr                      bool
 	}{
 		{
@@ -2141,7 +2262,16 @@ func TestInvokeScanDependency(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
+		},
+		{
+			name:  "OK missing message ID",
+			input: &code.InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
+			mockGetDependencyResponse: &model.CodeDependencySetting{
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+			},
+			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
+			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
+			mockQueue:                    &FakeCodeQueue{resp: &sqs.SendMessageOutput{}},
 		},
 		{
 			name:    "NG invalid param",
@@ -2166,7 +2296,7 @@ func TestInvokeScanDependency(t *testing.T) {
 			wantErr:                      true,
 		},
 		{
-			name:  "NG NG db error when UpsertDependencySetting",
+			name:  "NG db error when RefreshDependencySettingStatus",
 			input: &code.InvokeScanDependencyRequest{ProjectId: 1, GithubSettingId: 1},
 			mockGetDependencyResponse: &model.CodeDependencySetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now,
@@ -2174,7 +2304,7 @@ func TestInvokeScanDependency(t *testing.T) {
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockGithubClient:             newFakeGithubClient([]*ghub.Repository{{FullName: ghub.String("owner/repo"), ID: ghub.Int64(1)}}, nil),
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyError:    gorm.ErrInvalidDB,
+			mockRefreshDependencyError:   gorm.ErrInvalidDB,
 			wantErr:                      true,
 		},
 	}
@@ -2208,8 +2338,18 @@ func TestInvokeScanDependency(t *testing.T) {
 					mockDB.On("GetGitHubSetting", test.RepeatMockAnything(3)...).Return(c.mockGetGitHubSettingResponse, c.mockGetGitHubSettingError).Times(callCount)
 				}
 			}
-			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
-				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
+			if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"owner/repo"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+			}
+			if c.name == "NG fail sending queue" {
+				mockDB.On("UpsertDependencyRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.DependencyRepositoryForUpsert) bool {
+					return data.RepositoryFullName == "owner/repo" && data.Status == code.Status_ERROR
+				})).Return(&model.CodeDependencyRepository{}, nil).Once()
+			}
+			if c.mockRefreshDependencyError != nil {
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(c.mockRefreshDependencyError).Once()
+			} else if c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			_, err := svc.InvokeScanDependency(ctx, c.input)
 			if !c.wantErr && err != nil {
@@ -2276,7 +2416,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetGitleaksResponse:      &model.CodeGitleaksSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "", ScanPublic: true, ScanInternal: false, ScanPrivate: false, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertGitleaksResponse:   &model.CodeGitleaksSetting{},
 		},
 		{
 			name:      "OK found gitleaks setting but projectID is zero",
@@ -2309,7 +2448,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetDependencyResponse:    &model.CodeDependencySetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertDependencyResponse: &model.CodeDependencySetting{},
 		},
 		{
 			name:                     "OK found dependency setting but projectID is zero",
@@ -2342,7 +2480,6 @@ func TestInvokeScanAll(t *testing.T) {
 			mockGetCodeScanResponse:      &model.CodeCodeScanSetting{CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, ScanPublic: true, Status: "OK", StatusDetail: "", ScanAt: now, CreatedAt: now, UpdatedAt: now},
 			mockGetGitHubSettingResponse: &model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 1, Type: "ORGANIZATION", TargetResource: "ca-risken", GitHubUser: "user", PersonalAccessToken: "", CreatedAt: now, UpdatedAt: now},
 			mockQueue:                    newFakeCodeQueue("succeed", nil),
-			mockUpsertCodeScanResponse:   &model.CodeCodeScanSetting{},
 		},
 		{
 			name:                       "OK found CodeScan setting but projectID is zero",
@@ -2620,6 +2757,9 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertGitleaksResponse != nil || c.mockUpsertGitleaksError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertGitleaksResponse, c.mockUpsertGitleaksError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetGitleaksError == nil && c.mockGetGitleaksResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeGitleaksRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+				mockDB.On("RefreshGitleaksSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetDependencyResponse != nil || c.mockGetDependencyError != nil {
 				callCount := 1
@@ -2631,6 +2771,9 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertDependencyResponse != nil || c.mockUpsertDependencyError != nil {
 				mockDB.On("UpsertDependencySetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertDependencyResponse, c.mockUpsertDependencyError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetDependencyError == nil && c.mockGetDependencyResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeDependencyRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+				mockDB.On("RefreshDependencySettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 			if c.mockGetCodeScanResponse != nil || c.mockGetCodeScanError != nil {
 				// GetCodeScanSetting is called twice: once in InvokeScanCodeScan and once in listCodescanTargetRepository.
@@ -2662,6 +2805,9 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 			if c.mockUpsertCodeScanResponse != nil || c.mockUpsertCodeScanError != nil {
 				mockDB.On("UpsertCodeScanSetting", test.RepeatMockAnything(2)...).Return(c.mockUpsertCodeScanResponse, c.mockUpsertCodeScanError).Once()
+			} else if active := c.mockIsActiveResponse == nil || c.mockIsActiveResponse.Active; active && c.mockGetCodeScanError == nil && c.mockGetCodeScanResponse != nil && c.mockQueue != nil {
+				mockDB.On("InitializeCodeScanRepositories", mock.Anything, uint32(1), uint32(1), []string{"ca-risken/sample"}, mock.AnythingOfType("time.Time")).Return(nil).Once()
+				mockDB.On("RefreshCodeScanSettingStatus", test.RepeatMockAnything(4)...).Return(nil).Once()
 			}
 
 			if c.mockIsActiveResponse != nil || c.mockIsActiveError != nil {
@@ -2676,6 +2822,186 @@ func TestInvokeScanAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInvokeScanCodeScanInitializesRepositoriesBeforeSending(t *testing.T) {
+	repositories := []*ghub.Repository{
+		{Name: ghub.String("repo-1"), FullName: ghub.String("owner/repo-1"), Visibility: ghub.String("public")},
+		{Name: ghub.String("repo-2"), FullName: ghub.String("owner/repo-2"), Visibility: ghub.String("public")},
+	}
+	setting := &model.CodeCodeScanSetting{
+		CodeGitHubSettingID: 1,
+		CodeDataSourceID:    1,
+		ProjectID:           1,
+		ScanPublic:          true,
+	}
+	githubSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		Type:                "ORGANIZATION",
+		TargetResource:      "owner",
+	}
+
+	cases := []struct {
+		name              string
+		initializeErr     error
+		sendErrors        map[int]error
+		missingMessageIDs map[int]bool
+		wantErr           bool
+		wantSendCount     int
+		wantFailedRepo    string
+		wantRefreshCalled bool
+		wantErrNotContain string
+	}{
+		{
+			name:              "OK initializes all repositories before sending",
+			wantSendCount:     2,
+			wantRefreshCalled: true,
+		},
+		{
+			name:              "OK missing message ID is treated as sent",
+			missingMessageIDs: map[int]bool{0: true},
+			wantSendCount:     2,
+			wantRefreshCalled: true,
+		},
+		{
+			name:              "NG initialization failure does not send",
+			initializeErr:     errors.New("DB error"),
+			wantErr:           true,
+			wantErrNotContain: "DB error",
+		},
+		{
+			name:              "OK partial send failure marks repository error without retrying successful sends",
+			sendErrors:        map[int]error{0: errors.New("SQS error")},
+			wantSendCount:     2,
+			wantFailedRepo:    "owner/repo-1",
+			wantRefreshCalled: true,
+			wantErrNotContain: "SQS error",
+		},
+		{
+			name:              "NG all sends fail",
+			sendErrors:        map[int]error{0: errors.New("first SQS error"), 1: errors.New("second SQS error")},
+			wantErr:           true,
+			wantSendCount:     2,
+			wantFailedRepo:    "owner/repo-1",
+			wantRefreshCalled: true,
+			wantErrNotContain: "owner/repo-1",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			mockDB := mocks.NewCodeRepoInterface(t)
+			initialized := false
+			queue := &sequencedCodeQueue{sendErrors: c.sendErrors, missingMessageIDs: c.missingMessageIDs, initialized: &initialized}
+			svc := CodeService{
+				repository:           mockDB,
+				sqs:                  queue,
+				logger:               logging.NewLogger(),
+				githubClient:         newFakeGithubClient(repositories, nil),
+				codeCodeScanQueueURL: "codescan",
+			}
+
+			mockDB.On("GetCodeScanSetting", mock.Anything, uint32(1), uint32(1)).Return(setting, nil).Twice()
+			mockDB.On("GetGitHubSetting", mock.Anything, uint32(1), uint32(1)).Return(githubSetting, nil).Once()
+			mockDB.On(
+				"InitializeCodeScanRepositories",
+				mock.Anything,
+				uint32(1),
+				uint32(1),
+				[]string{"owner/repo-1", "owner/repo-2"},
+				mock.AnythingOfType("time.Time"),
+			).Run(func(_ mock.Arguments) {
+				if c.initializeErr == nil {
+					initialized = true
+				}
+			}).Return(c.initializeErr).Once()
+
+			if c.wantFailedRepo != "" {
+				mockDB.On("UpsertCodeScanRepository", mock.Anything, uint32(1), mock.MatchedBy(func(data *code.CodeScanRepositoryForUpsert) bool {
+					return data.Status == code.Status_ERROR
+				})).Return(&model.CodeCodeScanRepository{}, nil)
+			}
+			if c.wantRefreshCalled {
+				mockDB.On("RefreshCodeScanSettingStatus", mock.Anything, uint32(1), uint32(1), (*time.Time)(nil)).Return(nil).Once()
+			}
+
+			_, err := svc.InvokeScanCodeScan(context.Background(), &code.InvokeScanCodeScanRequest{
+				ProjectId:       1,
+				GithubSettingId: 1,
+			})
+			if c.wantErr && err == nil {
+				t.Fatal("Expected error but got nil")
+			}
+			if !c.wantErr && err != nil {
+				t.Fatalf("Unexpected error: %+v", err)
+			}
+			if err != nil && c.wantErrNotContain != "" && strings.Contains(err.Error(), c.wantErrNotContain) {
+				t.Fatalf("Error contains internal detail %q: %v", c.wantErrNotContain, err)
+			}
+			if queue.sendCount != c.wantSendCount {
+				t.Fatalf("Unexpected send count: want=%d, got=%d", c.wantSendCount, queue.sendCount)
+			}
+		})
+	}
+}
+
+func TestInvokeScanCodeScanRejectsEmptyRepositoryFullName(t *testing.T) {
+	mockDB := mocks.NewCodeRepoInterface(t)
+	setting := &model.CodeCodeScanSetting{
+		CodeGitHubSettingID: 1,
+		CodeDataSourceID:    1,
+		ProjectID:           1,
+		ScanPublic:          true,
+	}
+	githubSetting := &model.CodeGitHubSetting{
+		CodeGitHubSettingID: 1,
+		ProjectID:           1,
+		Type:                "ORGANIZATION",
+		TargetResource:      "owner",
+	}
+	mockDB.On("GetCodeScanSetting", mock.Anything, uint32(1), uint32(1)).Return(setting, nil).Twice()
+	mockDB.On("GetGitHubSetting", mock.Anything, uint32(1), uint32(1)).Return(githubSetting, nil).Once()
+
+	svc := CodeService{
+		repository: mockDB,
+		sqs:        &sequencedCodeQueue{},
+		logger:     logging.NewLogger(),
+		githubClient: newFakeGithubClient([]*ghub.Repository{
+			{Name: ghub.String("repo"), Visibility: ghub.String("public")},
+		}, nil),
+	}
+
+	_, err := svc.InvokeScanCodeScan(context.Background(), &code.InvokeScanCodeScanRequest{
+		ProjectId:       1,
+		GithubSettingId: 1,
+	})
+	if err == nil {
+		t.Fatal("Expected error but got nil")
+	}
+}
+
+type sequencedCodeQueue struct {
+	sendCount         int
+	sendErrors        map[int]error
+	missingMessageIDs map[int]bool
+	initialized       *bool
+}
+
+func (q *sequencedCodeQueue) Send(_ context.Context, _ string, _ interface{}) (*sqs.SendMessageOutput, error) {
+	index := q.sendCount
+	q.sendCount++
+	if q.initialized != nil && !*q.initialized {
+		return nil, errors.New("repository statuses were not initialized before sending")
+	}
+	if err := q.sendErrors[index]; err != nil {
+		return nil, err
+	}
+	if q.missingMessageIDs[index] {
+		return &sqs.SendMessageOutput{}, nil
+	}
+	messageID := fmt.Sprintf("message-%d", index)
+	return &sqs.SendMessageOutput{MessageId: &messageID}, nil
 }
 
 type FakeCodeQueue struct {
@@ -2742,6 +3068,7 @@ func (g *FakeGithubClient) VerifyInstallation(ctx context.Context, config *code.
 
 func (g *FakeGithubClient) GetGitHubAppInstallationStatus(ctx context.Context, config *code.GitHubSetting) (*code.GitHubAppInstallationStatus, error) {
 	g.gotConfig = config
+	config.InstallationId = g.installationID
 	return g.installationStatus, g.err
 }
 
