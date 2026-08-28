@@ -106,6 +106,10 @@ func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.
 		}
 		return nil, err
 	}
+	if ds.ExternalID == "" {
+		a.logger.Warnf(ctx, "AWS ExternalID is not configured for remediation proposal: project_id=%d, finding_id=%d, aws_data_source_id=%d", projectID, findingID, ds.AWSDataSourceID)
+		return nil, status.Error(codes.FailedPrecondition, "aws remediation target is not configured")
+	}
 	if !isAWSAccountIDInAssumeRoleArn(accountID, ds.AssumeRoleArn) {
 		a.logger.Warnf(ctx, "AWS account_id does not match assume_role_arn for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, aws_data_source_id=%d, account_id=%s, assume_role_arn=%s", projectID, findingID, ds.AWSID, ds.AWSDataSourceID, accountID, ds.AssumeRoleArn)
 		return nil, status.Error(codes.NotFound, "aws remediation target is not configured")

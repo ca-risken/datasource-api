@@ -65,6 +65,8 @@ func TestGenerateRemediationProposal(t *testing.T) {
 	}
 	dsForMismatchedRole := *dsForMessage
 	dsForMismatchedRole.AssumeRoleArn = "arn:aws:iam::210987654321:role/risken"
+	dsForMissingExternalID := *dsForMessage
+	dsForMissingExternalID.ExternalID = ""
 	createdProposal := &ai.CreateRemediationProposalResponse{
 		RemediationProposal: &ai.RemediationProposal{RemediationProposalId: 2001},
 	}
@@ -176,6 +178,19 @@ func TestGenerateRemediationProposal(t *testing.T) {
 			wantErr:            true,
 			wantCode:           codes.NotFound,
 			wantErrNotContains: []string{"123456789012", "210987654321", "assume_role_arn"},
+		},
+		{
+			name:  "NG external_id is empty",
+			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
+				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
+				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
+				awsRepo.On("ListAWSDataSource", mock.Anything, uint32(1), uint32(5), "aws:cloudsploit").Return(awsDataSources, nil).Once()
+				awsRepo.On("GetAWSDataSourceForMessage", mock.Anything, uint32(5), uint32(1003), uint32(1)).Return(&dsForMissingExternalID, nil).Once()
+			},
+			wantErr:  true,
+			wantCode: codes.FailedPrecondition,
 		},
 		{
 			name:  "NG create remediation proposal error",
