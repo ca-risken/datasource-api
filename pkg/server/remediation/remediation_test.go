@@ -1,4 +1,4 @@
-package ai
+package remediation
 
 import (
 	"context"
@@ -227,7 +227,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 			coreAIMock := coreaimocks.NewAIServiceClient(t)
 			awsRepoMock := dbmocks.NewAWSRepoInterface(t)
 			sqsMock := &mockSQS{}
-			svc := AIService{
+			svc := RemediationService{
 				dbClient:                    &mockDBClient{AWSRepoInterface: awsRepoMock},
 				findingClient:               findingMock,
 				coreAIClient:                coreAIMock,

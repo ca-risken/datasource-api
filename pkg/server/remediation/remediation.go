@@ -1,4 +1,4 @@
-package ai
+package remediation
 
 import (
 	"context"
@@ -29,7 +29,7 @@ var remediationProposalTargetDataSources = []string{
 
 var awsAccountIDPattern = regexp.MustCompile(`^[0-9]{12}$`)
 
-func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *remediationpb.GenerateRemediationProposalRequest) (*remediationpb.GenerateRemediationProposalResponse, error) {
+func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, req *remediationpb.GenerateRemediationProposalRequest) (*remediationpb.GenerateRemediationProposalResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *remedi
 	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
 }
 
-func (a *AIService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
+func (a *RemediationService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
 	findingResp, err := a.findingClient.GetFinding(ctx, &finding.GetFindingRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
@@ -69,7 +69,7 @@ func (a *AIService) getRemediationProposalTargetFinding(ctx context.Context, pro
 	return findingResp.Finding, nil
 }
 
-func (a *AIService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource string) (*db.DataSource, error) {
+func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource string) (*db.DataSource, error) {
 	accountID, err := a.getAWSAccountIDFromFindingTag(ctx, projectID, findingID)
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func (a *AIService) getAWSDataSourceForRemediationProposal(ctx context.Context, 
 	return ds, nil
 }
 
-func (a *AIService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
+func (a *RemediationService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
 	createResp, err := a.coreAIClient.CreateRemediationProposal(ctx, &coreai.CreateRemediationProposalRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
@@ -119,7 +119,7 @@ func (a *AIService) createRemediationProposal(ctx context.Context, projectID uin
 	return createResp.RemediationProposal.RemediationProposalId, nil
 }
 
-func (a *AIService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
+func (a *RemediationService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
 	msg := &message.RemediationProposalQueueMessage{
 		RemediationProposalID: remediationProposalID,
 		FindingID:             findingID,
@@ -152,7 +152,7 @@ func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
 	return parts[0] == "arn" && parts[2] == "iam" && parts[4] == accountID
 }
 
-func (a *AIService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID uint32, findingID uint64) (string, error) {
+func (a *RemediationService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID uint32, findingID uint64) (string, error) {
 	tags, err := a.findingClient.ListFindingTag(ctx, &finding.ListFindingTagRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
