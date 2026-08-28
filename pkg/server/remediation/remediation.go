@@ -47,6 +47,14 @@ func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, re
 		return nil, err
 	}
 	if err := a.sendRemediationProposalMessage(ctx, req.ProjectId, req.FindingId, remediationProposalID, ds); err != nil {
+		if _, updateErr := a.aiClient.UpdateRemediationProposalStatus(ctx, &ai.UpdateRemediationProposalStatusRequest{
+			ProjectId:             req.ProjectId,
+			RemediationProposalId: remediationProposalID,
+			Status:                "FAILED",
+			StatusDetail:          err.Error(),
+		}); updateErr != nil {
+			a.logger.Errorf(ctx, "Failed to update remediation proposal status after SQS send failure: project_id=%d, remediation_proposal_id=%d, err=%+v", req.ProjectId, remediationProposalID, updateErr)
+		}
 		return nil, err
 	}
 	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil

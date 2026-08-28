@@ -215,6 +215,12 @@ func TestGenerateRemediationProposal(t *testing.T) {
 				awsRepo.On("GetAWSDataSourceForMessage", mock.Anything, uint32(5), uint32(1003), uint32(1)).Return(dsForMessage, nil).Once()
 				a.On("CreateRemediationProposal", mock.Anything, mock.Anything).Return(createdProposal, nil).Once()
 				s.On("Send", mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("sqs error")).Once()
+				a.On("UpdateRemediationProposalStatus", mock.Anything, mock.MatchedBy(func(req *ai.UpdateRemediationProposalStatusRequest) bool {
+					return req.ProjectId == 1 &&
+						req.RemediationProposalId == 2001 &&
+						req.Status == "FAILED" &&
+						req.StatusDetail == "sqs error"
+				})).Return(&ai.UpdateRemediationProposalStatusResponse{}, nil).Once()
 			},
 			wantErr: true,
 		},
