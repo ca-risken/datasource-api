@@ -234,7 +234,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 					return req.ProjectId == 1 &&
 						req.RemediationProposalId == 2001 &&
 						req.Status == "FAILED" &&
-						req.StatusDetail == "sqs error"
+						req.StatusDetail == "failed to send remediation proposal message"
 				})).Return(&ai.UpdateRemediationProposalStatusResponse{}, nil).Once()
 			},
 			wantErr: true,
