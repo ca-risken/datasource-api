@@ -153,11 +153,11 @@ func isRemediationProposalTarget(dataSource string) bool {
 }
 
 func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
-	parts := strings.SplitN(assumeRoleArn, ":", 6)
-	if len(parts) != 6 {
+	if !strings.Contains(assumeRoleArn, "::") {
 		return false
 	}
-	return parts[0] == "arn" && parts[2] == "iam" && parts[4] == accountID
+	tmp := strings.Split(assumeRoleArn, "::")[1]
+	return strings.HasPrefix(tmp, accountID)
 }
 
 func (a *RemediationService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID uint32, findingID uint64) (string, error) {
