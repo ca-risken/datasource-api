@@ -8,8 +8,8 @@ import (
 
 	awssqs "github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
-	coreai "github.com/ca-risken/core/proto/ai"
-	coreaimocks "github.com/ca-risken/core/proto/ai/mocks"
+	"github.com/ca-risken/core/proto/ai"
+	aimocks "github.com/ca-risken/core/proto/ai/mocks"
 	"github.com/ca-risken/core/proto/finding"
 	findingmocks "github.com/ca-risken/core/proto/finding/mocks"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -65,14 +65,14 @@ func TestGenerateRemediationProposal(t *testing.T) {
 	}
 	dsForMismatchedRole := *dsForMessage
 	dsForMismatchedRole.AssumeRoleArn = "arn:aws:iam::210987654321:role/risken"
-	createdProposal := &coreai.CreateRemediationProposalResponse{
-		RemediationProposal: &coreai.RemediationProposal{RemediationProposalId: 2001},
+	createdProposal := &ai.CreateRemediationProposalResponse{
+		RemediationProposal: &ai.RemediationProposal{RemediationProposalId: 2001},
 	}
 
 	cases := []struct {
 		name               string
 		input              *remediationpb.GenerateRemediationProposalRequest
-		mockSetup          func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS)
+		mockSetup          func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS)
 		wantErr            bool
 		wantCode           codes.Code
 		wantErrNotContains []string
@@ -80,7 +80,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "OK",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
@@ -101,14 +101,14 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG validation error",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 0, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 			},
 			wantErr: true,
 		},
 		{
 			name:  "NG finding not found",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 9999},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(&finding.GetFindingResponse{}, nil).Once()
 			},
 			wantErr:            true,
@@ -118,7 +118,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG unsupported data_source",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(&finding.GetFindingResponse{
 					Finding: &finding.Finding{FindingId: 1001, ProjectId: 1, DataSource: "aws:guard-duty"},
 				}, nil).Once()
@@ -129,7 +129,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG account_id tag not found",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(&finding.ListFindingTagResponse{
 					Tag: []*finding.FindingTag{{Tag: "aws"}},
@@ -142,7 +142,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG aws account not registered",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(nil, gorm.ErrRecordNotFound).Once()
@@ -154,7 +154,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG aws data_source not attached",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
@@ -166,7 +166,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG account_id does not match assume_role_arn",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
@@ -180,7 +180,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG create remediation proposal error",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
@@ -193,13 +193,13 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG core returned empty proposal",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
 				awsRepo.On("ListAWSDataSource", mock.Anything, uint32(1), uint32(5), "aws:cloudsploit").Return(awsDataSources, nil).Once()
 				awsRepo.On("GetAWSDataSourceForMessage", mock.Anything, uint32(5), uint32(1003), uint32(1)).Return(dsForMessage, nil).Once()
-				a.On("CreateRemediationProposal", mock.Anything, mock.Anything).Return(&coreai.CreateRemediationProposalResponse{}, nil).Once()
+				a.On("CreateRemediationProposal", mock.Anything, mock.Anything).Return(&ai.CreateRemediationProposalResponse{}, nil).Once()
 			},
 			wantErr:  true,
 			wantCode: codes.Internal,
@@ -207,7 +207,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		{
 			name:  "NG sqs send error",
 			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
-			mockSetup: func(f *findingmocks.FindingServiceClient, a *coreaimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
 				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
 				f.On("ListFindingTag", mock.Anything, mock.Anything).Return(accountTags, nil).Once()
 				awsRepo.On("GetAWSByAccountID", mock.Anything, uint32(1), "123456789012").Return(awsData, nil).Once()
@@ -224,18 +224,18 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			ctx := context.Background()
 			findingMock := findingmocks.NewFindingServiceClient(t)
-			coreAIMock := coreaimocks.NewAIServiceClient(t)
+			aiMock := aimocks.NewAIServiceClient(t)
 			awsRepoMock := dbmocks.NewAWSRepoInterface(t)
 			sqsMock := &mockSQS{}
 			svc := RemediationService{
 				dbClient:                    &mockDBClient{AWSRepoInterface: awsRepoMock},
 				findingClient:               findingMock,
-				coreAIClient:                coreAIMock,
+				aiClient:                    aiMock,
 				sqs:                         sqsMock,
 				remediationProposalQueueURL: "https://example.com/queue/aws-remediation-proposal",
 				logger:                      logging.NewLogger(),
 			}
-			c.mockSetup(findingMock, coreAIMock, awsRepoMock, sqsMock)
+			c.mockSetup(findingMock, aiMock, awsRepoMock, sqsMock)
 
 			result, err := svc.GenerateRemediationProposal(ctx, c.input)
 			if err != nil && !c.wantErr {

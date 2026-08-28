@@ -11,7 +11,7 @@ import (
 
 	"github.com/ca-risken/common/pkg/logging"
 	mimosarpc "github.com/ca-risken/common/pkg/rpc"
-	coreai "github.com/ca-risken/core/proto/ai"
+	"github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/alert"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/core/proto/project"
@@ -198,13 +198,13 @@ func newFindingClient(svcAddr string) (finding.FindingServiceClient, error) {
 	return finding.NewFindingServiceClient(conn), nil
 }
 
-func newAIClient(svcAddr string) (coreai.AIServiceClient, error) {
+func newAIClient(svcAddr string) (ai.AIServiceClient, error) {
 	ctx := context.Background()
 	conn, err := getGRPCConn(ctx, svcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
-	return coreai.NewAIServiceClient(conn), nil
+	return ai.NewAIServiceClient(conn), nil
 }
 
 func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {

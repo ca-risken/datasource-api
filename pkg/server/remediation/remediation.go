@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	coreai "github.com/ca-risken/core/proto/ai"
+	"github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/message"
@@ -106,7 +106,7 @@ func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.
 }
 
 func (a *RemediationService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
-	createResp, err := a.coreAIClient.CreateRemediationProposal(ctx, &coreai.CreateRemediationProposalRequest{
+	createResp, err := a.aiClient.CreateRemediationProposal(ctx, &ai.CreateRemediationProposalRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
 	})
