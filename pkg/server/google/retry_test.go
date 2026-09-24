@@ -1,4 +1,4 @@
-package gcp
+package google
 
 import (
 	"context"
@@ -6,11 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/api/cloudresourcemanager/v1"
 	"google.golang.org/api/googleapi"
 )
 
-func TestRetryGetProject(t *testing.T) {
+func TestRetryVerifyCode(t *testing.T) {
 	tests := []struct {
 		name         string
 		failures     int
@@ -26,12 +25,12 @@ func TestRetryGetProject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			attempts := 0
-			project, err := retryGetProject(context.Background(), 0, func() (*cloudresourcemanager.Project, error) {
+			ok, err := retryVerifyCode(context.Background(), 0, func() (bool, error) {
 				attempts++
 				if attempts <= tt.failures {
-					return nil, tt.err
+					return false, tt.err
 				}
-				return &cloudresourcemanager.Project{ProjectId: "test-project"}, nil
+				return true, nil
 			}, nil)
 			if attempts != tt.wantAttempts {
 				t.Fatalf("attempts = %d, want %d", attempts, tt.wantAttempts)
@@ -39,20 +38,20 @@ func TestRetryGetProject(t *testing.T) {
 			if (err != nil) != tt.wantError {
 				t.Fatalf("error = %v, wantError %t", err, tt.wantError)
 			}
-			if !tt.wantError && (project == nil || project.ProjectId != "test-project") {
-				t.Fatalf("project = %+v", project)
+			if !tt.wantError && !ok {
+				t.Fatal("verification failed unexpectedly")
 			}
 		})
 	}
 }
 
-func TestRetryGetProjectCancel(t *testing.T) {
+func TestRetryVerifyCodeCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	attempts := 0
-	_, err := retryGetProject(ctx, time.Hour, func() (*cloudresourcemanager.Project, error) {
+	_, err := retryVerifyCode(ctx, time.Hour, func() (bool, error) {
 		attempts++
 		cancel()
-		return nil, &googleapi.Error{Code: 429}
+		return false, &googleapi.Error{Code: 429}
 	}, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("error = %v, want context canceled", err)
