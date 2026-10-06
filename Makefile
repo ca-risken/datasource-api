@@ -665,6 +665,13 @@ invoke-scan-gcp:
 invoke-google-scan-all:
 	$(GRPCURL) -plaintext $(DATASOURCE_API_ADDR) datasource.google.GoogleService.InvokeScanAll
 
+.PHONY: invoke-google-scan-all-asset
+invoke-google-scan-all-asset:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"google_data_source_id":1001, "full_scan":true}' \
+		$(DATASOURCE_API_ADDR) datasource.google.GoogleService.InvokeScanAll
+
 ####################################################
 ## OSINT
 ####################################################
