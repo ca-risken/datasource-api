@@ -262,7 +262,11 @@ func (g *GoogleService) InvokeScanGCP(ctx context.Context, req *google.InvokeSca
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := g.gcpClient.VerifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode); !ok || err != nil {
+	if ok, err := retryVerifyCode(ctx, projectGetRetryInterval, func() (bool, error) {
+		return g.gcpClient.VerifyCode(ctx, gcp.GCPProjectID, gcp.VerificationCode)
+	}, func(err error, wait time.Duration) {
+		g.logger.Warnf(ctx, "Retry ResourceManager.Projects.Get after %s: %v", wait, err)
+	}); !ok || err != nil {
 		if _, upErr := g.repository.UpsertGCPDataSource(ctx, &google.GCPDataSourceForUpsert{
 			GcpId:              data.GCPID,
 			GoogleDataSourceId: data.GoogleDataSourceID,
