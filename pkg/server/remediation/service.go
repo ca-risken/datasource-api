@@ -11,16 +11,12 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/queue"
 )
 
-type aiDBClient interface {
-	db.AWSRepoInterface
-}
-
 type sqsAPI interface {
 	Send(ctx context.Context, url string, msg interface{}) (*awssqs.SendMessageOutput, error)
 }
 
 type RemediationService struct {
-	dbClient                    aiDBClient
+	dbClient                    db.AWSRepoInterface
 	findingClient               finding.FindingServiceClient
 	aiClient                    ai.AIServiceClient
 	sqs                         sqsAPI
@@ -28,7 +24,7 @@ type RemediationService struct {
 	logger                      logging.Logger
 }
 
-func NewRemediationService(dbClient aiDBClient, findingClient finding.FindingServiceClient, aiClient ai.AIServiceClient, q *queue.Client, l logging.Logger) *RemediationService {
+func NewRemediationService(dbClient db.AWSRepoInterface, findingClient finding.FindingServiceClient, aiClient ai.AIServiceClient, q *queue.Client, l logging.Logger) *RemediationService {
 	return &RemediationService{
 		dbClient:                    dbClient,
 		findingClient:               findingClient,
