@@ -32,7 +32,7 @@ require (
 	github.com/ca-risken/common/pkg/profiler v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/rpc v0.0.0-20220601065422-5b97bd6efc9b
 	github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d
-	github.com/ca-risken/core v0.16.1-0.20260716080705-ad3c7364c668
+	github.com/ca-risken/core v0.16.1-0.20261002050808-7575b0301069
 	github.com/cenkalti/backoff/v4 v4.2.0
 	github.com/coocood/freecache v1.2.3
 	github.com/envoyproxy/protoc-gen-validate v0.9.1

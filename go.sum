@@ -149,6 +149,8 @@ github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d h1:d+Q
 github.com/ca-risken/common/pkg/tracer v0.0.0-20230727031236-b35703d5c59d/go.mod h1:c6ENRTqNN5hOCB85fZHvEjMhDWt87dpN20Wz6j91InU=
 github.com/ca-risken/core v0.16.1-0.20260716080705-ad3c7364c668 h1:W9dRjXKlW/n3yVP/wtQXIY8k36C2+OqCSd+Q0b1RC9w=
 github.com/ca-risken/core v0.16.1-0.20260716080705-ad3c7364c668/go.mod h1:hKlz8v1FofEEPK0AMerb8itPJdf6iRoB7C5ja9qaJ6o=
+github.com/ca-risken/core v0.16.1-0.20261002050808-7575b0301069 h1:kMmdW3/pb2Xe62v1BAq9ObxPAy9a18oVeH6Z/MzqBTk=
+github.com/ca-risken/core v0.16.1-0.20261002050808-7575b0301069/go.mod h1:hKlz8v1FofEEPK0AMerb8itPJdf6iRoB7C5ja9qaJ6o=
 github.com/cenkalti/backoff/v4 v4.2.0 h1:HN5dHm3WBOgndBH6E8V0q2jIYIR3s9yglV8k/+MN3u4=
 github.com/cenkalti/backoff/v4 v4.2.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

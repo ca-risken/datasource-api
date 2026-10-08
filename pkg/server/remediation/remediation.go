@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	listFindingTagLimit = 200
+	awsProvider = "aws"
 )
 
 var remediationProposalTargetDataSources = []string{
@@ -38,7 +38,7 @@ func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, re
 	if err != nil {
 		return nil, err
 	}
-	ds, err := a.getAWSDataSourceForRemediationProposal(ctx, req.ProjectId, req.FindingId, targetFinding.DataSource)
+	ds, err := a.getAWSDataSourceForRemediationProposal(ctx, req.ProjectId, req.FindingId, targetFinding.DataSource, targetFinding.ProviderTarget)
 	if err != nil {
 		return nil, err
 	}
@@ -72,17 +72,16 @@ func (a *RemediationService) getRemediationProposalTargetFinding(ctx context.Con
 	if findingResp.Finding == nil {
 		return nil, status.Errorf(codes.NotFound, "finding not found: finding_id=%d", findingID)
 	}
-	if !isRemediationProposalTarget(findingResp.Finding.DataSource) {
+	if !isRemediationProposalTarget(findingResp.Finding.DataSource) || findingResp.Finding.Provider != awsProvider {
 		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for remediation proposal: %s", findingResp.Finding.DataSource)
+	}
+	if !awsAccountIDPattern.MatchString(findingResp.Finding.ProviderTarget) {
+		return nil, status.Error(codes.FailedPrecondition, "aws remediation target is not configured")
 	}
 	return findingResp.Finding, nil
 }
 
-func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource string) (*db.DataSource, error) {
-	accountID, err := a.getAWSAccountIDFromFindingTag(ctx, projectID, findingID)
-	if err != nil {
-		return nil, err
-	}
+func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource, accountID string) (*db.DataSource, error) {
 	awsData, err := a.dbClient.GetAWSByAccountID(ctx, projectID, accountID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -163,22 +162,4 @@ func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
 	}
 	tmp := strings.Split(assumeRoleArn, "::")[1]
 	return strings.HasPrefix(tmp, accountID)
-}
-
-func (a *RemediationService) getAWSAccountIDFromFindingTag(ctx context.Context, projectID uint32, findingID uint64) (string, error) {
-	tags, err := a.findingClient.ListFindingTag(ctx, &finding.ListFindingTagRequest{
-		ProjectId: projectID,
-		FindingId: findingID,
-		Limit:     listFindingTagLimit,
-	})
-	if err != nil {
-		return "", err
-	}
-	for _, t := range tags.Tag {
-		if awsAccountIDPattern.MatchString(t.Tag) {
-			return t.Tag, nil
-		}
-	}
-	a.logger.Warnf(ctx, "AWS account_id tag is not found for remediation proposal: project_id=%d, finding_id=%d", projectID, findingID)
-	return "", status.Error(codes.NotFound, "aws remediation target is not configured")
 }
