@@ -266,3 +266,37 @@ func TestGenerateRemediationProposal(t *testing.T) {
 		})
 	}
 }
+
+func TestIsAWSAccountIDInAssumeRoleArn(t *testing.T) {
+	cases := []struct {
+		name      string
+		accountID string
+		roleARN   string
+		want      bool
+	}{
+		{
+			name:      "matching account",
+			accountID: "123456789012",
+			roleARN:   "arn:aws:iam::123456789012:role/risken",
+			want:      true,
+		},
+		{
+			name:      "account component has suffix",
+			accountID: "123456789012",
+			roleARN:   "arn:aws:iam::123456789012-invalid:role/risken",
+		},
+		{
+			name:      "different account",
+			accountID: "123456789012",
+			roleARN:   "arn:aws:iam::210987654321:role/risken",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := isAWSAccountIDInAssumeRoleArn(c.accountID, c.roleARN); got != c.want {
+				t.Fatalf("isAWSAccountIDInAssumeRoleArn() = %t, want %t", got, c.want)
+			}
+		})
+	}
+}

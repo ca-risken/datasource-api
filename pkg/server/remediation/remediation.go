@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/ca-risken/core/proto/ai"
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/db"
@@ -157,9 +158,12 @@ func isRemediationProposalTarget(dataSource string) bool {
 }
 
 func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
-	if !strings.Contains(assumeRoleArn, "::") {
+	parsedARN, err := arn.Parse(assumeRoleArn)
+	if err != nil {
 		return false
 	}
-	tmp := strings.Split(assumeRoleArn, "::")[1]
-	return strings.HasPrefix(tmp, accountID)
+	return parsedARN.Partition == "aws" &&
+		parsedARN.Service == "iam" &&
+		parsedARN.AccountID == accountID &&
+		strings.HasPrefix(parsedARN.Resource, "role/")
 }
