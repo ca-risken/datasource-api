@@ -12,7 +12,7 @@ import (
 )
 
 type sqsAPI interface {
-	Send(ctx context.Context, url string, msg interface{}) (*awssqs.SendMessageOutput, error)
+	Send(ctx context.Context, url string, msg any) (*awssqs.SendMessageOutput, error)
 }
 
 type RemediationService struct {

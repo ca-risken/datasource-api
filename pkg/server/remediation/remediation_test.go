@@ -31,7 +31,7 @@ type mockSQS struct {
 	mock.Mock
 }
 
-func (m *mockSQS) Send(ctx context.Context, url string, msg interface{}) (*awssqs.SendMessageOutput, error) {
+func (m *mockSQS) Send(ctx context.Context, url string, msg any) (*awssqs.SendMessageOutput, error) {
 	args := m.Called(ctx, url, msg)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -81,7 +81,7 @@ func TestGenerateRemediationProposal(t *testing.T) {
 				awsRepo.On("ListAWSDataSource", mock.Anything, uint32(1), uint32(5), "aws:cloudsploit").Return(awsDataSources, nil).Once()
 				awsRepo.On("GetAWSDataSourceForMessage", mock.Anything, uint32(5), uint32(1003), uint32(1)).Return(dsForMessage, nil).Once()
 				a.On("CreateRemediationProposal", mock.Anything, mock.Anything).Return(createdProposal, nil).Once()
-				s.On("Send", mock.Anything, "https://example.com/queue/aws-remediation-proposal", mock.MatchedBy(func(msg interface{}) bool {
+				s.On("Send", mock.Anything, "https://example.com/queue/aws-remediation-proposal", mock.MatchedBy(func(msg any) bool {
 					m, ok := msg.(*message.RemediationProposalQueueMessage)
 					return ok &&
 						m.RemediationProposalID == 2001 &&
