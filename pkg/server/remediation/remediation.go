@@ -1,0 +1,169 @@
+package remediation
+
+import (
+	"context"
+	"errors"
+	"regexp"
+	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/ca-risken/core/proto/ai"
+	"github.com/ca-risken/core/proto/finding"
+	"github.com/ca-risken/datasource-api/pkg/db"
+	"github.com/ca-risken/datasource-api/pkg/message"
+	remediationpb "github.com/ca-risken/datasource-api/proto/remediation"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
+)
+
+const (
+	awsProvider = "aws"
+)
+
+var remediationProposalTargetDataSources = []string{
+	message.AWSAccessAnalyzerDataSource,
+	message.AWSAdminCheckerDataSource,
+	message.AWSCloudSploitDataSource,
+	message.AWSPortscanDataSource,
+}
+
+var awsAccountIDPattern = regexp.MustCompile(`^[0-9]{12}$`)
+
+func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, req *remediationpb.GenerateRemediationProposalRequest) (*remediationpb.GenerateRemediationProposalResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	targetFinding, err := a.getRemediationProposalTargetFinding(ctx, req.ProjectId, req.FindingId)
+	if err != nil {
+		return nil, err
+	}
+	ds, err := a.getAWSDataSourceForRemediationProposal(ctx, req.ProjectId, req.FindingId, targetFinding.DataSource, targetFinding.ProviderTarget)
+	if err != nil {
+		return nil, err
+	}
+	remediationProposalID, err := a.createRemediationProposal(ctx, req.ProjectId, req.FindingId)
+	if err != nil {
+		return nil, err
+	}
+	if err := a.sendRemediationProposalMessage(ctx, req.ProjectId, req.FindingId, remediationProposalID, ds); err != nil {
+		a.logger.Errorf(ctx, "Failed to send remediation proposal message: project_id=%d, remediation_proposal_id=%d, err=%+v", req.ProjectId, remediationProposalID, err)
+		if _, updateErr := a.aiClient.UpdateRemediationProposalStatus(ctx, &ai.UpdateRemediationProposalStatusRequest{
+			ProjectId:             req.ProjectId,
+			RemediationProposalId: remediationProposalID,
+			Status:                "FAILED",
+			StatusDetail:          "failed to send remediation proposal message",
+		}); updateErr != nil {
+			a.logger.Errorf(ctx, "Failed to update remediation proposal status after SQS send failure: project_id=%d, remediation_proposal_id=%d, err=%+v", req.ProjectId, remediationProposalID, updateErr)
+		}
+		return nil, err
+	}
+	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
+}
+
+func (a *RemediationService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
+	findingResp, err := a.findingClient.GetFinding(ctx, &finding.GetFindingRequest{
+		ProjectId: projectID,
+		FindingId: findingID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if findingResp.Finding == nil {
+		return nil, status.Errorf(codes.NotFound, "finding not found: finding_id=%d", findingID)
+	}
+	if !isRemediationProposalTarget(findingResp.Finding.DataSource) || findingResp.Finding.Provider != awsProvider {
+		return nil, status.Errorf(codes.InvalidArgument, "unsupported data_source for remediation proposal: %s", findingResp.Finding.DataSource)
+	}
+	if !awsAccountIDPattern.MatchString(findingResp.Finding.ProviderTarget) {
+		return nil, status.Error(codes.FailedPrecondition, "aws remediation target is not configured")
+	}
+	return findingResp.Finding, nil
+}
+
+func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource, accountID string) (*db.DataSource, error) {
+	awsData, err := a.dbClient.GetAWSByAccountID(ctx, projectID, accountID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			a.logger.Warnf(ctx, "AWS account is not registered for remediation proposal: project_id=%d, finding_id=%d, account_id=%s", projectID, findingID, accountID)
+			return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
+		}
+		return nil, err
+	}
+	awsDataSources, err := a.dbClient.ListAWSDataSource(ctx, projectID, awsData.AWSID, dataSource)
+	if err != nil {
+		return nil, err
+	}
+	if awsDataSources == nil || len(*awsDataSources) == 0 {
+		a.logger.Warnf(ctx, "AWS data_source is not found for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, data_source=%s", projectID, findingID, awsData.AWSID, dataSource)
+		return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
+	}
+	ds, err := a.dbClient.GetAWSDataSourceForMessage(ctx, awsData.AWSID, (*awsDataSources)[0].AWSDataSourceID, projectID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			a.logger.Warnf(ctx, "AWS data_source is not attached for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, aws_data_source_id=%d, data_source=%s", projectID, findingID, awsData.AWSID, (*awsDataSources)[0].AWSDataSourceID, dataSource)
+			return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
+		}
+		return nil, err
+	}
+	if ds.ExternalID == "" {
+		a.logger.Warnf(ctx, "AWS ExternalID is not configured for remediation proposal: project_id=%d, finding_id=%d, aws_data_source_id=%d", projectID, findingID, ds.AWSDataSourceID)
+		return nil, status.Error(codes.FailedPrecondition, "aws remediation target is not configured")
+	}
+	if !isAWSAccountIDInAssumeRoleArn(accountID, ds.AssumeRoleArn) {
+		a.logger.Warnf(ctx, "AWS account_id does not match assume_role_arn for remediation proposal: project_id=%d, finding_id=%d, aws_id=%d, aws_data_source_id=%d, account_id=%s, assume_role_arn=%s", projectID, findingID, ds.AWSID, ds.AWSDataSourceID, accountID, ds.AssumeRoleArn)
+		return nil, status.Error(codes.NotFound, "aws remediation target is not configured")
+	}
+	return ds, nil
+}
+
+func (a *RemediationService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
+	createResp, err := a.aiClient.CreateRemediationProposal(ctx, &ai.CreateRemediationProposalRequest{
+		ProjectId: projectID,
+		FindingId: findingID,
+	})
+	if err != nil {
+		return 0, err
+	}
+	if createResp.RemediationProposal == nil || createResp.RemediationProposal.RemediationProposalId == 0 {
+		return 0, status.Error(codes.Internal, "failed to create remediation proposal")
+	}
+	return createResp.RemediationProposal.RemediationProposalId, nil
+}
+
+func (a *RemediationService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
+	msg := &message.RemediationProposalQueueMessage{
+		RemediationProposalID: remediationProposalID,
+		FindingID:             findingID,
+		ProjectID:             projectID,
+		AssumeRoleArn:         ds.AssumeRoleArn,
+		ExternalID:            ds.ExternalID,
+	}
+	resp, err := a.sqs.Send(ctx, a.remediationProposalQueueURL, msg)
+	if err != nil {
+		return err
+	}
+	a.logger.Infof(ctx, "Generated remediation proposal: remediation_proposal_id=%d, finding_id=%d, messageId=%v", remediationProposalID, findingID, resp.MessageId)
+	return nil
+}
+
+func isRemediationProposalTarget(dataSource string) bool {
+	for _, target := range remediationProposalTargetDataSources {
+		if dataSource == target {
+			return true
+		}
+	}
+	return false
+}
+
+func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
+	parsedARN, err := arn.Parse(assumeRoleArn)
+	if err != nil {
+		return false
+	}
+	return parsedARN.Partition == "aws" &&
+		parsedARN.Service == "iam" &&
+		parsedARN.AccountID == accountID &&
+		strings.HasPrefix(parsedARN.Resource, "role/")
+}

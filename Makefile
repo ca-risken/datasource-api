@@ -1,4 +1,4 @@
-TARGETS = aws google diagnosis osint code datasource azure ai
+TARGETS = aws google diagnosis osint code datasource azure remediation
 MOCK_TARGETS = $(TARGETS:=.mock)
 BUILD_OPT=""
 IMAGE_TAG=latest
@@ -7,6 +7,8 @@ IMAGE_NAME=datasource-api
 IMAGE_REGISTRY=local
 GRPCURL=kubectl run grpcurl --image=fullstorydev/grpcurl -n core --restart=Never --rm -it --
 DATASOURCE_API_ADDR=datasource-api.datasource.svc.cluster.local:8081
+REMEDIATION_PROPOSAL_PROJECT_ID ?= 1001
+REMEDIATION_PROPOSAL_FINDING_ID ?= 1001
 
 .PHONY: all
 all: run
@@ -53,7 +55,7 @@ proto-without-validate: fmt
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource" "azure" "ai"; do \
+	for svc in "datasource" "azure" "remediation"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -161,6 +163,13 @@ analyze-attack-flow:
 		-plaintext \
 		-d '{"project_id":1001, "resource_name":"arn:aws:cloudfront::123456789012:distribution/Exxxxxxxxxx", "cloud_type":"aws", "cloud_id":"123456789012"}' \
 		$(DATASOURCE_API_ADDR) datasource.DataSourceService.AnalyzeAttackFlow
+
+.PHONY: invoke-remediation-proposal
+invoke-remediation-proposal:
+	$(GRPCURL) \
+		-plaintext \
+		-d '{"project_id":$(REMEDIATION_PROPOSAL_PROJECT_ID), "finding_id":$(REMEDIATION_PROPOSAL_FINDING_ID)}' \
+		$(DATASOURCE_API_ADDR) datasource.remediation.AIService.GenerateRemediationProposal
 
 .PHONY: analyze-attack-flow-gcp
 analyze-attack-flow-gcp:

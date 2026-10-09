@@ -16,17 +16,18 @@ type SQSConfig struct {
 	SQSEndpoint string
 
 	// aws
-	AWSGuardDutyQueueURL      string
-	AWSAccessAnalyzerQueueURL string
-	AWSAdminCheckerQueueURL   string
-	AWSCloudSploitQueueURL    string
-	AWSPortscanQueueURL       string
+	AWSGuardDutyQueueURL           string
+	AWSAccessAnalyzerQueueURL      string
+	AWSAdminCheckerQueueURL        string
+	AWSCloudSploitQueueURL         string
+	AWSPortscanQueueURL            string
+	AWSRemediationProposalQueueURL string
 
 	// google
-	GoogleAssetQueueURL          string
-	GoogleCloudSploitQueueURL    string
-	GoogleSCCQueueURL            string
-	GooglePortscanQueueURL       string
+	GoogleAssetQueueURL       string
+	GoogleCloudSploitQueueURL string
+	GoogleSCCQueueURL         string
+	GooglePortscanQueueURL    string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -51,17 +52,18 @@ type Client struct {
 	logger logging.Logger
 
 	// aws
-	AWSGuardDutyQueueURL      string
-	AWSAccessAnalyzerQueueURL string
-	AWSAdminCheckerQueueURL   string
-	AWSCloudSploitQueueURL    string
-	AWSPortscanQueueURL       string
+	AWSGuardDutyQueueURL           string
+	AWSAccessAnalyzerQueueURL      string
+	AWSAdminCheckerQueueURL        string
+	AWSCloudSploitQueueURL         string
+	AWSPortscanQueueURL            string
+	AWSRemediationProposalQueueURL string
 
 	// google
-	GoogleAssetQueueURL          string
-	GoogleCloudSploitQueueURL    string
-	GoogleSCCQueueURL            string
-	GooglePortscanQueueURL       string
+	GoogleAssetQueueURL       string
+	GoogleCloudSploitQueueURL string
+	GoogleSCCQueueURL         string
+	GooglePortscanQueueURL    string
 
 	// code
 	CodeGitleaksQueueURL   string
@@ -114,6 +116,7 @@ func NewClient(ctx context.Context, conf *SQSConfig, l logging.Logger) (*Client,
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
