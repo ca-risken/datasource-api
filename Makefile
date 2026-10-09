@@ -7,7 +7,7 @@ IMAGE_NAME=datasource-api
 IMAGE_REGISTRY=local
 GRPCURL=kubectl run grpcurl --image=fullstorydev/grpcurl -n core --restart=Never --rm -it --
 DATASOURCE_API_ADDR=datasource-api.datasource.svc.cluster.local:8081
-REMEDIATION_PROPOSAL_PROJECT_ID ?= 1
+REMEDIATION_PROPOSAL_PROJECT_ID ?= 1001
 REMEDIATION_PROPOSAL_FINDING_ID ?= 1001
 
 .PHONY: all
