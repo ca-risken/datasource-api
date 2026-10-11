@@ -169,7 +169,7 @@ invoke-remediation-proposal:
 	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":$(REMEDIATION_PROPOSAL_PROJECT_ID), "finding_id":$(REMEDIATION_PROPOSAL_FINDING_ID)}' \
-		$(DATASOURCE_API_ADDR) datasource.remediation.AIService.GenerateRemediationProposal
+		$(DATASOURCE_API_ADDR) datasource.remediation.RemediationService.GenerateRemediationProposal
 
 .PHONY: analyze-attack-flow-gcp
 analyze-attack-flow-gcp:
