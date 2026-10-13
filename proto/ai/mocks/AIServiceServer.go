@@ -5,7 +5,7 @@ package mocks
 import (
 	context "context"
 
-	remediation "github.com/ca-risken/datasource-api/proto/remediation"
+	ai "github.com/ca-risken/datasource-api/proto/ai"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -15,7 +15,7 @@ type AIServiceServer struct {
 }
 
 // GenerateRemediationProposal provides a mock function with given fields: _a0, _a1
-func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 *remediation.GenerateRemediationProposalRequest) (*remediation.GenerateRemediationProposalResponse, error) {
+func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error) {
 	ret := _m.Called(_a0, _a1)
 
 	if len(ret) == 0 {
@@ -24,14 +24,14 @@ func (_m *AIServiceServer) GenerateRemediationProposal(_a0 context.Context, _a1 
 
 	var r0 *remediation.GenerateRemediationProposalResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *remediation.GenerateRemediationProposalRequest) (*remediation.GenerateRemediationProposalResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) (*ai.GenerateRemediationProposalResponse, error)); ok {
 		return rf(_a0, _a1)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, *remediation.GenerateRemediationProposalRequest) *remediation.GenerateRemediationProposalResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, *ai.GenerateRemediationProposalRequest) *ai.GenerateRemediationProposalResponse); ok {
 		r0 = rf(_a0, _a1)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*remediation.GenerateRemediationProposalResponse)
+			r0 = ret.Get(0).(*ai.GenerateRemediationProposalResponse)
 		}
 	}
 
