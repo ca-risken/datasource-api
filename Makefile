@@ -51,11 +51,17 @@ proto-without-validate: fmt
 			--go_out=plugins=grpc,paths=source_relative:proto \
 			proto/$$svc/*.proto; \
 	done
+	protoc \
+		--proto_path=proto/ai \
+		--proto_path=proto \
+		--error_format=gcc \
+		--go_out=plugins=grpc,paths=source_relative:proto/ai \
+		service.proto
 
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource" "azure" "ai"; do \
+	for svc in "datasource" "azure"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -64,6 +70,14 @@ proto-validate: fmt
 			--validate_out="lang=go,paths=source_relative:proto" \
 			proto/$$svc/*.proto; \
 	done
+	protoc \
+		--proto_path=proto/ai \
+		--proto_path=proto \
+		--error_format=gcc \
+		-I $(GOPATH)/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v0.6.7 \
+		--go_out=plugins=grpc,paths=source_relative:proto/ai \
+		--validate_out="lang=go,paths=source_relative:proto/ai" \
+		service.proto
 
 .PHONY: proto
 proto : proto-validate proto-without-validate proto-mock
