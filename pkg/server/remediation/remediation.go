@@ -1,4 +1,4 @@
-package ai
+package remediation
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/ca-risken/core/proto/finding"
 	"github.com/ca-risken/datasource-api/pkg/db"
 	"github.com/ca-risken/datasource-api/pkg/message"
-	aipb "github.com/ca-risken/datasource-api/proto/ai"
+	remediationpb "github.com/ca-risken/datasource-api/proto/remediation"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
@@ -30,7 +30,7 @@ var remediationProposalTargetDataSources = []string{
 
 var awsAccountIDPattern = regexp.MustCompile(`^[0-9]{12}$`)
 
-func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.GenerateRemediationProposalRequest) (*aipb.GenerateRemediationProposalResponse, error) {
+func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, req *remediationpb.GenerateRemediationProposalRequest) (*remediationpb.GenerateRemediationProposalResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
@@ -59,10 +59,10 @@ func (a *AIService) GenerateRemediationProposal(ctx context.Context, req *aipb.G
 		}
 		return nil, err
 	}
-	return &aipb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
+	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
 }
 
-func (a *AIService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
+func (a *RemediationService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
 	findingResp, err := a.findingClient.GetFinding(ctx, &finding.GetFindingRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
@@ -82,7 +82,7 @@ func (a *AIService) getRemediationProposalTargetFinding(ctx context.Context, pro
 	return findingResp.Finding, nil
 }
 
-func (a *AIService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource, accountID string) (*db.DataSource, error) {
+func (a *RemediationService) getAWSDataSourceForRemediationProposal(ctx context.Context, projectID uint32, findingID uint64, dataSource, accountID string) (*db.DataSource, error) {
 	awsData, err := a.dbClient.GetAWSByAccountID(ctx, projectID, accountID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -118,7 +118,7 @@ func (a *AIService) getAWSDataSourceForRemediationProposal(ctx context.Context, 
 	return ds, nil
 }
 
-func (a *AIService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
+func (a *RemediationService) createRemediationProposal(ctx context.Context, projectID uint32, findingID uint64) (uint32, error) {
 	createResp, err := a.aiClient.CreateRemediationProposal(ctx, &ai.CreateRemediationProposalRequest{
 		ProjectId: projectID,
 		FindingId: findingID,
@@ -132,7 +132,7 @@ func (a *AIService) createRemediationProposal(ctx context.Context, projectID uin
 	return createResp.RemediationProposal.RemediationProposalId, nil
 }
 
-func (a *AIService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
+func (a *RemediationService) sendRemediationProposalMessage(ctx context.Context, projectID uint32, findingID uint64, remediationProposalID uint32, ds *db.DataSource) error {
 	msg := &message.RemediationProposalQueueMessage{
 		RemediationProposalID: remediationProposalID,
 		FindingID:             findingID,

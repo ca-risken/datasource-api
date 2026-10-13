@@ -1,4 +1,4 @@
-TARGETS = aws google diagnosis osint code datasource azure ai
+TARGETS = aws google diagnosis osint code datasource azure remediation
 MOCK_TARGETS = $(TARGETS:=.mock)
 BUILD_OPT=""
 IMAGE_TAG=latest
@@ -51,17 +51,18 @@ proto-without-validate: fmt
 			--go_out=plugins=grpc,paths=source_relative:proto \
 			proto/$$svc/*.proto; \
 	done
-	protoc \
-		--proto_path=proto/ai \
-		--proto_path=proto \
-		--error_format=gcc \
-		--go_out=plugins=grpc,paths=source_relative:proto/ai \
-		service.proto
+	for svc in "azure" "remediation"; do \
+		protoc \
+			--proto_path=proto \
+			--error_format=gcc \
+			--go_out=plugins=grpc,paths=source_relative:proto \
+			proto/$$svc/*.proto; \
+	done
 
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
-	for svc in "datasource" "azure"; do \
+	for svc in "datasource" "azure" "remediation"; do \
 		protoc \
 			--proto_path=proto \
 			--error_format=gcc \
@@ -70,14 +71,6 @@ proto-validate: fmt
 			--validate_out="lang=go,paths=source_relative:proto" \
 			proto/$$svc/*.proto; \
 	done
-	protoc \
-		--proto_path=proto/ai \
-		--proto_path=proto \
-		--error_format=gcc \
-		-I $(GOPATH)/pkg/mod/github.com/envoyproxy/protoc-gen-validate@v0.6.7 \
-		--go_out=plugins=grpc,paths=source_relative:proto/ai \
-		--validate_out="lang=go,paths=source_relative:proto/ai" \
-		service.proto
 
 .PHONY: proto
 proto : proto-validate proto-without-validate proto-mock
@@ -183,7 +176,7 @@ invoke-remediation-proposal:
 	$(GRPCURL) \
 		-plaintext \
 		-d '{"project_id":$(REMEDIATION_PROPOSAL_PROJECT_ID), "finding_id":$(REMEDIATION_PROPOSAL_FINDING_ID)}' \
-		$(DATASOURCE_API_ADDR) datasource.ai.AIService.GenerateRemediationProposal
+		$(DATASOURCE_API_ADDR) datasource.remediation.RemediationService.GenerateRemediationProposal
 
 .PHONY: analyze-attack-flow-gcp
 analyze-attack-flow-gcp:

@@ -1,4 +1,4 @@
-package ai
+package remediation
 
 import (
 	"context"
@@ -15,7 +15,7 @@ type sqsAPI interface {
 	Send(ctx context.Context, url string, msg any) (*awssqs.SendMessageOutput, error)
 }
 
-type AIService struct {
+type RemediationService struct {
 	dbClient                    db.AWSRepoInterface
 	findingClient               finding.FindingServiceClient
 	aiClient                    ai.AIServiceClient
@@ -24,8 +24,8 @@ type AIService struct {
 	logger                      logging.Logger
 }
 
-func NewAIService(dbClient db.AWSRepoInterface, findingClient finding.FindingServiceClient, aiClient ai.AIServiceClient, q *queue.Client, l logging.Logger) *AIService {
-	return &AIService{
+func NewRemediationService(dbClient db.AWSRepoInterface, findingClient finding.FindingServiceClient, aiClient ai.AIServiceClient, q *queue.Client, l logging.Logger) *RemediationService {
+	return &RemediationService{
 		dbClient:                    dbClient,
 		findingClient:               findingClient,
 		aiClient:                    aiClient,

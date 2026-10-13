@@ -20,7 +20,6 @@ import (
 	"github.com/ca-risken/datasource-api/pkg/gcp"
 	"github.com/ca-risken/datasource-api/pkg/github"
 	"github.com/ca-risken/datasource-api/pkg/queue"
-	aiServer "github.com/ca-risken/datasource-api/pkg/server/ai"
 	awsServer "github.com/ca-risken/datasource-api/pkg/server/aws"
 	azureServer "github.com/ca-risken/datasource-api/pkg/server/azure"
 	codeServer "github.com/ca-risken/datasource-api/pkg/server/code"
@@ -28,7 +27,7 @@ import (
 	diagnosisServer "github.com/ca-risken/datasource-api/pkg/server/diagnosis"
 	googleServer "github.com/ca-risken/datasource-api/pkg/server/google"
 	osintServer "github.com/ca-risken/datasource-api/pkg/server/osint"
-	aipb "github.com/ca-risken/datasource-api/proto/ai"
+	remediationServer "github.com/ca-risken/datasource-api/pkg/server/remediation"
 	"github.com/ca-risken/datasource-api/proto/aws"
 	"github.com/ca-risken/datasource-api/proto/azure"
 	"github.com/ca-risken/datasource-api/proto/code"
@@ -36,6 +35,7 @@ import (
 	"github.com/ca-risken/datasource-api/proto/diagnosis"
 	"github.com/ca-risken/datasource-api/proto/google"
 	"github.com/ca-risken/datasource-api/proto/osint"
+	remediationpb "github.com/ca-risken/datasource-api/proto/remediation"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/slack-go/slack"
 	"google.golang.org/grpc"
@@ -124,7 +124,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosisSvc := diagnosisServer.NewDiagnosisService(s.db, s.queue, pjClient, s.logger)
 	azureSvc := azureServer.NewAzureService(ctx, azureClient, s.db, s.queue, pjClient, s.logger)
 	dsSvc := dsServer.NewDataSourceService(s.db, alertClient, gcpClient, slackClient, s.baseURL, s.defaultLocale, s.logger)
-	aiSvc := aiServer.NewAIService(s.db, findingClient, aiClient, s.queue, s.logger)
+	remediationSvc := remediationServer.NewRemediationService(s.db, findingClient, aiClient, s.queue, s.logger)
 	hsvc := health.NewServer()
 
 	server := grpc.NewServer(
@@ -139,7 +139,7 @@ func (s *Server) Run(ctx context.Context) error {
 	diagnosis.RegisterDiagnosisServiceServer(server, diagnosisSvc)
 	azure.RegisterAzureServiceServer(server, azureSvc)
 	datasource.RegisterDataSourceServiceServer(server, dsSvc)
-	aipb.RegisterAIServiceServer(server, aiSvc)
+	remediationpb.RegisterRemediationServiceServer(server, remediationSvc)
 	grpc_health_v1.RegisterHealthServer(server, hsvc)
 
 	reflection.Register(server) // enable reflection API
