@@ -162,8 +162,10 @@ func isAWSAccountIDInAssumeRoleArn(accountID, assumeRoleArn string) bool {
 	if err != nil {
 		return false
 	}
+	roleName := strings.TrimPrefix(parsedARN.Resource, "role/")
 	return parsedARN.Partition == "aws" &&
 		parsedARN.Service == "iam" &&
 		parsedARN.AccountID == accountID &&
-		strings.HasPrefix(parsedARN.Resource, "role/")
+		strings.HasPrefix(parsedARN.Resource, "role/") &&
+		roleName != ""
 }

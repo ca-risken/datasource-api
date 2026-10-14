@@ -290,6 +290,11 @@ func TestIsAWSAccountIDInAssumeRoleArn(t *testing.T) {
 			accountID: "123456789012",
 			roleARN:   "arn:aws:iam::210987654321:role/risken",
 		},
+		{
+			name:      "role name is empty",
+			accountID: "123456789012",
+			roleARN:   "arn:aws:iam::123456789012:role/",
+		},
 	}
 
 	for _, c := range cases {
