@@ -45,6 +45,7 @@ type AppConf struct {
 	AWSAdminCheckerQueueURL          string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-adminchecker"`
 	AWSCloudSploitQueueURL           string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-cloudsploit"`
 	AWSPortscanQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-portscan"`
+	AWSRemediationProposalQueueURL   string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/aws-remediation-proposal"`
 	GoogleAssetQueueURL              string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-asset"`
 	GoogleCloudSploitQueueURL        string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-cloudsploit"`
 	GoogleSCCQueueURL                string `split_words:"true" required:"true" default:"http://queue.middleware.svc.cluster.local:9324/queue/google-scc"`
@@ -160,6 +161,7 @@ func main() {
 		AWSAdminCheckerQueueURL:          conf.AWSAdminCheckerQueueURL,
 		AWSCloudSploitQueueURL:           conf.AWSCloudSploitQueueURL,
 		AWSPortscanQueueURL:              conf.AWSPortscanQueueURL,
+		AWSRemediationProposalQueueURL:   conf.AWSRemediationProposalQueueURL,
 		GoogleAssetQueueURL:              conf.GoogleAssetQueueURL,
 		GoogleCloudSploitQueueURL:        conf.GoogleCloudSploitQueueURL,
 		GoogleSCCQueueURL:                conf.GoogleSCCQueueURL,
