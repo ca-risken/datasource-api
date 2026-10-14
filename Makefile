@@ -51,14 +51,6 @@ proto-without-validate: fmt
 			--go_out=plugins=grpc,paths=source_relative:proto \
 			proto/$$svc/*.proto; \
 	done
-	for svc in "azure" "remediation"; do \
-		protoc \
-			--proto_path=proto \
-			--error_format=gcc \
-			--go_out=plugins=grpc,paths=source_relative:proto \
-			proto/$$svc/*.proto; \
-	done
-
 # build with protoc-gen-validate
 .PHONY: proto-validate
 proto-validate: fmt
