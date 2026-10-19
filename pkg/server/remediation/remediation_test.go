@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	awssqs "github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/ca-risken/common/pkg/logging"
@@ -62,6 +63,13 @@ func TestGenerateRemediationProposal(t *testing.T) {
 	dsForMissingExternalID.ExternalID = ""
 	createdProposal := &ai.CreateRemediationProposalResponse{
 		RemediationProposal: &ai.RemediationProposal{RemediationProposalId: 2001},
+	}
+	recentProposal := &ai.ListRemediationProposalResponse{
+		RemediationProposals: []*ai.RemediationProposal{{
+			FindingId: 1001,
+			Status:    "PENDING",
+			CreatedAt: time.Now().Unix(),
+		}},
 	}
 
 	cases := []struct {
@@ -131,6 +139,16 @@ func TestGenerateRemediationProposal(t *testing.T) {
 			wantErr:            true,
 			wantCode:           codes.FailedPrecondition,
 			wantErrNotContains: []string{"123456789012", "account_id"},
+		},
+		{
+			name:  "NG remediation proposal cooldown",
+			input: &remediationpb.GenerateRemediationProposalRequest{ProjectId: 1, FindingId: 1001},
+			mockSetup: func(f *findingmocks.FindingServiceClient, a *aimocks.AIServiceClient, awsRepo *dbmocks.AWSRepoInterface, s *mockSQS) {
+				f.On("GetFinding", mock.Anything, mock.Anything).Return(targetFinding, nil).Once()
+				a.On("ListRemediationProposal", mock.Anything, mock.Anything).Return(recentProposal, nil).Once()
+			},
+			wantErr:  true,
+			wantCode: codes.FailedPrecondition,
 		},
 		{
 			name:  "NG aws account not registered",
@@ -241,6 +259,8 @@ func TestGenerateRemediationProposal(t *testing.T) {
 				logger:                      logging.NewLogger(),
 			}
 			c.mockSetup(findingMock, aiMock, awsRepoMock, sqsMock)
+			aiMock.On("ListRemediationProposal", mock.Anything, mock.Anything).
+				Return(&ai.ListRemediationProposalResponse{}, nil).Maybe()
 
 			result, err := svc.GenerateRemediationProposal(ctx, c.input)
 			if err != nil && !c.wantErr {
@@ -263,6 +283,56 @@ func TestGenerateRemediationProposal(t *testing.T) {
 				t.Fatal("remediation_proposal_id is empty")
 			}
 			sqsMock.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHasRemediationProposalCooldown(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	cases := []struct {
+		name      string
+		proposals []*ai.RemediationProposal
+		want      bool
+	}{
+		{
+			name: "pending within cooldown",
+			proposals: []*ai.RemediationProposal{{
+				Status:    "PENDING",
+				CreatedAt: now.Add(-30 * time.Minute).Unix(),
+			}},
+			want: true,
+		},
+		{
+			name: "succeeded within cooldown",
+			proposals: []*ai.RemediationProposal{{
+				Status:    "SUCCEEDED",
+				CreatedAt: now.Add(-30 * time.Minute).Unix(),
+			}},
+			want: true,
+		},
+		{
+			name: "failed within cooldown",
+			proposals: []*ai.RemediationProposal{{
+				Status:    "FAILED",
+				CreatedAt: now.Add(-30 * time.Minute).Unix(),
+			}},
+		},
+		{
+			name: "succeeded outside cooldown",
+			proposals: []*ai.RemediationProposal{{
+				Status:    "SUCCEEDED",
+				CreatedAt: now.Add(-2 * time.Hour).Unix(),
+			}},
+		},
+		{
+			name: "empty",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := hasRemediationProposalCooldown(c.proposals, now); got != c.want {
+				t.Fatalf("hasRemediationProposalCooldown() = %t, want %t", got, c.want)
+			}
 		})
 	}
 }

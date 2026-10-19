@@ -5,6 +5,7 @@ import (
 	"errors"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/ca-risken/core/proto/ai"
@@ -18,7 +19,8 @@ import (
 )
 
 const (
-	awsProvider = "aws"
+	awsProvider                 = "aws"
+	remediationProposalCooldown = time.Hour
 )
 
 var remediationProposalTargetDataSources = []string{
@@ -37,6 +39,9 @@ func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, re
 
 	targetFinding, err := a.getRemediationProposalTargetFinding(ctx, req.ProjectId, req.FindingId)
 	if err != nil {
+		return nil, err
+	}
+	if err := a.checkRemediationProposalCooldown(ctx, req.ProjectId, req.FindingId); err != nil {
 		return nil, err
 	}
 	ds, err := a.getAWSDataSourceForRemediationProposal(ctx, req.ProjectId, req.FindingId, targetFinding.DataSource, targetFinding.ProviderTarget)
@@ -60,6 +65,39 @@ func (a *RemediationService) GenerateRemediationProposal(ctx context.Context, re
 		return nil, err
 	}
 	return &remediationpb.GenerateRemediationProposalResponse{RemediationProposalId: remediationProposalID}, nil
+}
+
+func (a *RemediationService) checkRemediationProposalCooldown(ctx context.Context, projectID uint32, findingID uint64) error {
+	proposalResp, err := a.aiClient.ListRemediationProposal(ctx, &ai.ListRemediationProposalRequest{
+		ProjectId: projectID,
+		FindingId: findingID,
+	})
+	if err != nil {
+		return err
+	}
+	if proposalResp == nil {
+		return nil
+	}
+	if hasRemediationProposalCooldown(proposalResp.RemediationProposals, time.Now()) {
+		return status.Errorf(codes.FailedPrecondition, "remediation proposal is in cooldown: finding_id=%d", findingID)
+	}
+	return nil
+}
+
+func hasRemediationProposalCooldown(proposals []*ai.RemediationProposal, now time.Time) bool {
+	cutoff := now.Add(-remediationProposalCooldown).Unix()
+	for _, proposal := range proposals {
+		if proposal == nil {
+			continue
+		}
+		if proposal.Status != "PENDING" && proposal.Status != "SUCCEEDED" {
+			continue
+		}
+		if proposal.CreatedAt >= cutoff {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *RemediationService) getRemediationProposalTargetFinding(ctx context.Context, projectID uint32, findingID uint64) (*finding.Finding, error) {
