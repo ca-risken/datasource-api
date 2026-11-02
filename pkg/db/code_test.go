@@ -309,8 +309,8 @@ func TestUpdateGitHubSetting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
 	}
-	mock.ExpectExec(regexp.QuoteMeta(updateGitHubWithToken)).WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
+	mock.ExpectExec(regexp.QuoteMeta(updateGitHubWithToken)).WillReturnResult(sqlmock.NewResult(0, 0))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{
 		"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
 		AddRow(uint32(1), "updated", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
 

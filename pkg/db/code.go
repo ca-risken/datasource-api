@@ -159,7 +159,8 @@ SET
   base_url = ?,
   target_resource = ?,
   github_user = ?,
-  personal_access_token = COALESCE(?, personal_access_token)
+  personal_access_token = COALESCE(?, personal_access_token),
+  auth_mode = ?
 WHERE project_id = ?
   AND code_github_setting_id = ?
 `
@@ -172,6 +173,7 @@ SET
   base_url = ?,
   target_resource = ?,
   github_user = ?,
+  personal_access_token = NULL,
   installation_id = ?,
   auth_mode = ?
 WHERE project_id = ?
@@ -223,6 +225,7 @@ func (c *Client) updateGitHubSettingWithToken(ctx context.Context, data *code.Gi
 		data.TargetResource,
 		convertZeroValueToNull(data.GithubUser),
 		convertZeroValueToNull(data.PersonalAccessToken),
+		data.AuthMode,
 		data.ProjectId,
 		data.GithubSettingId,
 	}
@@ -247,10 +250,17 @@ func (c *Client) executeGitHubSettingUpdate(ctx context.Context, data *code.GitH
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	if result.RowsAffected != 1 {
+	if result.RowsAffected > 1 {
 		return nil, fmt.Errorf("github setting update affected %d rows: project_id=%d, github_setting_id=%d", result.RowsAffected, data.ProjectId, data.GithubSettingId)
 	}
-	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
+	updated, err := c.GetGitHubSettingByID(ctx, data.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	if updated.ProjectID != data.ProjectId {
+		return nil, fmt.Errorf("github setting does not belong to project: project_id=%d, github_setting_id=%d", data.ProjectId, data.GithubSettingId)
+	}
+	return updated, nil
 }
 
 const createGitHubWithToken = `
