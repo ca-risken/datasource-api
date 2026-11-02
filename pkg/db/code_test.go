@@ -162,7 +162,28 @@ func TestGetGitHubSetting(t *testing.T) {
 	}
 }
 
-func TestUpsertGitHubSetting(t *testing.T) {
+func TestGetGitHubSettingByID(t *testing.T) {
+	now := time.Now()
+	db, mock, err := newDBMock()
+	if err != nil {
+		t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+	}
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT * FROM `code_github_setting` WHERE code_github_setting_id = ?")).WillReturnRows(sqlmock.NewRows([]string{"code_github_setting_id", "project_id", "name", "created_at", "updated_at"}).
+		AddRow(uint32(1), uint32(2), "setting", now, now))
+
+	got, err := db.GetGitHubSettingByID(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("Unexpected error: %+v", err)
+	}
+	if got.CodeGitHubSettingID != 1 || got.ProjectID != 2 || got.Name != "setting" {
+		t.Fatalf("Unexpected result: %+v", got)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
+	}
+}
+
+func TestCreateGitHubSetting(t *testing.T) {
 	now := time.Now()
 	installationID := uint64(12345)
 	type args struct {
@@ -184,7 +205,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubWithToken)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(createGitHubWithToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
 					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
@@ -198,7 +219,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", InstallationID: &installationID, AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubAppAuth)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(createGitHubAppAuth)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "installation_id", "auth_mode", "created_at", "updated_at"}).
 					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", installationID, code.GitHubAuthModeGitHubApp, now, now))
@@ -212,7 +233,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", AuthMode: code.GitHubAuthModeGitHubApp, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				query := strings.Replace(upsertGitHubAppAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, ?, NULL, ?", 1)
+				query := strings.Replace(createGitHubAppAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, ?, NULL, ?", 1)
 				mock.ExpectExec(regexp.QuoteMeta(query)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "auth_mode", "created_at", "updated_at"}).
@@ -227,7 +248,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", AuthMode: code.GitHubAuthModePersonalAccessToken, CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				query := strings.Replace(upsertGitHubPATAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, NULL, ?, ?", 1)
+				query := strings.Replace(createGitHubPATAuth, "?, ?, ?, ?, ?, ?, ?, ?, ?, ?", "?, ?, ?, ?, ?, ?, ?, NULL, ?, ?", 1)
 				mock.ExpectExec(regexp.QuoteMeta(query)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "auth_mode", "created_at", "updated_at"}).
@@ -242,7 +263,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    &model.CodeGitHubSetting{CodeGitHubSettingID: 1, Name: "github_setting1", ProjectID: 1, Type: "ORGANIZATION", TargetResource: "target", GitHubUser: "user", PersonalAccessToken: "token", CreatedAt: now, UpdatedAt: now},
 			wantErr: false,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubSettingWithoutToken)).WillReturnResult(sqlmock.NewResult(1, 1))
+				mock.ExpectExec(regexp.QuoteMeta(createGitHubSettingWithoutToken)).WillReturnResult(sqlmock.NewResult(1, 1))
 				mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
 					"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
 					AddRow(uint32(1), "github_setting1", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
@@ -256,7 +277,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 			want:    nil,
 			wantErr: true,
 			mockClosure: func(mock sqlmock.Sqlmock) {
-				mock.ExpectExec(regexp.QuoteMeta(upsertGitHubWithToken)).WillReturnError(errors.New("DB error"))
+				mock.ExpectExec(regexp.QuoteMeta(createGitHubWithToken)).WillReturnError(errors.New("DB error"))
 			},
 		},
 	}
@@ -268,7 +289,7 @@ func TestUpsertGitHubSetting(t *testing.T) {
 				t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
 			}
 			c.mockClosure(mock)
-			got, err := db.UpsertGitHubSetting(ctx, c.args.data)
+			got, err := db.CreateGitHubSetting(ctx, c.args.data)
 			if err != nil && !c.wantErr {
 				t.Fatalf("Unexpected error: %+v", err)
 			}
@@ -279,6 +300,37 @@ func TestUpsertGitHubSetting(t *testing.T) {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
 		})
+	}
+}
+
+func TestUpdateGitHubSetting(t *testing.T) {
+	now := time.Now()
+	db, mock, err := newDBMock()
+	if err != nil {
+		t.Fatalf("An error '%s' was not expected when opening a stub database connection", err)
+	}
+	mock.ExpectExec(regexp.QuoteMeta(updateGitHubWithToken)).WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectQuery(regexp.QuoteMeta(selectGetCodeGitHubSettingByUniqueIndex)).WillReturnRows(sqlmock.NewRows([]string{
+		"code_github_setting_id", "name", "project_id", "type", "target_resource", "github_user", "personal_access_token", "created_at", "updated_at"}).
+		AddRow(uint32(1), "updated", uint32(1), "ORGANIZATION", "target", "user", "token", now, now))
+
+	got, err := db.UpdateGitHubSetting(context.Background(), &code.GitHubSettingForUpsert{
+		GithubSettingId:     1,
+		Name:                "updated",
+		ProjectId:           1,
+		Type:                code.Type_ORGANIZATION,
+		TargetResource:      "target",
+		GithubUser:          "user",
+		PersonalAccessToken: "token",
+	})
+	if err != nil {
+		t.Fatalf("Unexpected error: %+v", err)
+	}
+	if got.CodeGitHubSettingID != 1 || got.ProjectID != 1 || got.Name != "updated" {
+		t.Fatalf("Unexpected result: %+v", got)
+	}
+	if err := mock.ExpectationsWereMet(); err != nil {
+		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 

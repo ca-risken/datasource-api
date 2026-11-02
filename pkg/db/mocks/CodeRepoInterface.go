@@ -752,6 +752,16 @@ func (_m *CodeRepoInterface) ListGitHubAppSettingRepositoryImmediately(ctx conte
 	return r0, r1
 }
 
+// GetGitHubSettingByID provides a mock function with given fields: ctx, githubSettingID
+func (_m *CodeRepoInterface) GetGitHubSettingByID(ctx context.Context, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
+	ret := _m.Called(ctx, githubSettingID)
+	var r0 *model.CodeGitHubSetting
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(*model.CodeGitHubSetting)
+	}
+	return r0, ret.Error(1)
+}
+
 // ListGitHubSetting provides a mock function with given fields: ctx, projectID, githubSettingID
 func (_m *CodeRepoInterface) ListGitHubSetting(ctx context.Context, projectID uint32, githubSettingID uint32) (*[]model.CodeGitHubSetting, error) {
 	ret := _m.Called(ctx, projectID, githubSettingID)
@@ -1160,12 +1170,22 @@ func (_m *CodeRepoInterface) UpsertDependencySetting(ctx context.Context, data *
 	return r0, r1
 }
 
-// UpsertGitHubSetting provides a mock function with given fields: ctx, data
-func (_m *CodeRepoInterface) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+// UpdateGitHubSetting provides a mock function with given fields: ctx, data
+func (_m *CodeRepoInterface) UpdateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	ret := _m.Called(ctx, data)
+	var r0 *model.CodeGitHubSetting
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).(*model.CodeGitHubSetting)
+	}
+	return r0, ret.Error(1)
+}
+
+// CreateGitHubSetting provides a mock function with given fields: ctx, data
+func (_m *CodeRepoInterface) CreateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
 	ret := _m.Called(ctx, data)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpsertGitHubSetting")
+		panic("no return value specified for CreateGitHubSetting")
 	}
 
 	var r0 *model.CodeGitHubSetting

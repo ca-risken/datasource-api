@@ -578,8 +578,13 @@ func TestPutGitHubSetting(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
 			svc := CodeService{repository: mockDB, githubClient: &FakeGithubClient{err: c.githubClientError, installationID: c.resolvedInstallationID}, cipherBlock: block, logger: logging.NewLogger()}
 
-			if c.mockResponse != nil || c.mockError != nil {
-				mockDB.On("UpsertGitHubSetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
+			if c.input.GithubSetting != nil && c.input.GithubSetting.GithubSettingId != 0 {
+				mockDB.On("GetGitHubSettingByID", test.RepeatMockAnything(2)...).Return(&model.CodeGitHubSetting{ProjectID: c.input.ProjectId}, nil).Once()
+				if c.mockResponse != nil || c.mockError != nil {
+					mockDB.On("UpdateGitHubSetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
+				}
+			} else if c.mockResponse != nil || c.mockError != nil {
+				mockDB.On("CreateGitHubSetting", test.RepeatMockAnything(2)...).Return(c.mockResponse, c.mockError).Once()
 			}
 			if c.wantStatus != "" {
 				if c.wantStatus == code.GitHubVerificationStatusSuccess || c.wantStatus == code.GitHubVerificationStatusPendingUserVerification {
@@ -606,6 +611,30 @@ func TestPutGitHubSetting(t *testing.T) {
 				t.Fatalf("Unexpected mapping: want=%+v, got=%+v", c.want, got)
 			}
 		})
+	}
+}
+
+func TestPutGitHubSettingRejectsOtherProject(t *testing.T) {
+	mockDB := mocks.NewCodeRepoInterface(t)
+	mockDB.On("GetGitHubSettingByID", mock.Anything, uint32(1)).Return(&model.CodeGitHubSetting{CodeGitHubSettingID: 1, ProjectID: 2}, nil).Once()
+	block, err := aes.NewCipher([]byte("1234567890123456"))
+	if err != nil {
+		t.Fatalf("failed to create cipher: %v", err)
+	}
+
+	svc := CodeService{repository: mockDB, cipherBlock: block, logger: logging.NewLogger()}
+	_, err = svc.PutGitHubSetting(context.Background(), &code.PutGitHubSettingRequest{
+		ProjectId: 1,
+		GithubSetting: &code.GitHubSettingForUpsert{
+			GithubSettingId: 1,
+			ProjectId:       1,
+			Name:            "attacker-update",
+			Type:            code.Type_ORGANIZATION,
+			TargetResource:  "target",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected project ownership error")
 	}
 }
 

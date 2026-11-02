@@ -363,6 +363,15 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	if req.GithubSetting.GithubSettingId != 0 {
+		setting, err := c.repository.GetGitHubSettingByID(ctx, req.GithubSetting.GithubSettingId)
+		if err != nil {
+			return nil, err
+		}
+		if setting.ProjectID != req.ProjectId {
+			return nil, fmt.Errorf("github setting does not belong to project: project_id=%d, github_setting_id=%d", req.ProjectId, req.GithubSetting.GithubSettingId)
+		}
+	}
 	if req.GithubSetting.PersonalAccessToken != "" && req.GithubSetting.PersonalAccessToken != maskData {
 		encrypted, err := encryptWithBase64(&c.cipherBlock, req.GithubSetting.PersonalAccessToken)
 		if err != nil {
@@ -373,7 +382,13 @@ func (c *CodeService) PutGitHubSetting(ctx context.Context, req *code.PutGitHubS
 	} else {
 		req.GithubSetting.PersonalAccessToken = "" // for not update token.
 	}
-	registeredGitHubSetting, err := c.repository.UpsertGitHubSetting(ctx, req.GithubSetting)
+	var registeredGitHubSetting *model.CodeGitHubSetting
+	var err error
+	if req.GithubSetting.GithubSettingId == 0 {
+		registeredGitHubSetting, err = c.repository.CreateGitHubSetting(ctx, req.GithubSetting)
+	} else {
+		registeredGitHubSetting, err = c.repository.UpdateGitHubSetting(ctx, req.GithubSetting)
+	}
 	if err != nil {
 		return nil, err
 	}
