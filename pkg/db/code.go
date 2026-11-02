@@ -191,19 +191,58 @@ WHERE project_id = ?
 `
 
 func (c *Client) UpdateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	var query string
-	var args []interface{}
-	switch {
-	case data.AuthMode == code.GitHubAuthModeGitHubApp:
-		query = updateGitHubAppAuth
-		args = []interface{}{data.Name, data.Type.String(), data.BaseUrl, data.TargetResource, convertZeroValueToNull(data.GithubUser), convertZeroValueToNull(data.InstallationId), data.AuthMode, data.ProjectId, data.GithubSettingId}
-	case data.AuthMode == code.GitHubAuthModePersonalAccessToken || data.PersonalAccessToken != "":
-		query = updateGitHubWithToken
-		args = []interface{}{data.Name, data.Type.String(), data.BaseUrl, data.TargetResource, convertZeroValueToNull(data.GithubUser), convertZeroValueToNull(data.PersonalAccessToken), data.ProjectId, data.GithubSettingId}
-	default:
-		query = updateGitHubSettingWithoutToken
-		args = []interface{}{data.Name, data.Type.String(), data.BaseUrl, data.TargetResource, convertZeroValueToNull(data.GithubUser), data.ProjectId, data.GithubSettingId}
+	if data.AuthMode == code.GitHubAuthModeGitHubApp {
+		return c.updateGitHubAppSetting(ctx, data)
 	}
+	if data.AuthMode == code.GitHubAuthModePersonalAccessToken || data.PersonalAccessToken != "" {
+		return c.updateGitHubSettingWithToken(ctx, data)
+	}
+	return c.updateGitHubSettingWithoutToken(ctx, data)
+}
+
+func (c *Client) updateGitHubAppSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		convertZeroValueToNull(data.InstallationId),
+		data.AuthMode,
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubAppAuth, args...)
+}
+
+func (c *Client) updateGitHubSettingWithToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		convertZeroValueToNull(data.PersonalAccessToken),
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubWithToken, args...)
+}
+
+func (c *Client) updateGitHubSettingWithoutToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubSettingWithoutToken, args...)
+}
+
+func (c *Client) executeGitHubSettingUpdate(ctx context.Context, data *code.GitHubSettingForUpsert, query string, args ...interface{}) (*model.CodeGitHubSetting, error) {
 	result := c.MasterDB.WithContext(ctx).Exec(query, args...)
 	if result.Error != nil {
 		return nil, result.Error
