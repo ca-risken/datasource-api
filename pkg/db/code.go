@@ -19,7 +19,9 @@ type CodeRepoInterface interface {
 	// code_github_setting
 	ListGitHubSetting(ctx context.Context, projectID, githubSettingID uint32) (*[]model.CodeGitHubSetting, error)
 	GetGitHubSetting(ctx context.Context, projectID, GitHubSettingID uint32) (*model.CodeGitHubSetting, error)
-	UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
+	GetGitHubSettingByID(ctx context.Context, githubSettingID uint32) (*model.CodeGitHubSetting, error)
+	CreateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
+	UpdateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	UpdateGitHubAppInstallationVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, verificationStatus, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, error)
 	CompleteGitHubAppVerification(ctx context.Context, projectID, githubSettingID uint32, installationID uint64, repositories []*code.GitHubAppSettingRepositoryForUpsert, verifiedGitHubUser string, verifiedAt time.Time) (*model.CodeGitHubSetting, *[]model.GitHubAppSettingRepository, error)
@@ -128,20 +130,140 @@ func (c *Client) GetGitHubSetting(ctx context.Context, projectID uint32, githubS
 	return &data, nil
 }
 
-func (c *Client) UpsertGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	if data.AuthMode == code.GitHubAuthModeGitHubApp {
-		return c.UpsertGitHubAppSetting(ctx, data)
+func (c *Client) GetGitHubSettingByID(ctx context.Context, githubSettingID uint32) (*model.CodeGitHubSetting, error) {
+	var data model.CodeGitHubSetting
+	if err := c.MasterDB.WithContext(ctx).Where("code_github_setting_id = ?", githubSettingID).First(&data).Error; err != nil {
+		return nil, err
 	}
-	if data.AuthMode == code.GitHubAuthModePersonalAccessToken {
-		return c.UpsertGitHubPATSetting(ctx, data)
-	}
-	if data.PersonalAccessToken != "" {
-		return c.UpsertGitHubSettingWithToken(ctx, data)
-	}
-	return c.UpsertGitHubSettingWithoutToken(ctx, data)
+	return &data, nil
 }
 
-const upsertGitHubWithToken = `
+func (c *Client) CreateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if data.AuthMode == code.GitHubAuthModeGitHubApp {
+		return c.CreateGitHubAppSetting(ctx, data)
+	}
+	if data.AuthMode == code.GitHubAuthModePersonalAccessToken {
+		return c.CreateGitHubPATSetting(ctx, data)
+	}
+	if data.PersonalAccessToken != "" {
+		return c.CreateGitHubSettingWithToken(ctx, data)
+	}
+	return c.CreateGitHubSettingWithoutToken(ctx, data)
+}
+
+const updateGitHubWithToken = `
+UPDATE code_github_setting
+SET
+  name = ?,
+  type = ?,
+  base_url = ?,
+  target_resource = ?,
+  github_user = ?,
+  personal_access_token = COALESCE(?, personal_access_token),
+  auth_mode = ?
+WHERE project_id = ?
+  AND code_github_setting_id = ?
+`
+
+const updateGitHubAppAuth = `
+UPDATE code_github_setting
+SET
+  name = ?,
+  type = ?,
+  base_url = ?,
+  target_resource = ?,
+  github_user = ?,
+  personal_access_token = NULL,
+  installation_id = ?,
+  auth_mode = ?
+WHERE project_id = ?
+  AND code_github_setting_id = ?
+`
+
+const updateGitHubSettingWithoutToken = `
+UPDATE code_github_setting
+SET
+  name = ?,
+  type = ?,
+  base_url = ?,
+  target_resource = ?,
+  github_user = ?
+WHERE project_id = ?
+  AND code_github_setting_id = ?
+`
+
+func (c *Client) UpdateGitHubSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if data.AuthMode == code.GitHubAuthModeGitHubApp {
+		return c.updateGitHubAppSetting(ctx, data)
+	}
+	if data.AuthMode == code.GitHubAuthModePersonalAccessToken || data.PersonalAccessToken != "" {
+		return c.updateGitHubSettingWithToken(ctx, data)
+	}
+	return c.updateGitHubSettingWithoutToken(ctx, data)
+}
+
+func (c *Client) updateGitHubAppSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		convertZeroValueToNull(data.InstallationId),
+		data.AuthMode,
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubAppAuth, args...)
+}
+
+func (c *Client) updateGitHubSettingWithToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		convertZeroValueToNull(data.PersonalAccessToken),
+		data.AuthMode,
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubWithToken, args...)
+}
+
+func (c *Client) updateGitHubSettingWithoutToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	args := []interface{}{
+		data.Name,
+		data.Type.String(),
+		data.BaseUrl,
+		data.TargetResource,
+		convertZeroValueToNull(data.GithubUser),
+		data.ProjectId,
+		data.GithubSettingId,
+	}
+	return c.executeGitHubSettingUpdate(ctx, data, updateGitHubSettingWithoutToken, args...)
+}
+
+func (c *Client) executeGitHubSettingUpdate(ctx context.Context, data *code.GitHubSettingForUpsert, query string, args ...interface{}) (*model.CodeGitHubSetting, error) {
+	result := c.MasterDB.WithContext(ctx).Exec(query, args...)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if result.RowsAffected > 1 {
+		return nil, fmt.Errorf("github setting update affected %d rows: project_id=%d, github_setting_id=%d", result.RowsAffected, data.ProjectId, data.GithubSettingId)
+	}
+	updated, err := c.GetGitHubSettingByID(ctx, data.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	if updated.ProjectID != data.ProjectId {
+		return nil, fmt.Errorf("github setting does not belong to project: project_id=%d, github_setting_id=%d", data.ProjectId, data.GithubSettingId)
+	}
+	return updated, nil
+}
+
+const createGitHubWithToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -153,19 +275,10 @@ INSERT INTO code_github_setting (
   personal_access_token
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-	code_github_setting_id=VALUES(code_github_setting_id),
-	name=VALUES(name),
-	project_id=VALUES(project_id),
-	type=VALUES(type),
-	base_url=VALUES(base_url),
-	target_resource=VALUES(target_resource),
-	github_user=VALUES(github_user),
-	personal_access_token=VALUES(personal_access_token)
 `
 
-func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubWithToken,
+func (c *Client) CreateGitHubSettingWithToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(createGitHubWithToken,
 		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
@@ -179,7 +292,7 @@ func (c *Client) UpsertGitHubSettingWithToken(ctx context.Context, data *code.Gi
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
-const upsertGitHubAppAuth = `
+const createGitHubAppAuth = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -193,21 +306,10 @@ INSERT INTO code_github_setting (
   auth_mode
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-	code_github_setting_id=VALUES(code_github_setting_id),
-	name=VALUES(name),
-	project_id=VALUES(project_id),
-	type=VALUES(type),
-	base_url=VALUES(base_url),
-	target_resource=VALUES(target_resource),
-	github_user=VALUES(github_user),
-	personal_access_token=VALUES(personal_access_token),
-	installation_id=VALUES(installation_id),
-	auth_mode=VALUES(auth_mode)
 `
 
-func (c *Client) UpsertGitHubAppSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubAppAuth,
+func (c *Client) CreateGitHubAppSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(createGitHubAppAuth,
 		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
@@ -223,7 +325,7 @@ func (c *Client) UpsertGitHubAppSetting(ctx context.Context, data *code.GitHubSe
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
-const upsertGitHubSettingWithoutToken = `
+const createGitHubSettingWithoutToken = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -234,18 +336,10 @@ INSERT INTO code_github_setting (
   github_user
 )
 VALUES (?, ?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-	code_github_setting_id=VALUES(code_github_setting_id),
-	name=VALUES(name),
-	project_id=VALUES(project_id),
-	type=VALUES(type),
-	base_url=VALUES(base_url),
-	target_resource=VALUES(target_resource),
-	github_user=VALUES(github_user)
 `
 
-func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubSettingWithoutToken,
+func (c *Client) CreateGitHubSettingWithoutToken(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(createGitHubSettingWithoutToken,
 		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
@@ -258,7 +352,7 @@ func (c *Client) UpsertGitHubSettingWithoutToken(ctx context.Context, data *code
 	return c.GetGitHubSettingByUniqueIndex(ctx, data.ProjectId, data.Name)
 }
 
-const upsertGitHubPATAuth = `
+const createGitHubPATAuth = `
 INSERT INTO code_github_setting (
   code_github_setting_id,
   name,
@@ -272,21 +366,10 @@ INSERT INTO code_github_setting (
   auth_mode
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-ON DUPLICATE KEY UPDATE
-	code_github_setting_id=VALUES(code_github_setting_id),
-	name=VALUES(name),
-	project_id=VALUES(project_id),
-	type=VALUES(type),
-	base_url=VALUES(base_url),
-	target_resource=VALUES(target_resource),
-	github_user=VALUES(github_user),
-	personal_access_token=IF(VALUES(personal_access_token) IS NULL, personal_access_token, VALUES(personal_access_token)),
-	installation_id=VALUES(installation_id),
-	auth_mode=VALUES(auth_mode)
 `
 
-func (c *Client) UpsertGitHubPATSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
-	if err := c.MasterDB.WithContext(ctx).Exec(upsertGitHubPATAuth,
+func (c *Client) CreateGitHubPATSetting(ctx context.Context, data *code.GitHubSettingForUpsert) (*model.CodeGitHubSetting, error) {
+	if err := c.MasterDB.WithContext(ctx).Exec(createGitHubPATAuth,
 		data.GithubSettingId,
 		convertZeroValueToNull(data.Name),
 		data.ProjectId,
