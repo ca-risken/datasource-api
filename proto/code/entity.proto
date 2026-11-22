@@ -54,6 +54,7 @@ message GitleaksSetting {
   int64 scan_at = 10;
   int64 created_at = 11;
   int64 updated_at = 12;
+  optional bool ai_scan = 13;
 }
 
 // GitleaksCache
@@ -160,6 +161,8 @@ message GitleaksSettingForUpsert {
   Status status = 8;
   string status_detail = 9;
   int64 scan_at = 10;
+  // Omit to preserve the saved setting. New settings default to false.
+  optional bool ai_scan = 11;
 }
 
 // GitleaksCacheForUpsert

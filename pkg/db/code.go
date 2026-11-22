@@ -602,11 +602,12 @@ INSERT INTO code_gitleaks_setting (
   scan_public,
   scan_internal,
   scan_private,
+  ai_scan,
   status,
   status_detail,
   scan_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(?, FALSE), ?, ?, ?)
 ON DUPLICATE KEY UPDATE
 	code_data_source_id=VALUES(code_data_source_id),
 	project_id=VALUES(project_id),
@@ -614,6 +615,7 @@ ON DUPLICATE KEY UPDATE
 	scan_public=VALUES(scan_public),
 	scan_internal=VALUES(scan_internal),
 	scan_private=VALUES(scan_private),
+	ai_scan=COALESCE(?, ai_scan),
 	status=VALUES(status),
 	status_detail=VALUES(status_detail),
 	scan_at=VALUES(scan_at)
@@ -628,9 +630,11 @@ func (c *Client) UpsertGitleaksSetting(ctx context.Context, data *code.GitleaksS
 		fmt.Sprintf("%t", data.ScanPublic),
 		fmt.Sprintf("%t", data.ScanInternal),
 		fmt.Sprintf("%t", data.ScanPrivate),
+		data.AiScan,
 		data.Status.String(),
 		convertZeroValueToNull(data.StatusDetail),
-		time.Unix(data.ScanAt, 0)).Error; err != nil {
+		time.Unix(data.ScanAt, 0),
+		data.AiScan).Error; err != nil {
 		return nil, err
 	}
 	return c.GetGitleaksSetting(ctx, data.ProjectId, data.GithubSettingId)

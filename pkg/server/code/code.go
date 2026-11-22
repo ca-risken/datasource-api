@@ -202,6 +202,7 @@ func convertGitleaksSetting(data *model.CodeGitleaksSetting) *code.GitleaksSetti
 		ScanPublic:        data.ScanPublic,
 		ScanInternal:      data.ScanInternal,
 		ScanPrivate:       data.ScanPrivate,
+		AiScan:            &data.AIScan,
 		Status:            getStatus(data.Status),
 		StatusDetail:      data.StatusDetail,
 		CreatedAt:         data.CreatedAt.Unix(),
@@ -611,6 +612,13 @@ func (c *CodeService) DeleteGitHubSetting(ctx context.Context, req *code.DeleteG
 func (c *CodeService) PutGitleaksSetting(ctx context.Context, req *code.PutGitleaksSettingRequest) (*code.PutGitleaksSettingResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
+	}
+	setting, err := c.repository.GetGitHubSettingByID(ctx, req.GitleaksSetting.GithubSettingId)
+	if err != nil {
+		return nil, err
+	}
+	if setting.ProjectID != req.ProjectId {
+		return nil, fmt.Errorf("github setting does not belong to project: project_id=%d, github_setting_id=%d", req.ProjectId, req.GitleaksSetting.GithubSettingId)
 	}
 	registered, err := c.repository.UpsertGitleaksSetting(ctx, req.GitleaksSetting)
 	if err != nil {
