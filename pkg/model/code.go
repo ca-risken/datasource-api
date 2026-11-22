@@ -58,6 +58,7 @@ type CodeGitleaksSetting struct {
 	ScanPublic          bool
 	ScanInternal        bool
 	ScanPrivate         bool
+	AIScan              bool `gorm:"column:ai_scan"`
 	Status              string
 	StatusDetail        string
 	ScanAt              time.Time

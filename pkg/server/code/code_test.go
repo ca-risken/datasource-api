@@ -95,6 +95,7 @@ func TestListDataSource(t *testing.T) {
 
 func TestListGitHubSetting(t *testing.T) {
 	now := time.Now()
+	aiScanDisabled := false
 	cases := []struct {
 		name                   string
 		input                  *code.ListGitHubSettingRequest
@@ -114,12 +115,12 @@ func TestListGitHubSetting(t *testing.T) {
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					GitleaksSetting:   &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
 				{GithubSettingId: 2, Name: "two", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo2", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					GitleaksSetting:   &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo2", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 2, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				},
@@ -170,7 +171,7 @@ func TestListGitHubSetting(t *testing.T) {
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-					GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					GitleaksSetting: &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					CodeScanSetting: &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
@@ -188,7 +189,7 @@ func TestListGitHubSetting(t *testing.T) {
 			input: &code.ListGitHubSettingRequest{ProjectId: 1},
 			want: &code.ListGitHubSettingResponse{GithubSetting: []*code.GitHubSetting{
 				{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: maskData, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-					GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+					GitleaksSetting:   &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 					DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				}}},
 			mockResponse: &[]model.CodeGitHubSetting{
@@ -282,6 +283,7 @@ func TestListGitHubSetting(t *testing.T) {
 
 func TestGetGitHubSetting(t *testing.T) {
 	now := time.Now()
+	aiScanDisabled := false
 	cases := []struct {
 		name                   string
 		input                  *code.GetGitHubSettingRequest
@@ -300,7 +302,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			name:  "OK",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-				GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GitleaksSetting:   &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				CodeScanSetting:   &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
@@ -344,7 +346,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			name:  "OK dependency setting empty",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-				GitleaksSetting: &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GitleaksSetting: &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				CodeScanSetting: &code.CodeScanSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
@@ -361,7 +363,7 @@ func TestGetGitHubSetting(t *testing.T) {
 			name:  "OK code scan setting empty",
 			input: &code.GetGitHubSettingRequest{ProjectId: 1, GithubSettingId: 1},
 			want: &code.GetGitHubSettingResponse{GithubSetting: &code.GitHubSetting{GithubSettingId: 1, Name: "one", ProjectId: 1, Type: code.Type_ORGANIZATION, TargetResource: "target", GithubUser: "user", PersonalAccessToken: "token", CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
-				GitleaksSetting:   &code.GitleaksSetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GitleaksSetting:   &code.GitleaksSetting{AiScan: &aiScanDisabled, GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", ScanPublic: false, ScanInternal: false, ScanPrivate: false, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 				DependencySetting: &code.DependencySetting{GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, Status: code.Status_OK, StatusDetail: "", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
 			}},
 			mockResponse: &model.CodeGitHubSetting{
@@ -1246,25 +1248,28 @@ func TestDeleteGitHubSetting(t *testing.T) {
 
 func TestPutGitleaksSetting(t *testing.T) {
 	now := time.Now()
+	enabled, disabled := true, false
 	cases := []struct {
 		name         string
 		input        *code.PutGitleaksSettingRequest
 		want         *code.PutGitleaksSettingResponse
 		mockResponse *model.CodeGitleaksSetting
 		mockError    error
+		ownerProject uint32
 		wantErr      bool
 	}{
 		{
-			name: "OK",
+			name: "OK with explicit opt-in",
 			input: &code.PutGitleaksSettingRequest{ProjectId: 1, GitleaksSetting: &code.GitleaksSettingForUpsert{
-				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), AiScan: &enabled},
 			},
 			want: &code.PutGitleaksSettingResponse{GitleaksSetting: &code.GitleaksSetting{
-				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(), AiScan: &enabled},
 			},
 			mockResponse: &model.CodeGitleaksSetting{
-				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now,
+				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now, AIScan: true,
 			},
+			ownerProject: 1,
 		},
 		{
 			name: "OK(empty)",
@@ -1272,11 +1277,20 @@ func TestPutGitleaksSetting(t *testing.T) {
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
 			want: &code.PutGitleaksSettingResponse{GitleaksSetting: &code.GitleaksSetting{
-				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix()},
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix(), CreatedAt: now.Unix(), UpdatedAt: now.Unix(), AiScan: &disabled},
 			},
 			mockResponse: &model.CodeGitleaksSetting{
 				CodeGitHubSettingID: 1, CodeDataSourceID: 1, ProjectID: 1, RepositoryPattern: "repo", Status: "OK", StatusDetail: "detail", ScanAt: now, CreatedAt: now, UpdatedAt: now,
 			},
+			ownerProject: 1,
+		},
+		{
+			name: "AI opt-in for another project is rejected",
+			input: &code.PutGitleaksSettingRequest{ProjectId: 1, GitleaksSetting: &code.GitleaksSettingForUpsert{
+				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, AiScan: &enabled,
+			}},
+			ownerProject: 2,
+			wantErr:      true,
 		},
 		{
 			name:    "NG invalid param",
@@ -1288,8 +1302,9 @@ func TestPutGitleaksSetting(t *testing.T) {
 			input: &code.PutGitleaksSettingRequest{ProjectId: 1, GitleaksSetting: &code.GitleaksSettingForUpsert{
 				GithubSettingId: 1, CodeDataSourceId: 1, ProjectId: 1, RepositoryPattern: "repo", Status: code.Status_OK, StatusDetail: "detail", ScanAt: now.Unix()},
 			},
-			mockError: gorm.ErrInvalidDB,
-			wantErr:   true,
+			mockError:    gorm.ErrInvalidDB,
+			ownerProject: 1,
+			wantErr:      true,
 		},
 	}
 	for _, c := range cases {
@@ -1298,6 +1313,9 @@ func TestPutGitleaksSetting(t *testing.T) {
 			mockDB := mocks.NewCodeRepoInterface(t)
 			svc := CodeService{repository: mockDB, logger: logging.NewLogger()}
 
+			if c.ownerProject != 0 {
+				mockDB.On("GetGitHubSettingByID", ctx, uint32(1)).Return(&model.CodeGitHubSetting{ProjectID: c.ownerProject}, nil).Once()
+			}
 			if c.mockResponse != nil || c.mockError != nil {
 				mockDB.On("UpsertGitleaksSetting", test.RepeatMockAnything(3)...).Return(c.mockResponse, c.mockError).Once()
 			}
