@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/ca-risken/common/pkg/logging"
 	mimosarpc "github.com/ca-risken/common/pkg/rpc"
@@ -43,6 +43,7 @@ import (
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/resolver"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
 
@@ -172,8 +173,7 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func newProjectClient(svcAddr string) (project.ProjectServiceClient, error) {
-	ctx := context.Background()
-	conn, err := getGRPCConn(ctx, svcAddr)
+	conn, err := getGRPCConn(svcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
@@ -181,8 +181,7 @@ func newProjectClient(svcAddr string) (project.ProjectServiceClient, error) {
 }
 
 func newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
-	ctx := context.Background()
-	conn, err := getGRPCConn(ctx, svcAddr)
+	conn, err := getGRPCConn(svcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
@@ -190,8 +189,7 @@ func newAlertClient(svcAddr string) (alert.AlertServiceClient, error) {
 }
 
 func newFindingClient(svcAddr string) (finding.FindingServiceClient, error) {
-	ctx := context.Background()
-	conn, err := getGRPCConn(ctx, svcAddr)
+	conn, err := getGRPCConn(svcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
@@ -199,22 +197,25 @@ func newFindingClient(svcAddr string) (finding.FindingServiceClient, error) {
 }
 
 func newAIClient(svcAddr string) (ai.AIServiceClient, error) {
-	ctx := context.Background()
-	conn, err := getGRPCConn(ctx, svcAddr)
+	conn, err := getGRPCConn(svcAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get grpc connection: err=%w", err)
 	}
 	return ai.NewAIServiceClient(conn), nil
 }
 
-func getGRPCConn(ctx context.Context, addr string) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(ctx, time.Second*3)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, addr,
+func getGRPCConn(addr string) (*grpc.ClientConn, error) {
+	target, err := url.Parse(addr)
+	if err != nil || resolver.Get(target.Scheme) == nil {
+		addr = "passthrough:///" + addr
+	}
+	conn, err := grpc.NewClient(addr,
+		grpc.WithLocalDNSResolution(),
 		grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
 	}
+	conn.Connect()
 	return conn, nil
 }

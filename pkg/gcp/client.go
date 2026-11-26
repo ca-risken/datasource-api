@@ -2,6 +2,7 @@ package gcp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -31,21 +32,29 @@ type GcpClient struct {
 }
 
 func NewGcpClient(ctx context.Context, credentialPath string, l logging.Logger) (GcpServiceClient, error) {
-	if _, err := os.Stat(credentialPath); os.IsNotExist(err) {
+	credentialJSON, err := os.ReadFile(credentialPath)
+	if os.IsNotExist(err) {
 		return nil, nil
 	} else if err != nil {
-		return nil, fmt.Errorf("failed to check google credential file: %w", err)
+		return nil, fmt.Errorf("failed to read google credential file: %w", err)
 	}
+	var credential struct {
+		Type option.CredentialsType `json:"type"`
+	}
+	if err := json.Unmarshal(credentialJSON, &credential); err != nil {
+		return nil, fmt.Errorf("failed to parse google credential file: %w", err)
+	}
+	authOption := option.WithAuthCredentialsJSON(credential.Type, credentialJSON)
 
-	crm, err := cloudresourcemanager.NewService(ctx, option.WithCredentialsFile(credentialPath))
+	crm, err := cloudresourcemanager.NewService(ctx, authOption)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new Cloud Resource Manager service: err=%w", err)
 	}
-	compute, err := compute.NewService(ctx, option.WithCredentialsFile(credentialPath))
+	compute, err := compute.NewService(ctx, authOption)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new Compute service: err=%w", err)
 	}
-	as, err := asset.NewClient(ctx, option.WithCredentialsFile(credentialPath))
+	as, err := asset.NewClient(ctx, authOption)
 	if err != nil {
 		return nil, fmt.Errorf("failed to authenticate for Google Asset API client: %w", err)
 	}
